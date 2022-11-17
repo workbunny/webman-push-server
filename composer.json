@@ -1,0 +1,46 @@
+{
+	"name": "workbunny/webman-push-server",
+	"type": "library",
+	"license": "MIT",
+	"description": "Webman plugin workbunny/webman-push-server",
+	"authors": [
+		{
+			"name": "chaz6chez",
+			"email": "250220719@qq.com",
+			"homepage": "http://chaz6chez.cn"
+		}
+	],
+	"support": {
+		"issues": "https://github.com/workbunny/webman-push-server/issues",
+		"source": "https://github.com/workbunny/webman-push-server"
+	},
+	"require": {
+		"php": ">=7.4",
+		"ext-json": "*",
+		"ext-redis": "*",
+		"psr/container": "^1.0",
+		"illuminate/redis": "^8.0",
+		"illuminate/events": "^8.0"
+	},
+	"require-dev": {
+		"workerman/webman-framework": "^1.3.0",
+		"phpunit/phpunit": "^9.0"
+	},
+	"suggest": {
+		"ext-uuid": "For unique socket id. "
+	},
+	"autoload": {
+		"psr-4": {
+			"Workbunny\\WebmanPushServer\\": "src"
+		},
+		"files": [
+			"./src/helpers.php",
+			"./src/constants.php"
+		]
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"Tests\\": "tests"
+		}
+	}
+}
