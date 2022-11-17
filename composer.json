@@ -20,7 +20,8 @@
 		"ext-redis": "*",
 		"psr/container": "^1.0",
 		"illuminate/redis": "^8.0",
-		"illuminate/events": "^8.0"
+		"illuminate/events": "^8.0",
+		"workerman/http-client": "^1.0"
 	},
 	"require-dev": {
 		"workerman/webman-framework": "^1.3.0",
