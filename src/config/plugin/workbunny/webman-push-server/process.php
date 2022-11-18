@@ -4,6 +4,7 @@ declare(strict_types=1);
 use Workbunny\WebmanPushServer\Server;
 
 return [
+    // 主服务
     'main_server' => [
         'handler'     => Server::class,
         'listen'      => config('plugin.workbunny.webman-push-server.app.host'),

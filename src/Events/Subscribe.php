@@ -14,7 +14,6 @@ use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PUBLIC;
 use const Workbunny\WebmanPushServer\EVENT_MEMBER_ADDED;
 use const Workbunny\WebmanPushServer\EVENT_SUBSCRIPTION_SUCCEEDED;
 use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_CHANNEL_OCCUPIED;
-use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_CLIENT_EVENT;
 use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_MEMBER_ADDED;
 
 class Subscribe extends AbstractEvent
@@ -29,7 +28,7 @@ class Subscribe extends AbstractEvent
         $auth = ($appKey = $pushServer->_getConnectionProperty($connection, 'appKey')) . ':' . hash_hmac(
                 'sha256',
                 $pushServer->_getConnectionProperty($connection, 'socketId') . ':' . $channel . ':' . $request['data']['channel_data'],
-                $pushServer->getConfig('apps', [])[$appKey]['app_secret'],
+                $pushServer->getConfig('app_key_query')($appKey)['app_secret'],
                 false
             );
         // private- 和 presence- 开头的channel需要验证

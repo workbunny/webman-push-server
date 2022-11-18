@@ -146,16 +146,17 @@ class Server
 
             // /app/1234567890abcdefghig?protocol=7&client=js&version=3.2.4&flash=false
             if (!preg_match('/ \/app\/([^\/^\?^ ]+)/', $header, $match)) {
-                echo "app_key not found\n$header\n";
+                $this->error($connection, null, 'Invalid app');
                 $connection->pauseRecv();
                 return;
             }
 
-            if(!isset($this->getConfig('apps', [])[$appKey = $match[1] ?? null])){
-                echo "Invalid app_key $appKey\n";
+            if(!$this->getConfig('app_key_query')($appKey = $match[1])){
+                $this->error($connection, null, "Invalid app_key");
                 $connection->pauseRecv();
                 return;
             }
+
             $this->_setConnectionProperty($connection, 'clientNotSendPingCount', 0);
             $this->_setConnectionProperty($connection, 'appKey', $appKey);
             $this->_setConnectionProperty($connection, 'socketId', $socketId = $this->_createSocketId());

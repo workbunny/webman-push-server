@@ -170,8 +170,10 @@ class Hook extends AbstractService
                 // 队列组
                 foreach ($res as $queue => $data){
                     $res = $this->getConfig('hook_handler')($client, $queue, $group, $data);
+                    // 如果是回调，则直接执行
                     if(is_callable($res)) {
-                        $res($client, $queue, $group, $data);
+                        $res($this, $queue, $group, $data);
+                    // 如果是返回配置，则使用_defaultHandler请求
                     }elseif (
                         isset($res['hook_host']) and
                         isset($res['hook_port']) and

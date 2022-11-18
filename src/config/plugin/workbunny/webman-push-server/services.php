@@ -11,6 +11,7 @@ use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_MEMBER_REMOVED;
 use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_SERVER_EVENT;
 
 return [
+    // api接口服务
     Apis::class => [
         'name'           => 'api-service',
         'count'          => cpu_count() * 2,
@@ -18,6 +19,7 @@ return [
         'context_option' => [],
         'extra'          => []
     ],
+    // 钩子队列
     Hook::class => [
         'name'           => 'webhook-service',
         'count'          => cpu_count() * 2,
@@ -31,7 +33,7 @@ return [
             ],
             'prefetch_count' => 5,
             'queue_limit'    => 4096,
-            'hook_handler'   => function(Redis $storage, string $queue, string $group, array $data){
+            'hook_handler'   => function(Hook $hook, string $queue, string $group, array $data){
                 return [
                     'hook_host'      => '127.0.0.1',
                     'hook_port'      => 8787,

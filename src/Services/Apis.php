@@ -35,8 +35,7 @@ class Apis extends AbstractService
                 $connection->send(new Response(400, [], 'Bad Request'));
                 return;
             }
-
-            if(!isset($this->getConfig('apps', [])[$appKey])){
+            if(!$this->getConfig('app_key_query')($appKey)){
                 $connection->send(new Response(401, [], 'Invalid app_key'));
                 return;
             }
@@ -53,7 +52,7 @@ class Apis extends AbstractService
             $realAuthSignature = hash_hmac(
                 'sha256',
                 $data->method()."\n" . $path . "\n" . self::_array_implode('=', '&', $params),
-                $this->getConfig('apps')[$appKey]['app_secret'],
+                $this->getConfig('app_key_query')($appKey)['app_secret'],
                 false
             );
             if ($data->get('auth_signature') !== $realAuthSignature) {
