@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace Workbunny\WebmanPushServer\Events;
 
 use RedisException;
+use Workbunny\WebmanPushServer\HookServer;
 use Workbunny\WebmanPushServer\Server;
-use Workbunny\WebmanPushServer\Services\Hook;
 use Workerman\Connection\TcpConnection;
 use function Workbunny\WebmanPushServer\uuid;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRESENCE;
@@ -81,7 +81,8 @@ class Unsubscribe extends AbstractEvent
                         'user_id' => $uid
                     ], JSON_UNESCAPED_UNICODE)
                 );
-                Hook::publish($server->getStorage(), PUSH_SERVER_EVENT_MEMBER_REMOVED, [
+                // PUSH_SERVER_EVENT_MEMBER_REMOVED 用户移除事件
+                HookServer::publish(PUSH_SERVER_EVENT_MEMBER_REMOVED, [
                     'id'      => uuid(),
                     'app_key' => $appKey,
                     'channel' => $channel,
@@ -104,7 +105,8 @@ class Unsubscribe extends AbstractEvent
             $server->send($connection, $channel, EVENT_UNSUBSCRIPTION_SUCCEEDED, '{}');
 
             if($channelVacated ?? false){
-                Hook::publish($server->getStorage(), PUSH_SERVER_EVENT_CHANNEL_VACATED, [
+                // PUSH_SERVER_EVENT_CHANNEL_VACATED 通道移除事件
+                HookServer::publish(PUSH_SERVER_EVENT_CHANNEL_VACATED, [
                     'id'      => uuid(),
                     'app_key' => $appKey,
                     'channel' => $channel,

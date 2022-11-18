@@ -8,19 +8,14 @@ use support\Redis;
 use Webman\Config;
 use Workbunny\WebmanPushServer\Events\AbstractEvent;
 use Workbunny\WebmanPushServer\Events\Unsubscribe;
-use Workbunny\WebmanPushServer\Services\AbstractService;
-use Workbunny\WebmanPushServer\Services\Hook;
 use Workerman\Connection\TcpConnection;
 use Workerman\Timer;
 use Workerman\Worker;
 
-class Server
+class Server extends AbstractServer
 {
-    /** @var array  */
-    protected array $_config = [];
-
-    /** @var AbstractService[] */
-    protected array $_services = [];
+    /** @var Server  */
+    protected static Server $_server;
 
     /**
      * @var TcpConnection[] = [
@@ -71,28 +66,16 @@ class Server
      */
     public function __construct(?array $config = null)
     {
-        $this->_config = $config ?? $this->_config;
-        //初始化services
-        $this->_initServices();
+        parent::__construct($config);
+        self::$_server = $this;
     }
 
     /**
-     * @param string|null $key
-     * @param $default
-     * @return array|mixed|null
+     * @return Server
      */
-    public function getConfig(?string $key = null, $default = null)
+    public static function getServer(): Server
     {
-        return $key === null ? $this->_config : ($this->_config[$key] ?? $default);
-    }
-
-    /**
-     * @param string $class
-     * @return AbstractService|null
-     */
-    public function getService(string $class): ?AbstractService
-    {
-        return $this->_services[$class] ?? null;
+        return self::$_server;
     }
 
     /**
@@ -136,10 +119,6 @@ class Server
                 $this->_storage->close();
                 $this->_storage = null;
             }catch (RedisException $exception){}
-        }
-        foreach ($this->_services as $service){
-            $service->stop();
-            unset($service);
         }
         if($this->_heartbeatTimer !== null){
             Timer::del($this->_heartbeatTimer);
@@ -311,24 +290,11 @@ class Server
         $connection->send($response ? json_encode($response, JSON_UNESCAPED_UNICODE) : '{}');
         if(AbstractEvent::pre($event) === AbstractEvent::SERVER_EVENT) {
             try {
-                Hook::publish($this->getStorage(),  AbstractEvent::SERVER_EVENT, array_merge($response, [
+                HookServer::publish( AbstractEvent::SERVER_EVENT, array_merge($response, [
                     'id' => uuid(),
                 ]));
             }catch (RedisException $exception){
                 error_log($exception->getMessage() . PHP_EOL);
-            }
-        }
-    }
-
-    /**
-     * 初始化 services
-     * @return void
-     */
-    protected function _initServices(): void
-    {
-        foreach (config('plugin.workbunny.webman-push-server.services') as $class => $config){
-            if(($obj = new $class($this, $config)) instanceof AbstractService){
-                $this->_services[$class] = $obj;
             }
         }
     }

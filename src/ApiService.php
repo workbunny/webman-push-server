@@ -1,15 +1,15 @@
 <?php
 declare(strict_types=1);
 
-namespace Workbunny\WebmanPushServer\Services;
+namespace Workbunny\WebmanPushServer;
 
-use Workbunny\WebmanPushServer\Services\Apis\AbstractApis;
+use Workbunny\WebmanPushServer\Apis\AbstractApis;
 use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
 use Workerman\Protocols\Http\Response;
 use Workerman\Worker;
 
-class Apis extends AbstractService
+class ApiService extends AbstractServer
 {
     protected array $_header = [
         'Content-Type' => 'application/json',

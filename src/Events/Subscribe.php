@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace Workbunny\WebmanPushServer\Events;
 
 use RedisException;
+use Workbunny\WebmanPushServer\HookServer;
 use Workbunny\WebmanPushServer\Server;
-use Workbunny\WebmanPushServer\Services\Hook;
 use Workerman\Connection\TcpConnection;
 use function Workbunny\WebmanPushServer\uuid;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRESENCE;
@@ -111,7 +111,7 @@ class Subscribe extends AbstractEvent
                     'user_info' => $userInfoArray = json_decode($userInfo, true)
                 ], JSON_UNESCAPED_UNICODE), $socketId);
                 // PUSH_SERVER_EVENT_MEMBER_ADDED 成员添加事件
-                Hook::publish($pushServer->getStorage(), PUSH_SERVER_EVENT_MEMBER_ADDED, [
+                HookServer::publish(PUSH_SERVER_EVENT_MEMBER_ADDED, [
                     'id'        => uuid(),
                     'app_key'   => $appKey,
                     'channel'   => $channel,
@@ -134,7 +134,7 @@ class Subscribe extends AbstractEvent
 
             if(!$channelOccupied){
                 // PUSH_SERVER_EVENT_CHANNEL_OCCUPIED 通道被创建事件
-                Hook::publish($pushServer->getStorage(), PUSH_SERVER_EVENT_CHANNEL_OCCUPIED, [
+                HookServer::publish(PUSH_SERVER_EVENT_CHANNEL_OCCUPIED, [
                     'id'      => uuid(),
                     'app_key' => $appKey,
                     'channel' => $channel,

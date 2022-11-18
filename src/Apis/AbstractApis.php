@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Workbunny\WebmanPushServer\Services\Apis;
+namespace Workbunny\WebmanPushServer\Apis;
 
 use Workbunny\WebmanPushServer\Server;
 use Workerman\Connection\TcpConnection;

@@ -2,11 +2,11 @@
 
 return [
     'enable'        => true,
-    'host'          => 'websocket://0.0.0.0:3131',
-    'auth_url'      => 'http://127.0.0.1:8787/plugin/workbunny/webman-push/auth',
+    'debug'         => true,
+    'ws_host'       => 'websocket://0.0.0.0:3131',
+    'api_host'      => 'http://0.0.0.0:3232',
     'redis_channel' => 'default',
-    'apps_query'    => function (?string $appKey, ?string $appId = null): array
-    {
+    'apps_query'    => function (?string $appKey, ?string $appId = null): array {
         $apps = config('plugin.workbunny.webman-push-server.app.apps', []);
         if($appId !== null){
             foreach ($apps as $app){
