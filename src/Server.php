@@ -22,11 +22,25 @@ class Server
     /** @var AbstractService[] */
     protected array $_services = [];
 
-    /** @var TcpConnection[] 所有连接 */
+    /**
+     * @var TcpConnection[] = [
+     *      'appKey_1' => [
+     *          'channel_1' => [
+     *              'socketId_1' => TcpConnection_1
+     *          ],
+     *          'channel_2' => [
+     *              'socketId_2' => TcpConnection_2,
+     *              'socketId_3' => TcpConnection_3
+     *          ]
+     *      ],
+     *      'appKey_2' => [
+     *         'channel_1' => [
+     *             'socketId_4' => TcpConnection_4
+     *         ]
+     *     ],
+     * ]
+     */
     protected array $_connections = [];
-
-    /** @var TcpConnection[] 事件连接 */
-    protected array $_eventConnections = [];
 
     /**
      * app_{appKey1}:channel_{channel1}:info => [
@@ -37,7 +51,8 @@ class Server
      * 用户 hash，
      * app_{appKey1}:channel_{channel1}:uid_{uid1} = [
      *      ref_count => 0,
-     *      info => json string
+     *      user_info => json string,
+     *      socket_id => socketId
      * ]
      *
      * @var \Redis|null 储存
@@ -151,7 +166,7 @@ class Server
                 return;
             }
 
-            if(!$this->getConfig('app_key_query')($appKey = $match[1])){
+            if(!$this->getConfig('app_query')($appKey = $match[1])){
                 $this->error($connection, null, "Invalid app_key");
                 $connection->pauseRecv();
                 return;
@@ -161,8 +176,7 @@ class Server
             $this->_setConnectionProperty($connection, 'appKey', $appKey);
             $this->_setConnectionProperty($connection, 'socketId', $socketId = $this->_createSocketId());
             $this->_setConnectionProperty($connection, 'channels', ['' => '']);
-            $this->_setEventConnection($connection, $appKey, '');
-            $this->_connections[$socketId]                   = $socketId;
+            $this->_setConnection($connection, $appKey, '');
 
             /**
              * 向客户端发送链接成功的消息
@@ -171,7 +185,7 @@ class Server
             $this->send($connection, null, null, [
                 'event' => EVENT_CONNECTION_ESTABLISHED,
                 'data'  => json_encode([
-                    'socket_id' => $socketId,
+                    'socket_id'        => $socketId,
                     'activity_timeout' => 55
                 ])
             ]);
@@ -185,13 +199,10 @@ class Server
      */
     public function onClose(TcpConnection $connection): void
     {
-        if($socketId = $this->_getConnectionProperty($connection, 'socketId')){
+        if(!$socketId = $this->_getConnectionProperty($connection, 'socketId')){
             return;
         }
-        unset(
-            $this->_connections[$socketId],
-            $this->_eventConnections[$appKey = $this->_getConnectionProperty($connection, 'appKey')][''][$socketId]
-        );
+        unset($this->_connections[$appKey = $this->_getConnectionProperty($connection, 'appKey')][''][$socketId]);
         if($channels = $this->_getConnectionProperty($connection, 'channels', [])){
             foreach ($channels as $channel => $value) {
                 if ('' === $channel) {
@@ -209,7 +220,7 @@ class Server
                         break;
                 }
                 Unsubscribe::unsubscribeChannel($this, $connection, $channel, $type, $userId);
-                unset($this->_eventConnections[$appKey][$channel][$socketId]);
+                unset($this->_connections[$appKey][$channel][$socketId]);
             }
         }
     }
@@ -247,10 +258,10 @@ class Server
      */
     public function publishToClients(string $appKey, string $channel, string $event, $data, ?string $socketId = null)
     {
-        if (!isset($this->_eventConnections[$appKey][$channel])) {
+        if (!isset($this->_connections[$appKey][$channel])) {
             return;
         }
-        foreach ($this->_eventConnections[$appKey][$channel] as $connection) {
+        foreach ($this->_connections[$appKey][$channel] as $connection) {
             if($this->_getConnectionProperty($connection, 'socketId') === $socketId){
                 continue;
             }
@@ -349,9 +360,9 @@ class Server
      * @param string $channel
      * @return void
      */
-    public function _setEventConnection(TcpConnection $connection, string $appKey, string $channel): void
+    public function _setConnection(TcpConnection $connection, string $appKey, string $channel): void
     {
-        $this->_eventConnections[$appKey][$channel][$this->_getConnectionProperty($connection, 'socketId')] = $connection;
+        $this->_connections[$appKey][$channel][$this->_getConnectionProperty($connection, 'socketId')] = $connection;
     }
 
     /**
@@ -360,9 +371,9 @@ class Server
      * @param string $channel
      * @return void
      */
-    public function _unsetEventConnection(TcpConnection $connection, string $appKey, string $channel): void
+    public function _unsetConnection(TcpConnection $connection, string $appKey, string $channel): void
     {
-        unset($this->_eventConnections[$appKey][$channel][$this->_getConnectionProperty($connection, 'socketId')]);
+        unset($this->_connections[$appKey][$channel][$this->_getConnectionProperty($connection, 'socketId')]);
     }
 
     /**

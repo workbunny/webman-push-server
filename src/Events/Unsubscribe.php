@@ -93,7 +93,7 @@ class Unsubscribe extends AbstractEvent
                 $server->getStorage()->del($key);
                 $channelVacated = true;
             }
-            $server->_unsetEventConnection($connection, $appKey, $channel);
+            $server->_unsetConnection($connection, $appKey, $channel);
             unset($channels[$channel]);
             $server->_setConnectionProperty($connection, 'channels', $channels);
             /**

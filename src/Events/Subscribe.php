@@ -28,7 +28,7 @@ class Subscribe extends AbstractEvent
         $auth = ($appKey = $pushServer->_getConnectionProperty($connection, 'appKey')) . ':' . hash_hmac(
                 'sha256',
                 $pushServer->_getConnectionProperty($connection, 'socketId') . ':' . $channel . ':' . $request['data']['channel_data'],
-                $pushServer->getConfig('app_key_query')($appKey)['app_secret'],
+                $pushServer->getConfig('app_query')($appKey)['app_secret'],
                 false
             );
         // private- 和 presence- 开头的channel需要验证
@@ -88,15 +88,22 @@ class Subscribe extends AbstractEvent
 
             $channels[$channel] = $isPresence ? $userId : '';
             $pushServer->_setConnectionProperty($connection, 'channels', $channels);
-            $pushServer->_setEventConnection($connection, $appKey, $channel);
+            $pushServer->_setConnection($connection, $appKey, $channel);
 
             $channelOccupied = boolval($pushServer->getStorage()->exists($key = $pushServer->_getChannelStorageKey($appKey, $channel)));
+            /** @see Server::$_storage */
             $pushServer->getStorage()->hIncrBy($key,'subscription_count', 1);
+            /** @see Server::$_storage */
             $pushServer->getStorage()->hSet($key, 'type', $type);
 
             if($isPresence){
+                /** @see Server::$_storage */
                 $pushServer->getStorage()->hIncrBy($key,'ref_count', 1);
-                $pushServer->getStorage()->hSet($key, 'user_info', $userInfo);
+                /** @see Server::$_storage */
+                $pushServer->getStorage()->hMSet($key,[
+                    'user_info' => $userInfo,
+                    'socket_id' => $socketId
+                ]);
                 // {"event":"pusher_internal:member_added","data":"{\"user_id\":1488465780,\"user_info\":{\"name\":\"123\",\"sex\":\"1\"}}","channel":"presence-channel"}
                 $pushServer->publishToClients($appKey, $channel, EVENT_MEMBER_ADDED, json_encode([
                     'id'        => uuid(),

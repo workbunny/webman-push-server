@@ -9,8 +9,9 @@
 ## 简介
 
 - **本项目 fork from [webman/push](https://www.workerman.net/plugin/2)，是webman/push的多进程持久化存储版本的push-server；**
+- **可以把该项目理解为 1：1 复刻的 pusher-channel服务，它既是一个插件，也是一个完整项目；**
 - workbunny/webman-push-server 是一个推送插件，客户端基于订阅模式，兼容 pusher，拥有众多客户端如JS、安卓(java)、IOS(swift)、IOS(Obj-C)、uniapp。后端推送SDK支持PHP、Node、Ruby、Asp、Java、Python、Go等。客户端自带心跳和断线自动重连，使用起来非常简单稳定。适用于消息推送、聊天等诸多即时通讯场景。
-- 兼容 [webman/push](https://www.workerman.net/plugin/2) 提供的客户端
+
 
 ## 依赖
 
@@ -189,7 +190,9 @@ Hook服务默认的处理方式是向预制的地址发送http请求，预制地
 
 如不想使用默认的消费处理方式，仅需修改 **hook_handler**，将匿名函数的返回值改为自己对应的处理函数即可：
 
-假设自身实现的处理器为 **\Namespace\YourHandlerClass** 下的 **run()** 函数
+假设自身实现的处理器为 **\Namespace\YourHandlerClass** 下的 **run()** 方法
+
+**run() 方法** 须接收参数 **Hook $hook, string $queue, string $group, array $data**
 
 ```php
 use Namespace\YourHandlerClass;
@@ -203,9 +206,18 @@ use Namespace\YourHandlerClass;
 
 ##### 支持的http-api接口：
 
-- /apps/{YOUR_APP_ID}/events ：用于推送消息
-- /apps/{YOUR_APP_ID}/channels ：用于获取频道信息
-- /apps/{YOUR_APP_ID}/batch_events ：用于批量推送消息
+1. **/apps/[app_id]/events** POST
+2. **/apps/[app_id]/batch_events** POST
+3. **/apps/[app_id]/channels** GET
+4. **/apps/[app_id]/channels/[channel_name]** GET
+5. **/apps/[app_id]/users/[user_id]/terminate_connections** POST
+6. **/apps/[app_id]/channels/[channel_name]/users** GET
+
+| method | url                   | 描述      |
+|:-------|:----------------------|:--------|
+| POST   | /apps/[app_id]/events | 向通道推送消息 |
+| POST   | 单元格                   ||
+
 
 ### 其他
 
