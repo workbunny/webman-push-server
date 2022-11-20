@@ -31,7 +31,7 @@ class Unsubscribe extends AbstractEvent
                 return;
             case CHANNEL_TYPE_PRESENCE:
                 $userData = json_decode($request['data']['channel_data'], true);
-                if (!$userData || !isset($userData['user_id'])) {
+                if (!$userData or !isset($userData['user_id'])) {
                     $pushServer->error($connection,null, 'Bad channel_data');
                     return;
                 }
@@ -57,40 +57,34 @@ class Unsubscribe extends AbstractEvent
         try {
             $appKey = $server->_getConnectionProperty($connection, 'appKey');
             $channels = $server->_getConnectionProperty($connection, 'channels');
+            $isPresence = ($type === CHANNEL_TYPE_PRESENCE);
 
-            $channelType = $server->getStorage()->hGet($key = $server->_getChannelStorageKey($appKey, $channel), 'type');
-            if ($type !== $channelType) {
-                $server->error($connection, null, 'Bad channel_type');
-                return;
-            }
-
-            if ($type === CHANNEL_TYPE_PRESENCE and $uid !== null) {
-                if (!$server->getStorage()->exists($userKey = $server->_getUserStorageKey($appKey, $channel, $uid))) {
-                    $server->error($connection, null, 'Bad user_id');
-                    return;
-                }
-                $refCount = $server->getStorage()->hIncrBy($userKey, 'ref_count', -1);
-                if ($refCount <= 0) {
-                    $server->getStorage()->del($key);
-                    $server->getStorage()->del($userKey);
-                }
-                // {"event":"pusher_internal:member_removed","data":"{\"user_id\":\"14884657801\"}","channel":"presence-channel"}
-                $server->publishToClients($appKey, $channel, EVENT_MEMBER_REMOVED,
-                    json_encode([
+            if ($isPresence) {
+                if ($server->getStorage()->exists($userKey = $server->_getUserStorageKey($appKey, $channel, $uid))) {
+                    $userCount = $server->getStorage()->hIncrBy($userKey, 'user_count', -1);
+                    if ($userCount <= 0) {
+                        $server->getStorage()->del($userKey);
+                    }
+                    // {"event":"pusher_internal:member_removed","data":"{\"user_id\":\"14884657801\"}","channel":"presence-channel"}
+                    $server->publishToClients($appKey, $channel, EVENT_MEMBER_REMOVED,
+                        json_encode([
+                            'id'      => uuid(),
+                            'user_id' => $uid
+                        ], JSON_UNESCAPED_UNICODE)
+                    );
+                    // PUSH_SERVER_EVENT_MEMBER_REMOVED 用户移除事件
+                    HookServer::publish(PUSH_SERVER_EVENT_MEMBER_REMOVED, [
                         'id'      => uuid(),
-                        'user_id' => $uid
-                    ], JSON_UNESCAPED_UNICODE)
-                );
-                // PUSH_SERVER_EVENT_MEMBER_REMOVED 用户移除事件
-                HookServer::publish(PUSH_SERVER_EVENT_MEMBER_REMOVED, [
-                    'id'      => uuid(),
-                    'app_key' => $appKey,
-                    'channel' => $channel,
-                    'user_id' => $uid,
-                    'time_ms' => microtime(true)
-                ]);
+                        'app_key' => $appKey,
+                        'channel' => $channel,
+                        'user_id' => $uid,
+                        'time_ms' => microtime(true)
+                    ]);
+                }
             }
-            if($server->getStorage()->hIncrBy($key = $server->_getChannelStorageKey($appKey, $channel), 'subscription_count', -1) <= 0){
+
+            $subCount = $server->getStorage()->hIncrBy($key = $server->_getChannelStorageKey($appKey, $channel), 'subscription_count', -1);
+            if($subCount <= 0){
                 $server->getStorage()->del($key);
                 $channelVacated = true;
             }

@@ -45,7 +45,7 @@ class Subscribe extends AbstractEvent
                     return;
                 }
                 $userData = json_decode($request['data']['channel_data'], true);
-                if (!$userData || !isset($userData['user_id']) || !isset($userData['user_info'])) {
+                if (!$userData || !isset($userData['user_id']) or !isset($userData['user_info'])) {
                     $pushServer->error($connection,null, 'Bad channel_data');
                     return;
                 }
@@ -82,25 +82,29 @@ class Subscribe extends AbstractEvent
             $appKey = $pushServer->_getConnectionProperty($connection, 'appKey');
             $socketId = $pushServer->_getConnectionProperty($connection, 'socketId');
             $channels = $pushServer->_getConnectionProperty($connection, 'channels');
-            $userId = $params[0] ?? null;
-            $userInfo = $params[1] ?? null;
-            $isPresence = ($type === CHANNEL_TYPE_PRESENCE and $userId !== null and $userInfo !== null);
+            $userId = $params[0] ?? 'unknown';
+            $userInfo = $params[1] ?? '{}';
+            $isPresence = ($type === CHANNEL_TYPE_PRESENCE);
+            $channelIsset = isset($channels[$channel]);
+            $userIsset = ($channelIsset and $channels[$channel] === $userId);
 
-            $channels[$channel] = $isPresence ? $userId : '';
-            $pushServer->_setConnectionProperty($connection, 'channels', $channels);
-            $pushServer->_setConnection($connection, $appKey, $channel);
+            if(!$channelIsset){
+                $channels[$channel] = $isPresence ? $userId : '';
+                $pushServer->_setConnectionProperty($connection, 'channels', $channels);
+                $pushServer->_setConnection($connection, $appKey, $channel);
+            }
 
-            $channelOccupied = boolval($pushServer->getStorage()->exists($key = $pushServer->_getChannelStorageKey($appKey, $channel)));
+            $channelOccupied = Server::getStorage()->exists($key = $pushServer->_getChannelStorageKey($appKey, $channel));
             /** @see Server::$_storage */
-            $pushServer->getStorage()->hIncrBy($key,'subscription_count', 1);
+            Server::getStorage()->hIncrBy($key,'subscription_count', $channelIsset ? 0 : 1);
             /** @see Server::$_storage */
-            $pushServer->getStorage()->hSet($key, 'type', $type);
+            Server::getStorage()->hSet($key, 'type', $type);
 
-            if($isPresence){
+            if($isPresence and !$userIsset) {
                 /** @see Server::$_storage */
-                $pushServer->getStorage()->hIncrBy($key,'ref_count', 1);
+                Server::getStorage()->hIncrBy($userKey = $pushServer->_getUserStorageKey($appKey, $channel, $userId),'user_count', 1);
                 /** @see Server::$_storage */
-                $pushServer->getStorage()->hMSet($key,[
+                Server::getStorage()->hMSet($userKey,[
                     'user_info' => $userInfo,
                     'socket_id' => $socketId
                 ]);

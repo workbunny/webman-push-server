@@ -5,25 +5,58 @@ namespace Workbunny\WebmanPushServer;
 
 use Closure;
 use RedisException;
+use support\Redis;
 use Workerman\Connection\TcpConnection;
 use Workerman\Http\Client;
 use Workerman\Http\Response;
 use Workerman\Timer;
 use Workerman\Worker;
 
-class HookServer extends AbstractServer
+class HookServer implements ServerInterface
 {
-    /** @var int|null  */
-    protected ?int $_timer = null;
+    /** @var \Redis|null  */
+    protected static ?\Redis $_storage = null;
 
-    /** @var Client|null  */
-    protected ?Client $_client = null;
-
-    /** @var int  */
-    protected int $_connectTimeout = 30;
+    /** @var Client|null HTTP-client */
+    protected static ?Client $_client = null;
 
     /** @var int  */
-    protected int $_requestTimeout = 30;
+    protected static int $_connectTimeout = 30;
+
+    /** @var int  */
+    protected static int $_requestTimeout = 30;
+
+    /** @var int|null 消费定时器 */
+    protected ?int $_consumerTimer = null;
+
+    /** @inheritDoc */
+    public static function getConfig(string $key, $default = null)
+    {
+        return config('plugin.worbunny.webman-push-server.app.hook-server.' . $key, $default);
+    }
+
+    /** @inheritDoc */
+    public static function getStorage(): \Redis
+    {
+        if(!self::$_storage instanceof \Redis){
+            self::$_storage = Redis::connection(self::getConfig('redis_channel', 'default'))->client();
+        }
+        return self::$_storage;
+    }
+
+    /**
+     * @return Client
+     */
+    public static function getClient(): Client
+    {
+        if(!self::$_client instanceof Client){
+            self::$_client = new Client([
+                'connect_timeout' => self::$_connectTimeout,
+                'timeout'         => self::$_requestTimeout,
+            ]);
+        }
+        return self::$_client;
+    }
 
     /**
      * @param string $event
@@ -33,11 +66,10 @@ class HookServer extends AbstractServer
      */
     public static function publish(string $event, array $data): ?bool
     {
-        $config = config('plugin.workbunny.webman-push-server.process.hook-server.constructor.config.queue_config');
-        if(Server::getServer()->getStorage()->xLen($queue = $config['queue_key']) >= $config['queue_limit']){
+        if(self::getStorage()->xLen($queue = self::getConfig('queue_key')) >= self::getConfig('queue_limit')){
             return null;
         }
-        return boolval(Server::getServer()->getStorage()->xAdd($queue,'*', [
+        return boolval(self::getStorage()->xAdd($queue,'*', [
             'name'   => $event,
             'data'   => $data,
             'time'   => microtime(true),
@@ -54,8 +86,8 @@ class HookServer extends AbstractServer
      */
     public static function ack(string $queue, string $group, array $idArray): void
     {
-        if(Server::getServer()->getStorage()->xAck($queue, $group, [$idArray])){
-            Server::getServer()->getStorage()->xDel($queue, $idArray);
+        if(self::getStorage()->xAck($queue, $group, [$idArray])){
+            self::getStorage()->xDel($queue, $idArray);
         }
     }
 
@@ -72,20 +104,13 @@ class HookServer extends AbstractServer
      */
     protected function _request(string $method, array $options = [], ?Closure $success = null, ?Closure $error = null) : void
     {
-        if(!$this->_client instanceof Client){
-            $this->_client = new Client([
-                'connect_timeout' => $this->_connectTimeout,
-                'timeout'         => $this->_requestTimeout,
-            ]);
-        }
         $queryString = http_build_query($options['query'] ?? []);
         $headers = array_merge($options['header'] ?? [], [
             'Connection' => 'keep-alive',
             'Server'     => 'workbunny-push-server'
         ]);
-        $config = $this->getConfig('webhook_config', []);
-        $this->_client->request(
-            sprintf('%s?%s', $config['webhook_url'], $queryString),
+        self::getClient()->request(
+            sprintf('%s?%s', self::getConfig('webhook_url'), $queryString),
             [
                 'method'    => $method,
                 'version'   => '1.1',
@@ -105,11 +130,10 @@ class HookServer extends AbstractServer
      */
     protected function _sign(string $method, array $query, array $data): string
     {
-        $config = $this->getConfig('webhook_config');
         return hash_hmac(
             'sha256',
-            $method . PHP_EOL . \parse_url($config['webhook_url'], \PHP_URL_PATH) . PHP_EOL . http_build_query($query) . PHP_EOL . json_encode($data),
-            $config['webhook_secret'],
+            $method . PHP_EOL . \parse_url(self::getConfig('webhook_url'), \PHP_URL_PATH) . PHP_EOL . http_build_query($query) . PHP_EOL . json_encode($data),
+            self::getConfig('webhook_secret'),
             false
         );
     }
@@ -117,12 +141,11 @@ class HookServer extends AbstractServer
     /** @inheritDoc */
     public function onWorkerStart(Worker $worker): void
     {
-        $this->_timer = Timer::add($interval = 0.001, function () use ($worker, $interval){
-            $config = $this->getConfig('queue_config');
+        $this->_consumerTimer = Timer::add($interval = 0.001, function () use ($worker, $interval){
             // 创建组
-            Server::getServer()->getStorage()->xGroup('CREATE', $queue = $config['queue_key'], $group = "$queue:webhook-group", '0', true);
+            self::getStorage()->xGroup('CREATE', $queue = self::getConfig('queue_key'), $group = "$queue:webhook-group", '0', true);
             // 读取未确认的消息组
-            if($res = Server::getServer()->getStorage()->xReadGroup($group, "webhook-consumer-$worker->id", [$queue => '>'], $config['queue_config'], (int)($interval * 1000))){
+            if($res = self::getStorage()->xReadGroup($group, "webhook-consumer-$worker->id", [$queue => '>'], self::getConfig('prefetch_count'), (int)($interval * 1000))){
                 // 队列组
                 foreach ($res as $queue => $data){
                     $idArray = array_keys($data);
@@ -144,7 +167,7 @@ class HookServer extends AbstractServer
                                 // 重入队尾
                                 foreach ($data as $value){
                                     $value['failed_count'] = ($value['failed_count'] ?? 0) + 1;
-                                    Server::getServer()->getStorage()->xAdd($queue,'*', $value);
+                                    self::getStorage()->xAdd($queue,'*', $value);
                                 }
                             }
                             self::ack($queue, $group, $idArray);
@@ -158,10 +181,14 @@ class HookServer extends AbstractServer
     /** @inheritDoc */
     public function onWorkerStop(Worker $worker): void
     {
-        if($this->_timer){
-            Timer::del($this->_timer);
-            $this->_timer = null;
+        if($this->_consumerTimer){
+            Timer::del($this->_consumerTimer);
+            $this->_consumerTimer = null;
         }
+        try {
+            self::getStorage()->close();
+            self::$_storage = null;
+        }catch (RedisException $exception){}
     }
 
     /** @inheritDoc */

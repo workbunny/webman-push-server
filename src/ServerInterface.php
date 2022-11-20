@@ -6,28 +6,22 @@ namespace Workbunny\WebmanPushServer;
 use Workerman\Connection\TcpConnection;
 use Workerman\Worker;
 
-abstract class AbstractServer
+interface ServerInterface
 {
-    /** @var array  */
-    protected array $_config = [];
-
     /**
-     * @param string|null $key
-     * @param $default
+     * 获取配置
+     * @param string $key
+     * @param mixed $default
      * @return array|mixed|null
      */
-    public function getConfig(?string $key = null, $default = null)
-    {
-        return $key === null ? $this->_config : ($this->_config[$key] ?? $default);
-    }
+    public static function getConfig(string $key, $default = null);
 
     /**
-     * @param array|null $config
+     * 获取储存器
+     * @return \Redis
      */
-    public function __construct(?array $config = null)
-    {
-        $this->_config = $config ?? $this->_config;
-    }
+    public static function getStorage(): \Redis;
+
 
     /**
      * 服务启动
@@ -35,7 +29,7 @@ abstract class AbstractServer
      * @param Worker $worker
      * @return void
      */
-    abstract public function onWorkerStart(Worker $worker): void;
+    public function onWorkerStart(Worker $worker): void;
 
     /**
      * 服务停止
@@ -43,7 +37,7 @@ abstract class AbstractServer
      * @param Worker $worker
      * @return void
      */
-    abstract public function onWorkerStop(Worker $worker): void;
+    public function onWorkerStop(Worker $worker): void;
 
     /**
      * 连接事件
@@ -51,7 +45,7 @@ abstract class AbstractServer
      * @param TcpConnection $connection
      * @return void
      */
-    abstract public function onConnect(TcpConnection $connection): void;
+    public function onConnect(TcpConnection $connection): void;
 
     /**
      * 连接关闭事件
@@ -59,7 +53,7 @@ abstract class AbstractServer
      * @param TcpConnection $connection
      * @return void
      */
-    abstract public function onClose(TcpConnection $connection): void;
+    public function onClose(TcpConnection $connection): void;
 
     /**
      * 消息事件
@@ -68,5 +62,5 @@ abstract class AbstractServer
      * @param $data
      * @return void
      */
-    abstract public function onMessage(TcpConnection $connection, $data): void;
+    public function onMessage(TcpConnection $connection, $data): void;
 }

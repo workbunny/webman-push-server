@@ -9,27 +9,23 @@ use Workerman\Protocols\Http\Request;
 use Workerman\Protocols\Http\Response;
 use Workerman\Worker;
 
-class ApiService extends AbstractServer
+class ApiService implements ServerInterface
 {
     protected array $_header = [
         'Content-Type' => 'application/json',
     ];
 
     /** @inheritDoc */
-    public function onWorkerStart(Worker $worker): void
-    {}
+    public static function getConfig(string $key, $default = null)
+    {
+        return Server::getConfig($key, $default);
+    }
 
     /** @inheritDoc */
-    public function onWorkerStop(Worker $worker): void
-    {}
-
-    /** @inheritDoc */
-    public function onConnect(TcpConnection $connection): void
-    {}
-
-    /** @inheritDoc */
-    public function onClose(TcpConnection $connection): void
-    {}
+    public static function getStorage(): \Redis
+    {
+        return Server::getStorage();
+    }
 
     /** @inheritDoc */
     public function onMessage(TcpConnection $connection, $data): void
@@ -66,7 +62,7 @@ class ApiService extends AbstractServer
         }
 
         if($response = AbstractApis::factory($explode[2])) {
-            $response->response($appKey, $this->getServer(), $connection, $data);
+            $response->response($appKey, Server::getServer(), $connection, $data);
             return;
         }
         $connection->send(new Response(404, [], "Not Found [$explode[2]"));
@@ -91,4 +87,20 @@ class ApiService extends AbstractServer
 
         return implode($separator, $string);
     }
+
+    /** @inheritDoc */
+    public function onWorkerStart(Worker $worker): void
+    {}
+
+    /** @inheritDoc */
+    public function onWorkerStop(Worker $worker): void
+    {}
+
+    /** @inheritDoc */
+    public function onConnect(TcpConnection $connection): void
+    {}
+
+    /** @inheritDoc */
+    public function onClose(TcpConnection $connection): void
+    {}
 }

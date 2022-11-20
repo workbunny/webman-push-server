@@ -5,32 +5,28 @@ namespace Workbunny\WebmanPushServer;
 
 use RedisException;
 use support\Redis;
-use Webman\Config;
 use Workbunny\WebmanPushServer\Events\AbstractEvent;
 use Workbunny\WebmanPushServer\Events\Unsubscribe;
 use Workerman\Connection\TcpConnection;
 use Workerman\Timer;
 use Workerman\Worker;
 
-class Server extends AbstractServer
+class Server implements ServerInterface
 {
-    /** @var Server  */
-    protected static Server $_server;
-
     /**
      * @var TcpConnection[] = [
      *      'appKey_1' => [
      *          'channel_1' => [
-     *              'socketId_1' => TcpConnection_1
+     *              'socketId_1' => TcpConnection_1, @see self::_getConnectionProperty()
      *          ],
      *          'channel_2' => [
-     *              'socketId_2' => TcpConnection_2,
-     *              'socketId_3' => TcpConnection_3
+     *              'socketId_2' => TcpConnection_2, @see self::_getConnectionProperty()
+     *              'socketId_3' => TcpConnection_3, @see self::_getConnectionProperty()
      *          ]
      *      ],
      *      'appKey_2' => [
      *         'channel_1' => [
-     *             'socketId_4' => TcpConnection_4
+     *             'socketId_4' => TcpConnection_4, @see self::_getConnectionProperty()
      *         ]
      *     ],
      * ]
@@ -38,21 +34,25 @@ class Server extends AbstractServer
     protected array $_connections = [];
 
     /**
-     * app_{appKey1}:channel_{channel1}:info => [
-     *      type => 'presence',
-     *      subscription_count => 0
+     * channel信息
+     * app_{appKey1}:channel_{channel1}:info = [
+     *      type               => 'presence', // 通道类型
+     *      subscription_count => 0,          // 订阅数
+     *      user_count         => 0,          // 用户数
      * ]
      *
-     * 用户 hash，
+     * user信息
      * app_{appKey1}:channel_{channel1}:uid_{uid1} = [
-     *      ref_count => 0,
-     *      user_info => json string,
-     *      socket_id => socketId
+     *      user_info  => json string,  // 用户信息json
+     *      socket_id  => socketId      // 客户端id
      * ]
      *
      * @var \Redis|null 储存
      */
-    protected ?\Redis $_storage = null;
+    protected static ?\Redis $_storage = null;
+
+    /** @var Server|null  */
+    protected static ?Server $_server = null;
 
     /** @var int|null 心跳定时器 */
     protected ?int $_heartbeatTimer = null;
@@ -61,31 +61,26 @@ class Server extends AbstractServer
     protected int $_keepaliveTimeout = 60;
 
     /**
-     * 构造函数
-     * @param array|null $config
+     * @return Server|null
      */
-    public function __construct(?array $config = null)
-    {
-        parent::__construct($config);
-        self::$_server = $this;
-    }
-
-    /**
-     * @return Server
-     */
-    public static function getServer(): Server
+    public static function getServer(): ?Server
     {
         return self::$_server;
     }
 
-    /**
-     * 频道 hash
-     * @see Server::$_storage
-     * @return \Redis|null
-     */
-    public function getStorage(): ?\Redis
+    /** @inheritDoc */
+    public static function getConfig(string $key, $default = null)
     {
-        return $this->_storage;
+        return config('plugin.worbunny.webman-push-server.app.push-server.' . $key, $default);
+    }
+
+    /** @inheritDoc */
+    public static function getStorage(): \Redis
+    {
+        if(!self::$_storage instanceof \Redis){
+            self::$_storage = Redis::connection(self::getConfig('redis_channel', 'default'))->client();
+        }
+        return self::$_storage;
     }
 
     /**
@@ -95,8 +90,6 @@ class Server extends AbstractServer
      */
     public function onWorkerStart(Worker $worker): void
     {
-        // 初始化储存
-        $this->_storage = Redis::connection(Config::get('plugin.workbunny.webman-push-server.app.redis_channel', 'default'))->client();
         // 心跳检查
         $this->_heartbeatTimer = Timer::add($this->_keepaliveTimeout / 2, function (){
             foreach ($this->_connections as $connection) {
@@ -114,16 +107,14 @@ class Server extends AbstractServer
      * @return void
      */
     public function onWorkerStop(Worker $worker): void{
-        if($this->_storage instanceof \Redis){
-            try {
-                $this->_storage->close();
-                $this->_storage = null;
-            }catch (RedisException $exception){}
-        }
         if($this->_heartbeatTimer !== null){
             Timer::del($this->_heartbeatTimer);
             $this->_heartbeatTimer = null;
         }
+        try {
+            self::getStorage()->close();
+            self::$_storage = null;
+        }catch (RedisException $exception){}
     }
 
     /**
@@ -145,7 +136,7 @@ class Server extends AbstractServer
                 return;
             }
 
-            if(!$this->getConfig('app_query')($appKey = $match[1])){
+            if(!self::getConfig('app_query')($appKey = $match[1])){
                 $this->error($connection, null, "Invalid app_key");
                 $connection->pauseRecv();
                 return;
@@ -344,7 +335,7 @@ class Server extends AbstractServer
 
     /**
      * @param TcpConnection $connection
-     * @param string $property = pushServerConnectionExtra | clientNotSendPingCount
+     * @param string $property = clientNotSendPingCount (int) | appKey (string) | socketId (string) | channels (array)
      * @param mixed|null $value
      * @return void
      */
@@ -355,7 +346,7 @@ class Server extends AbstractServer
 
     /**
      * @param TcpConnection $connection
-     * @param string $property = pushServerConnectionExtra | clientNotSendPingCount
+     * @param string $property = clientNotSendPingCount (int) | appKey (string) | socketId (string) | channels = [ channel => ''|uid]
      * @param mixed|null $default
      * @return mixed|null
      */
@@ -374,10 +365,10 @@ class Server extends AbstractServer
     {
         $hash = [];
         while(
-            false !== ($keys = $this->getStorage()->scan($iterator, $this->_getUserStorageKey($appKey, $channel),100))
+            false !== ($keys = self::getStorage()->scan($iterator, $this->_getUserStorageKey($appKey, $channel),100))
         ) {
             foreach($keys as $key) {
-                $result = $this->getStorage()->hGetAll($key);
+                $result = self::getStorage()->hGetAll($key);
                 $hash[$result['uid']] = json_decode($result['user_info'], true);
             }
         }
