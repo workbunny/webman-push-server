@@ -130,6 +130,7 @@ class HookServer implements ServerInterface
      */
     protected function _sign(string $method, array $query, array $data): string
     {
+        ksort($query);
         return hash_hmac(
             'sha256',
             $method . PHP_EOL . \parse_url(self::getConfig('webhook_url'), \PHP_URL_PATH) . PHP_EOL . http_build_query($query) . PHP_EOL . json_encode($data),

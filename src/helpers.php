@@ -13,6 +13,22 @@ declare(strict_types=1);
 
 namespace Workbunny\WebmanPushServer;
 
+use support\Response;
+
+if (!function_exists('response')) {
+    /**
+     * @param int $httpStatus
+     * @param array|string $data
+     * @param array $header
+     * @return Response
+     */
+    function response(int $httpStatus, $data, array $header = []): Response
+    {
+        return new Response($httpStatus, array_merge([
+            'Content-Type' => 'application/json'
+        ], $header), is_array($data) ? json_encode($data, JSON_UNESCAPED_UNICODE) : $data);
+    }
+}
 
 /**
  * 生成UUID
