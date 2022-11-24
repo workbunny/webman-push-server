@@ -149,15 +149,15 @@ user_channel.trigger('client-message', {form_uid:2, content:"hello"});
 ### 服务端使用
 
 服务端会分别启动一下服务进程：
-- main-server
-  - 主服务进程，用于监听websocket协议信息，拉起子服务
+- push-server
+  - 主服务进程，用于监听websocket协议信息
   - 配置位于config/plugin/workbunny/webman-push-server/app.php
-- api-service
-  - api子服务，用于提供http-api接口服务
-  - 配置位于config/plugin/workbunny/webman-push-server/services.php
-- hook-service
-  - hook子服务，用户启动钩子程序的消费者队列
-  - 配置位于config/plugin/workbunny/webman-push-server/services.php
+  - api-service子服务
+    - api子服务，用于提供http-api接口服务
+    - 路由配置位于config/plugin/workbunny/webman-push-server/apis.php
+- hook-server
+  - hook多进程消费服务，用于消费事件钩子，进行webhook通知
+  - 配置位于config/plugin/workbunny/webman-push-server/app.php
 
 #### 1.HOOK服务
 
