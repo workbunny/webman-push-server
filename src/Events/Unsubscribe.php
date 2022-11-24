@@ -61,7 +61,7 @@ class Unsubscribe extends AbstractEvent
 
             if ($isPresence) {
                 if ($server->getStorage()->exists($userKey = $server->_getUserStorageKey($appKey, $channel, $uid))) {
-                    $userCount = $server->getStorage()->hIncrBy($userKey, 'user_count', -1);
+                    $userCount = $server->getStorage()->hIncrBy($server->_getChannelStorageKey($appKey, $channel), 'user_count', -1);
                     if ($userCount <= 0) {
                         $server->getStorage()->del($userKey);
                     }

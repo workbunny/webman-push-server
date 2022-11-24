@@ -36,7 +36,7 @@ composer require workbunny/webman-push-server
 
 客户端可向私有频道推送/监听，一般用于端对端的通讯，服务端仅做转发；**该频道可以用于私聊场景；**
 
-- 状态频道
+- 状态频道（presence）
 
 与私有频道保持一致，区别在于状态频道还保存有客户端的信息，任何用户的上下线都会收到该频道的广播通知，如user_id、user_info；
 **状态频道最多支持100个客户端；可以用于群聊场景；**
@@ -49,7 +49,7 @@ composer require workbunny/webman-push-server
 
 - **pusher:** 前缀的事件
 
-拥有 **pusher:** 前缀，但不包含 **client-** 前缀的事件一般用于服务端消息，比如在公共频道由服务端推送的消息；
+拥有 **pusher:** 前缀，但不包含 **client-** 前缀的事件一般用于服务端消息、公共消息，比如在公共频道由服务端推送的消息、客户端发起的订阅公共消息；
 
 - **pusher_internal:** 前缀的事件
 
@@ -159,7 +159,7 @@ user_channel.trigger('client-message', {form_uid:2, content:"hello"});
   - hook子服务，用户启动钩子程序的消费者队列
   - 配置位于config/plugin/workbunny/webman-push-server/services.php
 
-#### 1.HOOK子服务
+#### 1.HOOK服务
 
 ##### 支持的HOOK事件：
 
@@ -175,48 +175,35 @@ user_channel.trigger('client-message', {form_uid:2, content:"hello"});
 
 ##### 事件处理器：
 
-Hook服务默认的处理方式是向预制的地址发送http请求，预制地址的配置详见**config/plugin/workbunny/webman-push-server/services.php**
-
-```php
-'hook_handler' => function(Hook $hook, string $queue, string $group, array $data){
-    return [
-        'hook_host'      => '127.0.0.1',
-        'hook_port'      => 8787,
-        'hook_uri'       => '/plugin/workbunny/webman-push-server/webhook',
-        'hook_secret'    => 'YOUR_WEBHOOK_SECRET',
-    ];
-},
-```
-
-如不想使用默认的消费处理方式，仅需修改 **hook_handler**，将匿名函数的返回值改为自己对应的处理函数即可：
-
-假设自身实现的处理器为 **\Namespace\YourHandlerClass** 下的 **run()** 方法
-
-**run() 方法** 须接收参数 **Hook $hook, string $queue, string $group, array $data**
-
-```php
-use Namespace\YourHandlerClass;
-
-'hook_handler' => function(Hook $hook, string $queue, string $group, array $data){
-    return [new YourHandlerClass(), 'run'];
-},
-```
+Hook服务是多进程消费队列，消费方式是通过http的请求进行webhook通知；
+对应配置详见**config/plugin/workbunny/webman-push-server/app.php**；
 
 #### 2.API子服务
 
+API子服务提供REST风格的http-APIs，接口内容与 [pusher-channel-api](https://pusher.com/docs/channels/library_auth_reference/rest-api/) 基本保持一致；
+
 ##### 支持的http-api接口：
 
-1. **/apps/[app_id]/events** POST
-2. **/apps/[app_id]/batch_events** POST
-3. **/apps/[app_id]/channels** GET
-4. **/apps/[app_id]/channels/[channel_name]** GET
-5. **/apps/[app_id]/users/[user_id]/terminate_connections** POST
-6. **/apps/[app_id]/channels/[channel_name]/users** GET
+| method | url                                                  | 描述                                                                                                                               |
+|:-------|:-----------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------|
+| POST   | /apps/[app_id]/events                                | [对应的pusher文档地址](https://pusher.com/docs/channels/library_auth_reference/rest-api/#post-event-trigger-an-event)                   |
+| POST   | /apps/[app_id]/batch_events                          | [对应的pusher文档地址](https://pusher.com/docs/channels/library_auth_reference/rest-api/#post-batch-events-trigger-multiple-events)     |
+| GET    | /apps/[app_id]/channels                              | [对应的pusher文档地址](https://pusher.com/docs/channels/library_auth_reference/rest-api/#get-channels-fetch-info-for-multiple-channels) |
+| GET    | /apps/[app_id]/channels/[channel_name]               | [对应的pusher文档地址](https://pusher.com/docs/channels/library_auth_reference/rest-api/#get-channel-fetch-info-for-one-channel)        |
+| POST   | /apps/[app_id]/users/[user_id]/terminate_connections | [对应的pusher文档地址](https://pusher.com/docs/channels/library_auth_reference/rest-api/#post-terminate-user-connections)               |
+| GET    | /apps/[app_id]/channels/[channel_name]/users         | [对应的pusher文档地址](https://pusher.com/docs/channels/library_auth_reference/rest-api/#get-users)                                     |
 
-| method | url                   | 描述      |
-|:-------|:----------------------|:--------|
-| POST   | /apps/[app_id]/events | 向通道推送消息 |
-| POST   | 单元格                   ||
+##### API客户端
+
+1. 使用pusher提供的api客户端
+
+```
+composer require pusher/pusher-php-server
+```
+
+2. 或者使用\Workbunny\WebmanPushServer\ApiClient
+
+**Tpis: ApiClient 既是 pusher/pusher-php-server**
 
 
 ### 其他

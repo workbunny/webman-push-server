@@ -102,9 +102,9 @@ class Subscribe extends AbstractEvent
 
             if($isPresence and !$userIsset) {
                 /** @see Server::$_storage */
-                Server::getStorage()->hIncrBy($userKey = $pushServer->_getUserStorageKey($appKey, $channel, $userId),'user_count', 1);
+                Server::getStorage()->hIncrBy($key ,'user_count', 1);
                 /** @see Server::$_storage */
-                Server::getStorage()->hMSet($userKey,[
+                Server::getStorage()->hMSet($pushServer->_getUserStorageKey($appKey, $channel, $userId),[
                     'user_info' => $userInfo,
                     'socket_id' => $socketId
                 ]);

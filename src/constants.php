@@ -19,6 +19,7 @@ const EVENT_PING                       = 'pusher:ping';
 const EVENT_PONG                       = 'pusher:pong';
 const EVENT_SUBSCRIBE                  = 'pusher:subscribe';
 const EVENT_UNSUBSCRIBE                = 'pusher:unsubscribe';
+const EVENT_TERMINATE_CONNECTION       = 'pusher:terminate_connection';
 const EVENT_MEMBER_ADDED               = 'pusher_internal:member_added';
 const EVENT_MEMBER_REMOVED             = 'pusher_internal:member_removed';
 const EVENT_SUBSCRIPTION_SUCCEEDED     = 'pusher_internal:subscription_succeeded';

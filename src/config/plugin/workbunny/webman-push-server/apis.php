@@ -17,76 +17,68 @@ ApiService::get('/plugin/workbunny/webman-push-server/push.js', function (Reques
 
 
 ApiService::addGroup('/apps/{appId}', function () {
-    /** /apps/[app_id]/channels */
+
+    /**
+     * 获取所有channel
+     * @url /apps/[app_id]/channels
+     * @method GET
+     */
     ApiService::get('/channels', function (Server $server, Request $request, array $urlParams): Response {
-        // info todo
+        $appKey = $request->get('auth_key');
         $requestInfo = explode(',', $request->get('info', ''));
-        if (!isset($explode[3])) {
-            $channels = [];
-            $prefix = $request->get('filter_by_prefix');
-            $returnSubscriptionCount = in_array('subscription_count', $requestInfo);
-            try {
-                $keys = Server::getStorage()->keys($server->_getChannelStorageKey($appKey));
-                foreach ($keys as $key) {
-                    $channel = $server->_getChannelName($key);
-                    if ($prefix !== null) {
-                        if (strpos($channel, $prefix) !== 0) {
-                            continue;
-                        }
-                    }
-                    $channels[$channel] = [];
-                    if ($returnSubscriptionCount) {
-                        $channels[$channel]['subscription_count'] = $server->getStorage()->hGet($key, 'subscription_count');
-                    }
-                }
-                return new Response(200, [], json_encode(['channels' => $channels], JSON_UNESCAPED_UNICODE));
-            }catch (\Throwable $throwable){
-                return new Response(500, [], 'Server Error [Channels]');
-            }
+        $prefix = $request->get('filter_by_prefix');
+        $returnSubscriptionCount = in_array('subscription_count', $requestInfo);
+        $channels = [];
+        $fields = ['type'];
+        if(in_array('subscription_count', $requestInfo)){
+            $fields[] = 'subscription_count';
         }
-        $channel = $explode[3];
-        // users
-        if (isset($explode[4])) {
-            if ($explode[4] !== 'users') {
-                return new Response(400, [], 'Bad Request');
-            }
-            $userIdArray = [];
-            try {
-                $keys = $server->getStorage()->keys($server->_getUserStorageKey($appKey, $channel));
-                $userCount = count($keys);
-                foreach ($keys as $key){
-                    $userIdArray['id'] = $server->_getUserId($key);
-                }
-                return new Response(200, [], json_encode($userIdArray, JSON_UNESCAPED_UNICODE));
-                $subscriptionCount = 0;
-                if($channelInfo['occupied'] = $server->getStorage()->exists($server->_getChannelStorageKey($appKey, $channel))){
-                    $subscriptionCount = $server->getStorage()->hGet($server->_getChannelStorageKey($appKey, $channel), 'subscription_count');
-                }
-                foreach ($requestInfo as $name){
-                    switch ($name) {
-                        case 'user_count':
-                            $channelInfo['user_count'] = $userCount;
-                            break;
-                        case 'subscription_count':
-                            $channelInfo['subscription_count'] = $subscriptionCount;
-                            break;
-                    }
-                }
-                $connection->send(json_encode($channelInfo, JSON_UNESCAPED_UNICODE));
-            }catch (\Throwable $throwable){
-                $connection->send(new Response(500, [], 'Server Error [Users]'));
-                return;
-            }
+        if(in_array('user_count', $requestInfo)){
+            $fields[] = 'user_count';
         }
-        return new Response();
+        try {
+            $keys = Server::getStorage()->keys($server->_getChannelStorageKey($appKey));
+            foreach ($keys as $key) {
+                $channel = $server->_getChannelName($key);
+                $channelType = $server->_getChannelType($channel);
+                if($prefix !== null and $channelType !== $prefix){
+                    continue;
+                }
+                ;
+                $channels[$channel] = Server::getStorage()->hMGet($key, $fields) ?? [];
+            }
+            return \Workbunny\WebmanPushServer\response(200, ['channels' => $channels]);
+        }catch (\Throwable $throwable){
+            //TODO log
+            return \Workbunny\WebmanPushServer\response(500, 'Server Error [Channels]');
+        }
     });
 
-    /** /apps/[app_id]/channels/[channel_name] */
+    /**
+     * 获取通道信息
+     * @url /apps/[app_id]/channels/[channel_name]
+     * @method GET
+     */
     ApiService::get('/channels/{channelName}', function (Server $server, Request $request, array $urlParams): Response {
-// todo
+        $appKey = $request->get('auth_key');
+        $requestInfo = explode(',', $request->get('info', ''));
         $channelName = $urlParams['channelName'];
-        dump($request->path());
-        return new Response();
+        $fields = ['type'];
+        if(in_array('subscription_count', $requestInfo)){
+            $fields[] = 'subscription_count';
+        }
+        if(in_array('user_count', $requestInfo)){
+            $fields[] = 'user_count';
+        }
+        try {
+            $channels = Server::getStorage()->hMGet($server->_getChannelStorageKey($appKey,$channelName), $fields);
+            return \Workbunny\WebmanPushServer\response(200, $channels ? array_merge([
+                'occupied' => true,
+            ], $channels) : '{}');
+        }catch (RedisException $exception){
+            //TODO log
+            return \Workbunny\WebmanPushServer\response(500,'Server Error [channel]');
+        }
     });
 
     /**
@@ -133,10 +125,25 @@ ApiService::addGroup('/apps/{appId}', function () {
         return \Workbunny\WebmanPushServer\response(200,'{}');
     });
 
-    /** /apps/[app_id]/users/[user_id]/terminate_connections */
+    /**
+     * 终止用户所有连接
+     * @url /apps/[app_id]/users/[user_id]/terminate_connections
+     * @method POST
+     */
     ApiService::post('/users/{userId}/terminate_connections', function (Server $server, Request $request, array $urlParams): Response {
-        dump($request->path()); // todo
-        return new Response();
+        $appKey = $request->get('auth_key');
+        $userId = $urlParams['userId'];
+        $socketIds = [];
+        $userKeys = Server::getStorage()->keys($server->_getUserStorageKey($appKey, null, $userId));
+        foreach ($userKeys as $userKey){
+            $socketIds[] = Server::getStorage()->hGet($userKey, 'socket_id');
+        }
+        foreach ($socketIds as $socketId){
+            $server->terminateConnections($appKey, $socketId, [
+                'message' => 'Terminate connection by API'
+            ]);
+        }
+        return \Workbunny\WebmanPushServer\response(200, '{}');
     });
 
     /**

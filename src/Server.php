@@ -291,6 +291,27 @@ class Server implements ServerInterface
     }
 
     /**
+     * 终止连接
+     * @param string $appKey
+     * @param string $socketId
+     * @param array $data
+     * @return void
+     */
+    public function terminateConnections(string $appKey, string $socketId, array $data): void
+    {
+        $channelConnections = $this->_connections[$appKey];
+        foreach ($channelConnections as $channel => $channelConnection){
+            if(isset($channelConnection[$socketId])){
+                /** @var TcpConnection $connection */
+                $connection = $channelConnection[$socketId];
+                $this->send($connection, $channel, EVENT_TERMINATE_CONNECTION, $data);
+                $this->onClose($connection);
+                $connection->destroy();
+            }
+        }
+    }
+
+    /**
      * 创建一个全局的客户端id
      * @return string
      */
@@ -389,9 +410,8 @@ class Server implements ServerInterface
      */
     public function _getChannelStorageKey(string $appKey, ?string $channel = null): string
     {
-        return $channel !== null ?
-            "workbunny:webman-push-server:appKey_$appKey:channel_*:info" :
-            "workbunny:webman-push-server:appKey_$appKey:channel_$channel:info";
+        $channel = $channel !== null ? $channel : '*';
+        return "workbunny:webman-push-server:appKey_$appKey:channel_$channel:info";
     }
 
     /**
@@ -408,15 +428,15 @@ class Server implements ServerInterface
     /**
      * 获取用户储存key
      * @param string $appKey
-     * @param string $channel
+     * @param string|null $channel
      * @param string|null $uid
      * @return string
      */
-    public function _getUserStorageKey(string $appKey, string $channel, ?string $uid = null): string
+    public function _getUserStorageKey(string $appKey, ?string $channel = null, ?string $uid = null): string
     {
-        return $uid !== null ?
-            "workbunny:webman-push-server:appKey_$appKey:channel_$channel:uid_*" :
-            "workbunny:webman-push-server:appKey_$appKey:channel_$channel:uid_$uid";
+        $channel = $channel !== null ? $channel : '*';
+        $uid = $uid !== null ? $uid : '*';
+        return "workbunny:webman-push-server:appKey_$appKey:channel_$channel:uid_$uid";
     }
 
     /**
