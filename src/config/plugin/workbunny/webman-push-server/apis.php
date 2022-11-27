@@ -4,26 +4,26 @@ declare(strict_types=1);
 use Pusher\Pusher;
 use support\Request;
 use support\Response;
-use Workbunny\WebmanPushServer\ApiService;
+use Workbunny\WebmanPushServer\ApiRoute;
 use Workbunny\WebmanPushServer\Server;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRESENCE;
 
 /**
  * 推送js客户端文件
  */
-ApiService::get('/plugin/workbunny/webman-push-server/push.js', function (Request $request) {
+ApiRoute::get('/plugin/workbunny/webman-push-server/push.js', function (Request $request) {
     return response()->file(base_path().'/vendor/workbunny/webman-push-server/push.js');
 });
 
 
-ApiService::addGroup('/apps/{appId}', function () {
+ApiRoute::addGroup('/apps/{appId}', function () {
 
     /**
      * 获取所有channel
      * @url /apps/[app_id]/channels
      * @method GET
      */
-    ApiService::get('/channels', function (Server $server, Request $request, array $urlParams): Response {
+    ApiRoute::get('/channels', function (Server $server, Request $request, array $urlParams): Response {
         $appKey = $request->get('auth_key');
         $requestInfo = explode(',', $request->get('info', ''));
         $prefix = $request->get('filter_by_prefix');
@@ -59,7 +59,7 @@ ApiService::addGroup('/apps/{appId}', function () {
      * @url /apps/[app_id]/channels/[channel_name]
      * @method GET
      */
-    ApiService::get('/channels/{channelName}', function (Server $server, Request $request, array $urlParams): Response {
+    ApiRoute::get('/channels/{channelName}', function (Server $server, Request $request, array $urlParams): Response {
         $appKey = $request->get('auth_key');
         $requestInfo = explode(',', $request->get('info', ''));
         $channelName = $urlParams['channelName'];
@@ -86,7 +86,7 @@ ApiService::addGroup('/apps/{appId}', function () {
      * @url /apps/[app_id]/events
      * @method POST
      */
-    ApiService::post('/events', function (Server $server, Request $request, array $urlParams): Response {
+    ApiRoute::post('/events', function (Server $server, Request $request, array $urlParams): Response {
         $appKey = $request->get('auth_key');
         if($channels = $request->post('channels') or !is_array($channels)){
             return \Workbunny\WebmanPushServer\response(400, ['error' => 'Required channels']);
@@ -109,7 +109,7 @@ ApiService::addGroup('/apps/{appId}', function () {
      * @url /apps/[app_id]/batch_events
      * @method POST
      */
-    ApiService::post('/batch_events', function (Server $server, Request $request, array $urlParams): Response {
+    ApiRoute::post('/batch_events', function (Server $server, Request $request, array $urlParams): Response {
         $appKey = $request->get('auth_key');
         $packages = $request->post('batch');
         if (!$packages) {
@@ -130,7 +130,7 @@ ApiService::addGroup('/apps/{appId}', function () {
      * @url /apps/[app_id]/users/[user_id]/terminate_connections
      * @method POST
      */
-    ApiService::post('/users/{userId}/terminate_connections', function (Server $server, Request $request, array $urlParams): Response {
+    ApiRoute::post('/users/{userId}/terminate_connections', function (Server $server, Request $request, array $urlParams): Response {
         $appKey = $request->get('auth_key');
         $userId = $urlParams['userId'];
         $socketIds = [];
@@ -151,7 +151,7 @@ ApiService::addGroup('/apps/{appId}', function () {
      * @url /apps/[app_id]/channels/[channel_name]/users
      * @method GET
      */
-    ApiService::get('/channels/{channelName}/users', function (Server $server, Request $request, array $urlParams): Response {
+    ApiRoute::get('/channels/{channelName}/users', function (Server $server, Request $request, array $urlParams): Response {
         $appKey = $request->get('auth_key');
         $channelName = $urlParams['channelName'];
         $userIdArray = [];
