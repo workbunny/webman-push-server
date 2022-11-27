@@ -71,7 +71,7 @@ class Server implements ServerInterface
     /** @inheritDoc */
     public static function getConfig(string $key, $default = null)
     {
-        return config('plugin.worbunny.webman-push-server.app.push-server.' . $key, $default);
+        return config('plugin.workbunny.webman-push-server.app.push-server.' . $key, $default);
     }
 
     /** @inheritDoc */
