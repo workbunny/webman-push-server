@@ -51,9 +51,20 @@ class ApiRoute implements Bootstrap
     protected static ?Dispatcher $_dispatcher = null;
 
     /**
-     * @var bool
+     * @var string|null
      */
-    protected static bool $_groupStatus = false;
+    protected static ?string $_groupPrefix = null;
+
+    /**
+     * @var array = [
+     *      [
+     *          'method'      => 'POST',
+     *          'uri'         => '/apps/{appId}/channels'
+     *          'handler'     => Closure function
+     *      ],
+     * ]
+     */
+    protected static array $_routes = [];
 
     /**
      * @var array = [
@@ -170,6 +181,14 @@ class ApiRoute implements Bootstrap
     }
 
     /**
+     * @return array
+     */
+    public static function getRoutes(): array
+    {
+        return self::$_routes;
+    }
+
+    /**
      * @param array|string $httpMethod
      * @param string $route
      * @param Closure $handler
@@ -180,7 +199,14 @@ class ApiRoute implements Bootstrap
     public static function route($httpMethod, string $route, Closure $handler, Closure ...$middlewares): void
     {
         $methods = is_array($httpMethod) ? $httpMethod : [$httpMethod];
-        self::middleware(self::getMiddlewareTag($handler), self::$_groupStatus ? self::getMiddlewares('#group') : $middlewares, $methods);
+        foreach ($methods as $method){
+            self::$_routes[] = [
+                'method'      => $method,
+                'uri'         => self::$_groupPrefix ? self::$_groupPrefix . $route : $route,
+                'handler'     => $handler
+            ];
+        }
+        self::middleware(self::getMiddlewareTag($handler), self::$_groupPrefix !== null ? self::getMiddlewares('#group') : $middlewares, $methods);
         self::$_collector->addRoute($methods, $route, $handler);
     }
 
@@ -193,11 +219,11 @@ class ApiRoute implements Bootstrap
      */
     public static function group(string $prefix, Closure $callback, Closure ...$middlewares): void
     {
-        self::$_groupStatus = true;
+        self::$_groupPrefix = $prefix;
         self::middleware('#group', $middlewares);
         self::$_collector->addGroup(...func_get_args());
         unset(self::$_middlewares['#group']);
-        self::$_groupStatus= false;
+        self::$_groupPrefix = null;
     }
 
     /**

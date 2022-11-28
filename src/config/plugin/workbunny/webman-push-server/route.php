@@ -27,7 +27,6 @@ ApiRoute::addGroup('/apps/{appId}', function () {
         $appKey = $request->get('auth_key');
         $requestInfo = explode(',', $request->get('info', ''));
         $prefix = $request->get('filter_by_prefix');
-        $returnSubscriptionCount = in_array('subscription_count', $requestInfo);
         $channels = [];
         $fields = ['type'];
         if(in_array('subscription_count', $requestInfo)){
