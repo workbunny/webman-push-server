@@ -90,6 +90,7 @@ class Server implements ServerInterface
      */
     public function onWorkerStart(Worker $worker): void
     {
+        self::$_server = $this;
         // 心跳检查
         $this->_heartbeatTimer = Timer::add($this->_keepaliveTimeout / 2, function (){
             foreach ($this->_connections as $connection) {

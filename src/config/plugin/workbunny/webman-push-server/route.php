@@ -2,17 +2,18 @@
 declare(strict_types=1);
 
 use Pusher\Pusher;
-use support\Request;
+use Workerman\Protocols\Http\Request;
 use support\Response;
 use Workbunny\WebmanPushServer\ApiRoute;
 use Workbunny\WebmanPushServer\Server;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRESENCE;
+use function Workbunny\WebmanPushServer\response;
 
 /**
  * 推送js客户端文件
  */
-ApiRoute::get('/plugin/workbunny/webman-push-server/push.js', function (Request $request) {
-    return response()->file(base_path().'/vendor/workbunny/webman-push-server/push.js');
+ApiRoute::get('/plugin/workbunny/webman-push-server/push.js', function () {
+    return response(200, '')->file(base_path().'/vendor/workbunny/webman-push-server/push.js');
 });
 
 
@@ -46,10 +47,10 @@ ApiRoute::addGroup('/apps/{appId}', function () {
                 ;
                 $channels[$channel] = Server::getStorage()->hMGet($key, $fields) ?? [];
             }
-            return \Workbunny\WebmanPushServer\response(200, ['channels' => $channels]);
+            return response(200, ['channels' => $channels]);
         }catch (\Throwable $throwable){
             //TODO log
-            return \Workbunny\WebmanPushServer\response(500, 'Server Error [Channels]');
+            return response(500, 'Server Error [Channels]');
         }
     });
 
@@ -71,12 +72,12 @@ ApiRoute::addGroup('/apps/{appId}', function () {
         }
         try {
             $channels = Server::getStorage()->hMGet($server->_getChannelStorageKey($appKey,$channelName), $fields);
-            return \Workbunny\WebmanPushServer\response(200, $channels ? array_merge([
+            return response(200, $channels ? array_merge([
                 'occupied' => true,
             ], $channels) : '{}');
         }catch (RedisException $exception){
             //TODO log
-            return \Workbunny\WebmanPushServer\response(500,'Server Error [channel]');
+            return response(500,'Server Error [channel]');
         }
     });
 
@@ -88,19 +89,19 @@ ApiRoute::addGroup('/apps/{appId}', function () {
     ApiRoute::post('/events', function (Server $server, Request $request, array $urlParams): Response {
         $appKey = $request->get('auth_key');
         if($channels = $request->post('channels') or !is_array($channels)){
-            return \Workbunny\WebmanPushServer\response(400, ['error' => 'Required channels']);
+            return response(400, ['error' => 'Required channels']);
         }
         if($event = $request->post('name')){
-            return \Workbunny\WebmanPushServer\response(400, ['error' => 'Required name']);
+            return response(400, ['error' => 'Required name']);
         }
         if($data = $request->post('data')){
-            return \Workbunny\WebmanPushServer\response(400, ['error' => 'Required data']);
+            return response(400, ['error' => 'Required data']);
         }
         foreach ($channels as $channel) {
             $socket_id = $package['socket_id'] ?? null;
             $server->publishToClients($appKey, $channel, $event, $data, $socket_id);
         }
-        return \Workbunny\WebmanPushServer\response(200, '{}');
+        return response(200, '{}');
     });
 
     /**
@@ -112,7 +113,7 @@ ApiRoute::addGroup('/apps/{appId}', function () {
         $appKey = $request->get('auth_key');
         $packages = $request->post('batch');
         if (!$packages) {
-            return \Workbunny\WebmanPushServer\response(400,['error' => 'Required batch']);
+            return response(400,['error' => 'Required batch']);
         }
         foreach ($packages as $package) {
             $channel = $package['channel'];
@@ -121,7 +122,7 @@ ApiRoute::addGroup('/apps/{appId}', function () {
             $socket_id = $package['socket_id'] ?? null;
             $server->publishToClients($appKey, $channel, $event, $data, $socket_id);
         }
-        return \Workbunny\WebmanPushServer\response(200,'{}');
+        return response(200,'{}');
     });
 
     /**
@@ -142,7 +143,7 @@ ApiRoute::addGroup('/apps/{appId}', function () {
                 'message' => 'Terminate connection by API'
             ]);
         }
-        return \Workbunny\WebmanPushServer\response(200, '{}');
+        return response(200, '{}');
     });
 
     /**
@@ -157,36 +158,36 @@ ApiRoute::addGroup('/apps/{appId}', function () {
         try {
             $channelType = Server::getStorage()->hGet($server->_getChannelStorageKey($appKey, $channelName), 'type');
             if(!$channelType){
-                return \Workbunny\WebmanPushServer\response(404, ['error' => "Not Found [$channelName]"]);
+                return response(404, ['error' => "Not Found [$channelName]"]);
             }
             if($channelType !== CHANNEL_TYPE_PRESENCE) {
-                return \Workbunny\WebmanPushServer\response(400, ['error' => "Invalid channel [$channelName]"]);
+                return response(400, ['error' => "Invalid channel [$channelName]"]);
             }
             $userKeys = Server::getStorage()->keys($server->_getUserStorageKey($appKey, $channelName));
             foreach ($userKeys as $userKey) {
                 $userIdArray[] = Server::getStorage()->hGet($userKey,'user_id');
             }
-            return \Workbunny\WebmanPushServer\response(200, ['users' => $userIdArray]);
+            return response(200, ['users' => $userIdArray]);
         }catch (\Throwable $throwable){
             //TODO log
-            return \Workbunny\WebmanPushServer\response(500,'Server Error [users]');
+            return response(500,'Server Error [users]');
         }
     });
 
 }, function (Closure $next, Server $server, Request $request, array $urlParams): Response {
     if($appId = $urlParams['appId'] ?? null){
         if (!($appKey = $request->get('auth_key'))) {
-            return \Workbunny\WebmanPushServer\response(400,['error' => 'Required auth_key']);
+            return response(400,['error' => 'Required auth_key']);
         }
         $apps = config_path('plugin.workbunny.webman-push-server.app.push-server.apps_query')($appKey, $appId);
         if(!$apps){
-            return \Workbunny\WebmanPushServer\response(401,['error' => 'Invalid auth_key']);
+            return response(401,['error' => 'Invalid auth_key']);
         }
         $params = $request->get();
         unset($params['auth_signature']);
         $realAuthSignature = Pusher::build_auth_query_params($appKey, $apps['app_secret'], $request->method(), $request->path(), $params)['auth_signature'];
         if ($request->get('auth_signature') !== $realAuthSignature) {
-            return \Workbunny\WebmanPushServer\response(401,['error' => 'Invalid signature']);
+            return response(401,['error' => 'Invalid signature']);
         }
     }
     return $next($next, $server, $request, $urlParams);

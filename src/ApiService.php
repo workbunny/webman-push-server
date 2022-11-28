@@ -28,22 +28,23 @@ class ApiService implements ServerInterface
     public function onMessage(TcpConnection $connection, $data): void
     {
         if(!$data instanceof Request){
-            $connection->close(new Response(400, [], 'Bad Request. '));
+            $connection->send(new Response(400, [], 'Bad Request. '));
             return;
         }
         $res = ApiRoute::getDispatcher()->dispatch($data->method(), $data->path());
-        if(!$res){
+        $handler = $res[1] ?? null;
+        $params = $res[2] ?? [];
+        if(!$handler instanceof Closure) {
             $connection->send(new Response(404, [], 'Not Found'));
+            return;
         }
-
         $result = call_user_func(array_reduce(
-            array_reverse(ApiRoute::getMiddlewares(ApiRoute::getMiddlewareTag($res[1]), $data->method())),
-            function (Closure $next, Closure $handler) use ($data, $res) {
-                return $handler($next, $this, $data, $res[2]);
+            array_reverse(ApiRoute::getMiddlewares(ApiRoute::getMiddlewareTag($handler), $data->method())),
+            function (Closure $next, Closure $handler) use ($data, $params) {
+                return $handler($next, Server::getServer(), $data, $params);
             },
-            $res[1]
+            $handler
         ));
-
         if(!$result instanceof Response){
             $connection->send(new Response(500, [], 'Server Error'));
             return;
