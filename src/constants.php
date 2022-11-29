@@ -4,10 +4,10 @@
  *
  * Redistributions of files must retain the above copyright notice.
  *
- * @author    chaz6chez<250220719@qq.com>
- * @copyright chaz6chez<250220719@qq.com>
- * @link      https://github.com/workbunny/webman-multi-push
- * @license   https://github.com/workbunny/webman-multi-push/blob/main/LICENSE
+ * @author    chaz6chez<chaz6chez1993@outlook.com>
+ * @copyright chaz6chez<chaz6chez1993@outlook.com>
+ * @link      https://github.com/workbunny/webman-push-server
+ * @license   https://github.com/workbunny/webman-push-server/blob/main/LICENSE
  */
 declare(strict_types=1);
 

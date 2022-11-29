@@ -1,4 +1,14 @@
 <?php
+/**
+ * This file is part of workbunny.
+ *
+ * Redistributions of files must retain the above copyright notice.
+ *
+ * @author    chaz6chez<chaz6chez1993@outlook.com>
+ * @copyright chaz6chez<chaz6chez1993@outlook.com>
+ * @link      https://github.com/workbunny/webman-push-server
+ * @license   https://github.com/workbunny/webman-push-server/blob/main/LICENSE
+ */
 declare(strict_types=1);
 
 use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_CHANNEL_OCCUPIED;
@@ -10,7 +20,7 @@ use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_SERVER_EVENT;
 
 return [
     'enable'      => true,
-    'debug'       => true,
+    'debug'       => false, // 仅用于测试用例使用，请勿修改
     'push-server' => [
         'redis_channel' => 'default',
         'ws_host'       => 'websocket://0.0.0.0:3131',

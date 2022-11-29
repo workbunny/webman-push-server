@@ -1,4 +1,14 @@
 <?php
+/**
+ * This file is part of workbunny.
+ *
+ * Redistributions of files must retain the above copyright notice.
+ *
+ * @author    chaz6chez<chaz6chez1993@outlook.com>
+ * @copyright chaz6chez<chaz6chez1993@outlook.com>
+ * @link      https://github.com/workbunny/webman-push-server
+ * @license   https://github.com/workbunny/webman-push-server/blob/main/LICENSE
+ */
 declare(strict_types=1);
 
 use Pusher\Pusher;
@@ -10,13 +20,22 @@ use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRESENCE;
 use function Workbunny\WebmanPushServer\response;
 
 /**
+ * 欢迎界面
+ */
+ApiRoute::get('/index', function () {
+    return response(200, 'Hello Workbunny!');
+});
+
+/**
  * 推送js客户端文件
  */
 ApiRoute::get('/plugin/workbunny/webman-push-server/push.js', function () {
     return response(200, '')->file(base_path().'/vendor/workbunny/webman-push-server/push.js');
 });
 
-
+/**
+ * API路由
+ */
 ApiRoute::addGroup('/apps/{appId}', function () {
 
     /**
