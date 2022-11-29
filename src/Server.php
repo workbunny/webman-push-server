@@ -14,6 +14,11 @@ use Workerman\Worker;
 class Server implements ServerInterface
 {
     /**
+     * @var null|mixed
+     */
+    protected $_buffer = null;
+
+    /**
      * @var TcpConnection[] = [
      *      'appKey_1' => [
      *          'channel_1' => [
@@ -61,6 +66,30 @@ class Server implements ServerInterface
     protected int $_keepaliveTimeout = 60;
 
     /**
+     * @param mixed|null $buffer
+     */
+    public function setBuffer($buffer): void
+    {
+        $this->_buffer = $buffer;
+    }
+
+    /**
+     * @return mixed|null
+     */
+    public function getBuffer()
+    {
+        return $this->_buffer;
+    }
+
+    /**
+     * @return bool
+     */
+    public static function isDebug(): bool
+    {
+        return config('plugin.workbunny.webman-push-server.app.debug', false);
+    }
+
+    /**
      * @return Server|null
      */
     public static function getServer(): ?Server
@@ -84,125 +113,11 @@ class Server implements ServerInterface
     }
 
     /**
-     * @see Worker::$onWorkerStart
-     * @param Worker $worker
+     * @param $data
+     * @param TcpConnection|null $connection
      * @return void
      */
-    public function onWorkerStart(Worker $worker): void
-    {
-        self::$_server = $this;
-        // 心跳检查
-        $this->_heartbeatTimer = Timer::add($this->_keepaliveTimeout / 2, function (){
-            foreach ($this->_connections as $connection) {
-                if (($count = $this->_getConnectionProperty($connection, 'clientNotSendPingCount')) > 1) {
-                    $connection->destroy();
-                }
-                $this->_setConnectionProperty($connection, 'clientNotSendPingCount', $count + 1);
-            }
-        });
-    }
-
-    /**
-     * @see Worker::$onWorkerStop
-     * @param Worker $worker
-     * @return void
-     */
-    public function onWorkerStop(Worker $worker): void{
-        if($this->_heartbeatTimer !== null){
-            Timer::del($this->_heartbeatTimer);
-            $this->_heartbeatTimer = null;
-        }
-        try {
-            self::getStorage()->close();
-            self::$_storage = null;
-        }catch (RedisException $exception){}
-    }
-
-    /**
-     * @see Worker::$onConnect
-     * @param TcpConnection $connection
-     * @return void
-     */
-    public function onConnect(TcpConnection $connection): void
-    {
-        // 设置websocket握手事件回调
-        $this->_setConnectionProperty($connection, 'onWebSocketConnect', function(TcpConnection $connection, string $header) {
-            // 客户端有多少次没在规定时间发送心跳
-            $this->_setConnectionProperty($connection, 'clientNotSendPingCount', 0);
-
-            // /app/1234567890abcdefghig?protocol=7&client=js&version=3.2.4&flash=false
-            if (!preg_match('/ \/app\/([^\/^\?^ ]+)/', $header, $match)) {
-                $this->error($connection, null, 'Invalid app');
-                $connection->pauseRecv();
-                return;
-            }
-
-            if(!self::getConfig('app_query')($appKey = $match[1])){
-                $this->error($connection, null, "Invalid app_key");
-                $connection->pauseRecv();
-                return;
-            }
-
-            $this->_setConnectionProperty($connection, 'clientNotSendPingCount', 0);
-            $this->_setConnectionProperty($connection, 'appKey', $appKey);
-            $this->_setConnectionProperty($connection, 'socketId', $socketId = $this->_createSocketId());
-            $this->_setConnectionProperty($connection, 'channels', ['' => '']);
-            $this->_setConnection($connection, $appKey, '');
-
-            /**
-             * 向客户端发送链接成功的消息
-             * {"event":"pusher:connection_established","data":"{\"socket_id\":\"208836.27464492\",\"activity_timeout\":120}"}
-             */
-            $this->send($connection, null, null, [
-                'event' => EVENT_CONNECTION_ESTABLISHED,
-                'data'  => json_encode([
-                    'socket_id'        => $socketId,
-                    'activity_timeout' => 55
-                ])
-            ]);
-        });
-    }
-
-    /**
-     * @see Worker::$onClose
-     * @param TcpConnection $connection
-     * @return void
-     */
-    public function onClose(TcpConnection $connection): void
-    {
-        if(!$socketId = $this->_getConnectionProperty($connection, 'socketId')){
-            return;
-        }
-        unset($this->_connections[$appKey = $this->_getConnectionProperty($connection, 'appKey')][''][$socketId]);
-        if($channels = $this->_getConnectionProperty($connection, 'channels', [])){
-            foreach ($channels as $channel => $value) {
-                if ('' === $channel) {
-                    continue;
-                }
-                switch ($value){
-                    case CHANNEL_TYPE_PRIVATE:
-                    case CHANNEL_TYPE_PUBLIC:
-                        $userId = null;
-                        $type = $value;
-                        break;
-                    default:
-                        $userId = $value;
-                        $type = CHANNEL_TYPE_PRESENCE;
-                        break;
-                }
-                Unsubscribe::unsubscribeChannel($this, $connection, $channel, $type, $userId);
-                unset($this->_connections[$appKey][$channel][$socketId]);
-            }
-        }
-    }
-
-    /**
-     * @see Worker::$onMessage
-     * @param TcpConnection $connection
-     * @param mixed $data
-     * @return void
-     */
-    public function onMessage(TcpConnection $connection, $data): void
+    public function execute($data, ?TcpConnection $connection = null): void
     {
         if(is_string($data)){
             $this->_setConnectionProperty($connection, 'clientNotSendPingCount', 0);
@@ -251,13 +166,18 @@ class Server implements ServerInterface
      */
     public function error(TcpConnection $connection, ?string $code, ?string $message = null, array $extra = []): void
     {
-        $connection->send(json_encode([
+        $response = json_encode([
             'event' => EVENT_ERROR,
             'data'  => array_merge([
                 'code'    => $code,
                 'message' => $message
             ], $extra)
-        ], JSON_UNESCAPED_UNICODE));
+        ], JSON_UNESCAPED_UNICODE);
+        if(self::isDebug()){
+            $this->_buffer = $response;
+            return;
+        }
+        $connection->send($response);
     }
 
     /**
@@ -278,6 +198,10 @@ class Server implements ServerInterface
         }
         if($data){
             $response['data'] = $data;
+        }
+        if(self::isDebug()){
+            $this->_buffer = $response;
+            return;
         }
         $connection->send($response ? json_encode($response, JSON_UNESCAPED_UNICODE) : '{}');
         if(AbstractEvent::pre($event) === AbstractEvent::SERVER_EVENT) {
@@ -449,6 +373,109 @@ class Server implements ServerInterface
     {
         $userIdKey = explode(':', $userStorageKey, 5)[4];
         return explode('_', $userIdKey, 2)[1];
+    }
+
+    /** @inheritDoc */
+    public function onWorkerStart(Worker $worker): void
+    {
+        self::$_server = $this;
+        // 心跳检查
+        $this->_heartbeatTimer = Timer::add($this->_keepaliveTimeout / 2, function (){
+            foreach ($this->_connections as $connection) {
+                if (($count = $this->_getConnectionProperty($connection, 'clientNotSendPingCount')) > 1) {
+                    $connection->destroy();
+                }
+                $this->_setConnectionProperty($connection, 'clientNotSendPingCount', $count + 1);
+            }
+        });
+    }
+
+    /** @inheritDoc */
+    public function onWorkerStop(Worker $worker): void{
+        if($this->_heartbeatTimer !== null){
+            Timer::del($this->_heartbeatTimer);
+            $this->_heartbeatTimer = null;
+        }
+        try {
+            self::getStorage()->close();
+            self::$_storage = null;
+        }catch (RedisException $exception){}
+    }
+
+    /** @inheritDoc */
+    public function onConnect(TcpConnection $connection): void
+    {
+        // 设置websocket握手事件回调
+        $this->_setConnectionProperty($connection, 'onWebSocketConnect', function(TcpConnection $connection, string $header) {
+            // 客户端有多少次没在规定时间发送心跳
+            $this->_setConnectionProperty($connection, 'clientNotSendPingCount', 0);
+
+            // /app/1234567890abcdefghig?protocol=7&client=js&version=3.2.4&flash=false
+            if (!preg_match('/ \/app\/([^\/^\?^ ]+)/', $header, $match)) {
+                $this->error($connection, null, 'Invalid app');
+                $connection->pauseRecv();
+                return;
+            }
+
+            if(!self::getConfig('app_query')($appKey = $match[1])){
+                $this->error($connection, null, "Invalid app_key");
+                $connection->pauseRecv();
+                return;
+            }
+
+            $this->_setConnectionProperty($connection, 'clientNotSendPingCount', 0);
+            $this->_setConnectionProperty($connection, 'appKey', $appKey);
+            $this->_setConnectionProperty($connection, 'socketId', $socketId = $this->_createSocketId());
+            $this->_setConnectionProperty($connection, 'channels', ['' => '']);
+            $this->_setConnection($connection, $appKey, '');
+
+            /**
+             * 向客户端发送链接成功的消息
+             * {"event":"pusher:connection_established","data":"{\"socket_id\":\"208836.27464492\",\"activity_timeout\":120}"}
+             */
+            $this->send($connection, null, null, [
+                'event' => EVENT_CONNECTION_ESTABLISHED,
+                'data'  => json_encode([
+                    'socket_id'        => $socketId,
+                    'activity_timeout' => 55
+                ])
+            ]);
+        });
+    }
+
+    /** @inheritDoc */
+    public function onMessage(TcpConnection $connection, $data): void
+    {
+        $this->execute($data, $connection);
+    }
+
+    /** @inheritDoc */
+    public function onClose(TcpConnection $connection): void
+    {
+        if(!$socketId = $this->_getConnectionProperty($connection, 'socketId')){
+            return;
+        }
+        unset($this->_connections[$appKey = $this->_getConnectionProperty($connection, 'appKey')][''][$socketId]);
+        if($channels = $this->_getConnectionProperty($connection, 'channels', [])){
+            foreach ($channels as $channel => $value) {
+                if ('' === $channel) {
+                    continue;
+                }
+                switch ($value){
+                    case CHANNEL_TYPE_PRIVATE:
+                    case CHANNEL_TYPE_PUBLIC:
+                        $userId = null;
+                        $type = $value;
+                        break;
+                    default:
+                        $userId = $value;
+                        $type = CHANNEL_TYPE_PRESENCE;
+                        break;
+                }
+                Unsubscribe::unsubscribeChannel($this, $connection, $channel, $type, $userId);
+                unset($this->_connections[$appKey][$channel][$socketId]);
+            }
+        }
     }
 }
 

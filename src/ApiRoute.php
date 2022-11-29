@@ -88,9 +88,9 @@ class ApiRoute implements Bootstrap
      */
     public static function initRoutes(): void
     {
-//        if(\is_file($file = __DIR__ . '/config/plugin/workbunny/webman-push-server/route.php')){
-//            require_once $file;
-//        }
+        if(Server::isDebug() and \is_file($file = __DIR__ . '/config/plugin/workbunny/webman-push-server/route.php')){
+            require_once $file;
+        }
         if(\is_file($file = \config_path() . '/plugin/workbunny/webman-push-server/route.php')){
             require_once $file;
         }

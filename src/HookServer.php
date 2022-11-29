@@ -14,6 +14,11 @@ use Workerman\Worker;
 
 class HookServer implements ServerInterface
 {
+    /**
+     * @var null|mixed
+     */
+    protected $_buffer = null;
+
     /** @var \Redis|null  */
     protected static ?\Redis $_storage = null;
 
@@ -28,6 +33,22 @@ class HookServer implements ServerInterface
 
     /** @var int|null 消费定时器 */
     protected ?int $_consumerTimer = null;
+
+    /**
+     * @param mixed|null $buffer
+     */
+    public function setBuffer($buffer): void
+    {
+        $this->_buffer = $buffer;
+    }
+
+    /**
+     * @return mixed|null
+     */
+    public function getBuffer()
+    {
+        return $this->_buffer;
+    }
 
     /** @inheritDoc */
     public static function getConfig(string $key, $default = null)
