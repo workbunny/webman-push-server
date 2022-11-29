@@ -403,7 +403,7 @@ class Server implements ServerInterface
             }
         });
         // init service
-        foreach (self::getConfig('service', []) as $service){
+        foreach (self::getConfig('services', []) as $service){
             $handler = $service['handler'] ?? null;
             $listen  = $service['listen'] ?? '';
             $context = $service['context'] ?? [];
@@ -421,8 +421,11 @@ class Server implements ServerInterface
                     }
                 }
                 $service->reusePort = true;
-                $service->name = 'workbunny/webman-push-server:api-service';
-                $service->listen();
+                $service->name = 'workbunny/webman-push-server/api-service';
+                if($listen) {
+                    echo "{$service->name} listen: $listen" . PHP_EOL;
+                    $service->listen();
+                }
             }
         }
     }

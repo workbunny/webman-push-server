@@ -11,6 +11,7 @@
  */
 declare(strict_types=1);
 
+use Workbunny\WebmanPushServer\ApiService;
 use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_CHANNEL_OCCUPIED;
 use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_CHANNEL_VACATED;
 use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_CLIENT_EVENT;
@@ -21,12 +22,26 @@ use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_SERVER_EVENT;
 return [
     'enable'      => true,
     'debug'       => false, // 仅用于测试用例使用，请勿修改
+    'apps'        => [
+        'APP_KEY_TO_REPLACE' => [
+            'app_id'     => 'APP_ID_TO_REPLACE',
+            'app_key'    => 'APP_KEY_TO_REPLACE',
+            'app_secret' => 'APP_SECRET_TO_REPLACE',
+        ]
+    ],
+    // 推送服务配置
     'push-server' => [
         'redis_channel' => 'default',
-        'ws_host'       => 'websocket://0.0.0.0:3131',
-        'api_host'      => 'http://0.0.0.0:3232',
-        'apps_query'   => function (?string $appKey, ?string $appId = null): array {
-            $apps = config('plugin.workbunny.webman-push-server.app.push-server.apps', []);
+        'ws_host'       => 'websocket://0.0.0.0:8001',
+        'services'      => [
+            ApiService::class => [
+                'handler'     => ApiService::class,
+                'listen'      => 'http://0.0.0.0:8002',
+            ]
+        ],
+        'apps_query'    => function (?string $appKey, ?string $appId = null): array
+        {
+            $apps = config('plugin.workbunny.webman-push-server.app.apps', []);
             if($appId !== null){
                 foreach ($apps as $app){
                     if($app['app_id'] === $appId){
@@ -35,16 +50,10 @@ return [
                 }
                 return [];
             }
-            return config('plugin.workbunny.webman-push-server.push-server.app.apps', [])[$appKey] ?? [];
+            return $apps[$appKey] ?? [];
         },
-        'apps'          => [
-            'APP_KEY_TO_REPLACE' => [
-                'app_id'     => 'APP_ID_TO_REPLACE',
-                'app_key'    => 'APP_KEY_TO_REPLACE',
-                'app_secret' => 'APP_SECRET_TO_REPLACE',
-            ]
-        ],
     ],
+    // hook消费者配置
     'hook-server' => [
         'redis_channel'  => 'default',
         'queue_key'      => 'workbunny:webman-push-server:webhook-stream',
