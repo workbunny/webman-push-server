@@ -19,6 +19,9 @@ use Workerman\Protocols\Http\Request;
 use Workerman\Protocols\Http\Response;
 use Workerman\Worker;
 
+/**
+ * @property
+ */
 class ApiService implements ServerInterface
 {
     /**

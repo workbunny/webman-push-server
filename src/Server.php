@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Workbunny\WebmanPushServer;
 
+use Exception;
 use RedisException;
 use support\Redis;
 use Workbunny\WebmanPushServer\Events\AbstractEvent;
@@ -385,7 +386,10 @@ class Server implements ServerInterface
         return explode('_', $userIdKey, 2)[1];
     }
 
-    /** @inheritDoc */
+    /**
+     * @inheritDoc
+     * @throws Exception
+     */
     public function onWorkerStart(Worker $worker): void
     {
         self::$_server = $this;
@@ -398,6 +402,29 @@ class Server implements ServerInterface
                 $this->_setConnectionProperty($connection, 'clientNotSendPingCount', $count + 1);
             }
         });
+        // init service
+        foreach (self::getConfig('service', []) as $service){
+            $handler = $service['handler'] ?? null;
+            $listen  = $service['listen'] ?? '';
+            $context = $service['context'] ?? [];
+            if($handler instanceof ServerInterface){
+                $service = new Worker($listen, $context);
+                foreach ([
+                             'onConnect',
+                             'onMessage',
+                             'onClose',
+                             'onWorkerStart',
+                             'onWorkerStop'
+                         ] as $property) {
+                    if(method_exists($handler, $property)){
+                        $service->$property = [$handler, $property];
+                    }
+                }
+                $service->reusePort = true;
+                $service->name = 'workbunny/webman-push-server:api-service';
+                $service->listen();
+            }
+        }
     }
 
     /** @inheritDoc */
