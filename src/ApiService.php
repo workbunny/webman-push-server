@@ -107,11 +107,9 @@ class ApiService implements ServerInterface
      */
     public function send(TcpConnection $connection, Response $response): void
     {
-        $response->withHeaders([
-            'Content-Type' => 'application/json',
-            'Server'       => 'workbunny/webman-push-server',
-            'Version'      => Server::$version
-        ]);
+        $response->withHeader('Content-Type', 'application/json');
+        $response->withHeader('Server', 'workbunny/webman-push-server');
+        $response->withHeader('Version', Server::$version);
         if(Server::isDebug()){
             $this->setBuffer($response);
             return;
