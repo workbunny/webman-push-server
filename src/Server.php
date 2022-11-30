@@ -26,6 +26,11 @@ use Workerman\Worker;
 class Server implements ServerInterface
 {
     /**
+     * @var string version
+     */
+    public static string $version = '0.0.1';
+
+    /**
      * @var null|mixed
      */
     protected $_buffer = null;

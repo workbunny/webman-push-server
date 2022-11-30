@@ -72,14 +72,14 @@ class ApiService implements ServerInterface
     public function execute($request, ?TcpConnection $connection = null): void
     {
         if(!$request instanceof Request){
-            $this->send($connection, new Response(400, [], 'Bad Request. '));
+            $this->send($connection, \Workbunny\WebmanPushServer\response(400, 'Bad Request. '));
             return;
         }
         $res = ApiRoute::getDispatcher()->dispatch($request->method(), $request->path());
         $handler = $res[1] ?? null;
         $params = $res[2] ?? [];
         if(!$handler instanceof Closure) {
-            $this->send($connection, new Response(404, [], 'Not Found'));
+            $this->send($connection, \Workbunny\WebmanPushServer\response(404, 'Not Found'));
             return;
         }
         $response = call_user_func(array_reduce(
@@ -94,7 +94,7 @@ class ApiService implements ServerInterface
             }
         ), Server::getServer(), $request, $params);
         if(!$response instanceof Response){
-            $this->send($connection, new Response(500, [], 'Server Error'));
+            $this->send($connection, \Workbunny\WebmanPushServer\response(500, 'Server Error'));
             return;
         }
         $this->send($connection, $response);
@@ -107,6 +107,11 @@ class ApiService implements ServerInterface
      */
     public function send(TcpConnection $connection, Response $response): void
     {
+        $response->withHeaders([
+            'Content-Type' => 'application/json',
+            'Server'       => 'workbunny/webman-push-server',
+            'Version'      => Server::$version
+        ]);
         if(Server::isDebug()){
             $this->setBuffer($response);
             return;
