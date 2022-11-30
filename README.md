@@ -154,7 +154,7 @@ user_channel.trigger('client-message', {form_uid:2, content:"hello"});
   - 配置位于config/plugin/workbunny/webman-push-server/app.php
   - api-service子服务
     - api子服务，用于提供http-api接口服务
-    - 路由配置位于config/plugin/workbunny/webman-push-server/apis.php
+    - 路由配置位于config/plugin/workbunny/webman-push-server/route.php
 - hook-server
   - hook多进程消费服务，用于消费事件钩子，进行webhook通知
   - 配置位于config/plugin/workbunny/webman-push-server/app.php
