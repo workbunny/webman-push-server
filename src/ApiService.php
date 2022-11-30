@@ -42,6 +42,9 @@ class ApiService implements ServerInterface
         return $this->_buffer;
     }
 
+    /**
+     * 初始化
+     */
     public function __construct()
     {
         ApiRoute::initRoutes();
@@ -61,6 +64,7 @@ class ApiService implements ServerInterface
     }
 
     /**
+     * TODO 单元测试
      * @param mixed $request
      * @param TcpConnection|null $connection
      * @return void
@@ -78,18 +82,22 @@ class ApiService implements ServerInterface
             $this->send($connection, new Response(404, [], 'Not Found'));
             return;
         }
-        $result = call_user_func(array_reduce(
+        $response = call_user_func(array_reduce(
             array_reverse(ApiRoute::getMiddlewares(ApiRoute::getMiddlewareTag($handler), $request->method())),
-            function (Closure $next, Closure $handler) use ($request, $params) {
-                return $handler($next, Server::getServer(), $request, $params);
+            function (Closure $carry, Closure $pipe) {
+                return function (...$arguments) use ($carry, $pipe) {
+                    return $pipe($carry, ...$arguments);
+                };
             },
-            $handler
-        ));
-        if(!$result instanceof Response){
+            function (...$arguments) use ($handler) {
+                return $handler(...$arguments);
+            }
+        ), Server::getServer(), $request, $params);
+        if(!$response instanceof Response){
             $this->send($connection, new Response(500, [], 'Server Error'));
             return;
         }
-        $this->send($connection, $result);
+        $this->send($connection, $response);
     }
 
     /**

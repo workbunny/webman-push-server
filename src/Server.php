@@ -166,6 +166,7 @@ class Server implements ServerInterface
     }
 
     /**
+     * TODO 单元测试
      * @param $data
      * @param TcpConnection|null $connection
      * @return void
