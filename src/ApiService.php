@@ -42,6 +42,12 @@ class ApiService implements ServerInterface
         return $this->_buffer;
     }
 
+    public function __construct()
+    {
+        ApiRoute::initRoutes();
+        ApiRoute::initDispatcher();
+    }
+
     /** @inheritDoc */
     public static function getConfig(string $key, $default = null)
     {
@@ -101,11 +107,7 @@ class ApiService implements ServerInterface
     }
 
     /** @inheritDoc */
-    public function onWorkerStart(Worker $worker): void
-    {
-        ApiRoute::initRoutes();
-        ApiRoute::initDispatcher();
-    }
+    public function onWorkerStart(Worker $worker): void{}
 
     /** @inheritDoc */
     public function onWorkerStop(Worker $worker): void{}
