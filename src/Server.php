@@ -15,6 +15,7 @@ namespace Workbunny\WebmanPushServer;
 
 use Exception;
 use RedisException;
+use support\Container;
 use support\Redis;
 use Workbunny\WebmanPushServer\Events\AbstractEvent;
 use Workbunny\WebmanPushServer\Events\Unsubscribe;
@@ -75,6 +76,47 @@ class Server implements ServerInterface
 
     /** @var int 心跳 */
     protected int $_keepaliveTimeout = 60;
+
+    /**
+     * @param array $services = [
+     *      class_name => [
+     *          'handler'     => class_name,
+     *          'listen'      => host
+     *          'context'     => [],
+     *          'constructor' => []
+     *      ]
+     * ]
+     * @throws Exception
+     */
+    public function __construct(array $services)
+    {
+        // init service
+        foreach ($services as $service){
+            $handler = Container::make($service['handler'], $services['constructor'] ?? []);
+            $listen  = $service['listen'] ?? '';
+            $context = $service['context'] ?? [];
+            if($handler instanceof ServerInterface){
+                $service = new Worker($listen, $context);
+                foreach ([
+                             'onConnect',
+                             'onMessage',
+                             'onClose',
+                             'onWorkerStart',
+                             'onWorkerStop'
+                         ] as $property) {
+                    if(method_exists($handler, $property)){
+                        $service->$property = [$handler, $property];
+                    }
+                }
+                $service->reusePort = true;
+                $service->name = 'workbunny/webman-push-server/api-service';
+                if($listen) {
+                    echo "{$service->name} listen: $listen" . PHP_EOL;
+                    $service->listen();
+                }
+            }
+        }
+    }
 
     /**
      * @param mixed|null $buffer
@@ -402,32 +444,6 @@ class Server implements ServerInterface
                 $this->_setConnectionProperty($connection, 'clientNotSendPingCount', $count + 1);
             }
         });
-        // init service
-        foreach (self::getConfig('services', []) as $service){
-            $handler = $service['handler'] ?? null;
-            $listen  = $service['listen'] ?? '';
-            $context = $service['context'] ?? [];
-            if($handler instanceof ServerInterface){
-                $service = new Worker($listen, $context);
-                foreach ([
-                             'onConnect',
-                             'onMessage',
-                             'onClose',
-                             'onWorkerStart',
-                             'onWorkerStop'
-                         ] as $property) {
-                    if(method_exists($handler, $property)){
-                        $service->$property = [$handler, $property];
-                    }
-                }
-                $service->reusePort = true;
-                $service->name = 'workbunny/webman-push-server/api-service';
-                if($listen) {
-                    echo "{$service->name} listen: $listen" . PHP_EOL;
-                    $service->listen();
-                }
-            }
-        }
     }
 
     /** @inheritDoc */

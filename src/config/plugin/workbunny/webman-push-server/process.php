@@ -18,17 +18,27 @@ use Workbunny\WebmanPushServer\Server;
 return [
     // 推送服务器
     'push-server' => [
-        'handler'    => Server::class,
-        'listen'     => config('plugin.workbunny.webman-push-server.app.push-server.ws_host'),
-        'count'      => cpu_count() * 2,
-        'reloadable' => false, // 执行reload不重启
-        'reusePort'  => true,
+        'handler'     => Server::class,
+        'listen'      => 'websocket://0.0.0.0:8001',
+        'count'       => cpu_count(),
+        'reloadable'  => false, // 执行reload不重启
+        'reusePort'   => true,
+        'constructor' => [
+            'services'    => [
+                ApiService::class => [
+                    'handler'     => ApiService::class,
+                    'listen'      => 'http://0.0.0.0:8002',
+                    'context'     => [],
+                    'constructor' => []
+                ]
+            ]
+        ],
     ],
     // hook钩子消费者
     'hook-server' => [
         'handler'     => HookServer::class,
         'listen'      => null,
-        'count'       => cpu_count() * 2,
+        'count'       => cpu_count(),
         'reloadable'  => false, // 执行reload不重启
         'reusePort'   => true
     ]

@@ -38,7 +38,7 @@ class Subscribe extends AbstractEvent
         $auth = ($appKey = $pushServer->_getConnectionProperty($connection, 'appKey')) . ':' . hash_hmac(
                 'sha256',
                 $pushServer->_getConnectionProperty($connection, 'socketId') . ':' . $channel . ':' . $request['data']['channel_data'],
-                $pushServer->getConfig('app_query')($appKey)['app_secret'],
+                Server::getConfig('app_query')($appKey)['app_secret'],
                 false
             );
         // private- 和 presence- 开头的channel需要验证

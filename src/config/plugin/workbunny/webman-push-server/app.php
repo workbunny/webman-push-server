@@ -32,13 +32,6 @@ return [
     // 推送服务配置
     'push-server' => [
         'redis_channel' => 'default',
-        'ws_host'       => 'websocket://0.0.0.0:8001',
-        'services'      => [
-            ApiService::class => [
-                'handler'     => ApiService::class,
-                'listen'      => 'http://0.0.0.0:8002',
-            ]
-        ],
         'apps_query'    => function (?string $appKey, ?string $appId = null): array
         {
             $apps = config('plugin.workbunny.webman-push-server.app.apps', []);
