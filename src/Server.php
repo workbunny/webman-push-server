@@ -189,7 +189,6 @@ class Server implements ServerInterface
                 continue;
             }
             $this->_setConnectionProperty($connection, 'clientNotSendPingCount', 0);
-            // {"event":"my-event","data":"{\"message\":\"hello world\"}","channel":"my-channel"}
             $this->send($connection, $channel, $event, $data);
         }
     }
@@ -234,7 +233,7 @@ class Server implements ServerInterface
         if($event){
             if(AbstractEvent::pre($event) === AbstractEvent::SERVER_EVENT or AbstractEvent::pre($event) === AbstractEvent::CLIENT_EVENT) {
                 try {
-                    HookServer::publish( AbstractEvent::SERVER_EVENT, array_merge($response, [
+                    HookServer::publish( PUSH_SERVER_EVENT_SERVER_EVENT, array_merge($response, [
                         'id' => uuid(),
                     ]));
                 }catch (RedisException $exception){

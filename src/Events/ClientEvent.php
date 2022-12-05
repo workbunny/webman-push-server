@@ -37,10 +37,13 @@ class ClientEvent extends AbstractEvent
             $pushServer->error($connection, null, 'Bad channel');
             return;
         }
+        if(!$data = $request['data'] ?? []){
+            $pushServer->error($connection, null, 'Bad data');
+            return;
+        }
         // 客户端触发事件必须是private 或者 presence的channel
         $channelType = $pushServer->_getChannelType($channel);
         if ($channelType !== CHANNEL_TYPE_PRIVATE and $channelType !== CHANNEL_TYPE_PRESENCE) {
-            // {"event":"pusher:error","data":{"code":null,"message":"Client event rejected - only supported on private and presence channels"}}
             $pushServer->error($connection, null, 'Client event rejected - only supported on private and presence channels');
             return;
         }
@@ -56,13 +59,12 @@ class ClientEvent extends AbstractEvent
         }
 
         // @todo 检查是否设置了可前端发布事件
-        // {"event":"pusher:error","data":{"code":null,"message":"To send client events, you must enable this feature in the Settings page of your dashboard."}}
         // 全局发布事件
         $pushServer->publishToClients(
             $appKey = $pushServer->_getConnectionProperty($connection, 'appKey'),
             $channel,
             $this->getEvent(),
-            json_encode($request['data'], JSON_UNESCAPED_UNICODE),
+            $data,
             $pushServer->_getConnectionProperty($connection,'socketId')
         );
         try {

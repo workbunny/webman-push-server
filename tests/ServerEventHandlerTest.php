@@ -135,9 +135,9 @@ class ServerEventHandlerTest extends BaseTest
         $this->getServer()->onMessage($mockConnection, json_encode([
             'event' => 'pusher:client-test',
             'channel' => 'public-abc',
-//            'data' => [
-//                'channel' => 'public-abc'
-//            ]
+            'data' => [
+                'message' => 'hello world!'
+            ]
         ], JSON_UNESCAPED_UNICODE));
 
         $this->assertEquals(true, isset($mockConnection->clientNotSendPingCount));

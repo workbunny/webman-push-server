@@ -18,12 +18,13 @@ use Workerman\Connection\TcpConnection;
 use const Workbunny\WebmanPushServer\EVENT_PING;
 use const Workbunny\WebmanPushServer\EVENT_SUBSCRIBE;
 use const Workbunny\WebmanPushServer\EVENT_UNSUBSCRIBE;
-
+use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_CLIENT_EVENT;
+use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_SERVER_EVENT;
 
 abstract class AbstractEvent
 {
-    const CLIENT_EVENT = 'client_event';
-    const SERVER_EVENT = 'server_event';
+    const CLIENT_EVENT = PUSH_SERVER_EVENT_CLIENT_EVENT;
+    const SERVER_EVENT = PUSH_SERVER_EVENT_SERVER_EVENT;
 
     /** @var string  */
     protected string $_event;
@@ -36,7 +37,6 @@ abstract class AbstractEvent
         EVENT_SUBSCRIBE     => Subscribe::class,
         EVENT_UNSUBSCRIBE   => Unsubscribe::class,
         self::CLIENT_EVENT  => ClientEvent::class,
-//        self::SERVER_EVENT  => ServerEvent::class
     ];
 
     /**

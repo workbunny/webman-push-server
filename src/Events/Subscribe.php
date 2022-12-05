@@ -119,12 +119,12 @@ class Subscribe extends AbstractEvent
                     'user_info' => $userInfo,
                     'socket_id' => $socketId
                 ]);
-                // {"event":"pusher_internal:member_added","data":"{\"user_id\":1488465780,\"user_info\":{\"name\":\"123\",\"sex\":\"1\"}}","channel":"presence-channel"}
-                $pushServer->publishToClients($appKey, $channel, EVENT_MEMBER_ADDED, json_encode([
+                // {"event":"pusher_internal:member_added","data":"{"user_id":1488465780,"user_info":{"name":"123","sex":"1"}}","channel":"presence-channel"}
+                $pushServer->publishToClients($appKey, $channel, EVENT_MEMBER_ADDED, [
                     'id'        => uuid(),
                     'user_id'   => $userId,
                     'user_info' => $userInfoArray = json_decode($userInfo, true)
-                ], JSON_UNESCAPED_UNICODE), $socketId);
+                ], $socketId);
                 // PUSH_SERVER_EVENT_MEMBER_ADDED 成员添加事件
                 HookServer::publish(PUSH_SERVER_EVENT_MEMBER_ADDED, [
                     'id'        => uuid(),

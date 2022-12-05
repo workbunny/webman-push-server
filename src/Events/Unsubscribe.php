@@ -33,7 +33,7 @@ class Unsubscribe extends AbstractEvent
      */
     public function response(Server $pushServer, TcpConnection $connection, array $request): void
     {
-        $channel = $request['data']['channel'];
+        $channel = $request['data']['channel'] ?? '';
         switch ($channelType = $pushServer->_getChannelType($channel)) {
             case CHANNEL_TYPE_PUBLIC:
             case CHANNEL_TYPE_PRIVATE:
