@@ -15,22 +15,11 @@ namespace Tests;
 
 use Exception;
 use PHPUnit\Framework\TestCase;
-use Tests\MockClass\MockTcpConnection;
 use Workbunny\WebmanPushServer\ApiService;
-use Workbunny\WebmanPushServer\Events\ClientEvent;
-use Workbunny\WebmanPushServer\Events\Ping;
-use Workbunny\WebmanPushServer\Events\ServerEvent;
-use Workbunny\WebmanPushServer\Events\Subscribe;
-use Workbunny\WebmanPushServer\Events\Unsubscribe;
 use Workbunny\WebmanPushServer\Server;
-use const Workbunny\WebmanPushServer\EVENT_MEMBER_REMOVED;
-use const Workbunny\WebmanPushServer\EVENT_PING;
-use const Workbunny\WebmanPushServer\EVENT_PONG;
-use const Workbunny\WebmanPushServer\EVENT_SUBSCRIBE;
-use const Workbunny\WebmanPushServer\EVENT_UNSUBSCRIBE;
 
 
-class BaseTest extends TestCase
+abstract class BaseTest extends TestCase
 {
     protected string $_auth_key = 'workbunny';
 
