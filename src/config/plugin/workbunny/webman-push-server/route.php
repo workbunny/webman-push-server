@@ -62,8 +62,8 @@ ApiRoute::addGroup('/apps/{appId}', function () {
                 $channelType = $server->_getChannelType($channel);
                 if($prefix !== null and $channelType !== $prefix){
                     continue;
+                    
                 }
-                ;
                 $channels[$channel] = Server::getStorage()->hMGet($key, $fields) ?? [];
             }
             return response(200, ['channels' => $channels]);
