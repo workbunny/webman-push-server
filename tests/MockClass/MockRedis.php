@@ -43,4 +43,20 @@ class MockRedis extends \Redis
         }
     }
 
+    public function hSet($key, $hashKey, $value)
+    {
+        $this->_storage[$key][$hashKey] = $value;
+    }
+
+    public function del($key1, ...$otherKeys)
+    {
+        if($this->exists($key1)){
+            unset($this->_storage[$key1]);
+        }
+        foreach ($otherKeys as $key){
+            if($this->exists($key)){
+                unset($this->_storage[$key]);
+            }
+        }
+    }
 }
