@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Workbunny\WebmanPushServer\Events;
 
+use InvalidArgumentException;
 use Workbunny\WebmanPushServer\Server;
 use Workerman\Connection\TcpConnection;
 use const Workbunny\WebmanPushServer\EVENT_PING;
@@ -80,10 +81,10 @@ abstract class AbstractEvent
     final public static function register(string $event, string $eventClass): void
     {
         if(self::exists($event)){
-            throw new \InvalidArgumentException("Event $event already exists. ");
+            throw new InvalidArgumentException("Event $event already exists. ");
         }
         if(!(new $eventClass) instanceof AbstractEvent){
-            throw new \InvalidArgumentException("Invalid event class $eventClass. ");
+            throw new InvalidArgumentException("Invalid event class $eventClass. ");
         }
         self::$_events[$event] = $eventClass;
     }
