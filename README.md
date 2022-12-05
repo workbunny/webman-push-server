@@ -8,9 +8,16 @@
 
 ## 简介
 
-- **本项目 fork from [webman/push](https://www.workerman.net/plugin/2)，是webman/push的多进程持久化存储版本的push-server；**
-- **可以把该项目理解为 1：1 复刻的 pusher-channel服务，它既是一个插件，也是一个完整项目；**
-- workbunny/webman-push-server 是一个推送插件，客户端基于订阅模式，兼容 pusher，拥有众多客户端如JS、安卓(java)、IOS(swift)、IOS(Obj-C)、uniapp。后端推送SDK支持PHP、Node、Ruby、Asp、Java、Python、Go等。客户端自带心跳和断线自动重连，使用起来非常简单稳定。适用于消息推送、聊天等诸多即时通讯场景。
+- **目前版本为alpha版**，未发布正式，请勿用于生产环境，如遇问题，欢迎 **[issue](https://github.com/workbunny/webman-push-server/issues) & PR**；
+- **本项目 fork from [webman/push](https://www.workerman.net/plugin/2)**，是webman/push的**多进程持久化存储版本的push-server**；
+- **一比一复刻 pusher-channel，是完整的推送服务器实现；**
+- 本插件可用于实现消息推送、单聊、群聊、直播间、站内推送等多种即时通讯场景；
+- 本插件兼容 pusher-channel 的客户端，包含JS、安卓(java)、IOS(swift)、IOS(Obj-C)、uniapp等；后端推送SDK支持PHP、Node、Ruby、Asp、Java、Python、Go等；客户端自带心跳和断线自动重连，使用起来非常简单稳定；
+- 本插件包含
+	- 基于websocket的消息推送服务
+	- 基于http的推送APIs
+	- 基于http-api的后端推送SDK
+	- 基于redis-stream的持久化服务端事件订阅服务
 
 
 ## 依赖
@@ -154,7 +161,7 @@ user_channel.trigger('client-message', {form_uid:2, content:"hello"});
   - 配置位于config/plugin/workbunny/webman-push-server/app.php
   - api-service子服务
     - api子服务，用于提供http-api接口服务
-    - 路由配置位于config/plugin/workbunny/webman-push-server/apis.php
+    - 路由配置位于config/plugin/workbunny/webman-push-server/route.php
 - hook-server
   - hook多进程消费服务，用于消费事件钩子，进行webhook通知
   - 配置位于config/plugin/workbunny/webman-push-server/app.php
