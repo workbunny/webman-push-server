@@ -42,7 +42,7 @@ class Server implements ServerInterface
     public static ?AbstractEvent $eventFactory = null;
 
     /**
-     * @var TcpConnection[] = [
+     * @var TcpConnection[][] = [
      *      'appKey_1' => [
      *          'channel_1' => [
      *              'socketId_1' => TcpConnection_1, @see self::_getConnectionProperty()
@@ -229,12 +229,12 @@ class Server implements ServerInterface
         }
         $connection->send($response ? json_encode($response, JSON_UNESCAPED_UNICODE) : '{}');
 
-        // 回执的client-event也认定为server-event事件
         if($event){
-            if(AbstractEvent::pre($event) === AbstractEvent::SERVER_EVENT or AbstractEvent::pre($event) === AbstractEvent::CLIENT_EVENT) {
+            if(AbstractEvent::pre($event) === AbstractEvent::SERVER_EVENT) {
                 try {
                     HookServer::publish( PUSH_SERVER_EVENT_SERVER_EVENT, array_merge($response, [
-                        'id' => uuid(),
+                        'id'      => uuid(),
+                        'time_ms' => microtime(true)
                     ]));
                 }catch (RedisException $exception){
                     error_log($exception->getMessage() . PHP_EOL);
@@ -423,11 +423,13 @@ class Server implements ServerInterface
         self::$_server = $this;
         // 心跳检查
         $this->_heartbeatTimer = Timer::add($this->_keepaliveTimeout / 2, function (){
-            foreach ($this->_connections as $connection) {
-                if (($count = $this->_getConnectionProperty($connection, 'clientNotSendPingCount')) > 1) {
-                    $connection->destroy();
+            foreach ($this->_connections as $appKeyConnections) {
+                foreach ($appKeyConnections as $connection){
+                    if (($count = $this->_getConnectionProperty($connection, 'clientNotSendPingCount')) > 1) {
+                        $connection->destroy();
+                    }
+                    $this->_setConnectionProperty($connection, 'clientNotSendPingCount', $count + 1);
                 }
-                $this->_setConnectionProperty($connection, 'clientNotSendPingCount', $count + 1);
             }
         });
     }

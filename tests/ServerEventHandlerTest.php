@@ -133,7 +133,7 @@ class ServerEventHandlerTest extends BaseTest
         $onWebSocketConnect($mockConnection, "/app/{$this->_auth_key}?{$this->_query_string}");
         // 手动触发 onMessage 回调
         $this->getServer()->onMessage($mockConnection, json_encode([
-            'event' => 'pusher:client-test',
+            'event' => 'client-test',
             'channel' => 'public-abc',
             'data' => [
                 'message' => 'hello world!'
@@ -173,8 +173,8 @@ class ServerEventHandlerTest extends BaseTest
 
         $this->assertEquals(true, isset($mockConnection->clientNotSendPingCount));
         $this->assertEquals(0, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
-        $this->assertEquals(true, Server::$eventFactory instanceof ClientEvent);
-        $this->assertEquals('{"event":"pusher:error","data":{"code":null,"message":"Bad channel"}}', $mockConnection->getSendBuffer());
+        $this->assertEquals(null, Server::$eventFactory);
+        $this->assertEquals('{"event":"pusher:error","data":{"code":null,"message":"Client event rejected - Unknown event"}}', $mockConnection->getSendBuffer());
 
         // internal Server-event
         $mockConnection = new MockTcpConnection();

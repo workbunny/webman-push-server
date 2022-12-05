@@ -89,12 +89,12 @@ abstract class AbstractEvent
     }
 
     /**
-     * @param string $event
+     * @param string|null $event
      * @return bool
      */
-    final public static function exists(string $event): bool
+    final public static function exists(?string $event): bool
     {
-        return isset(self::$_events[$event]);
+        return isset(self::$_events[$event ?? '']);
     }
 
     /**
@@ -107,10 +107,10 @@ abstract class AbstractEvent
         if (isset(self::$_events[$event])) {
             return $event;
         }
-        if (strpos($event, 'pusher:') === 0) {
+        if (strpos($event, 'client-') === 0) {
             return self::CLIENT_EVENT;
         }
-        if (strpos($event, 'pusher_internal:') === 0) {
+        if (strpos($event, 'pusher:') === 0 or strpos($event, 'pusher_internal:') === 0) {
             return self::SERVER_EVENT;
         }
         return null;
