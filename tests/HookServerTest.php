@@ -20,7 +20,7 @@ use Workerman\Connection\TcpConnection;
 /**
  * TODO
  */
-class ServerTest extends TestCase
+class HookServerTest extends TestCase
 {
     /**
      * @var Server|null

@@ -106,7 +106,7 @@ class Unsubscribe extends AbstractEvent
              * @public-channel:{"event":"pusher_internal:unsubscription_succeeded","data":"{}","channel":"my-channel"}
              * @presence-channel:{"event":"pusher_internal:unsubscription_succeeded","data":"{}","channel":"my-channel"}
              **/
-            $server->send($connection, $channel, EVENT_UNSUBSCRIPTION_SUCCEEDED, '{}');
+            $server->send($connection, $channel, EVENT_UNSUBSCRIPTION_SUCCEEDED, new \stdClass());
 
             if($channelVacated ?? false){
                 // PUSH_SERVER_EVENT_CHANNEL_VACATED 通道移除事件

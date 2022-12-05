@@ -35,6 +35,7 @@ class ClientEvent extends AbstractEvent
     {
         if(!$channel = $request['channel'] ?? null){
             $pushServer->error($connection, null, 'Bad channel');
+            return;
         }
         // 客户端触发事件必须是private 或者 presence的channel
         $channelType = $pushServer->_getChannelType($channel);

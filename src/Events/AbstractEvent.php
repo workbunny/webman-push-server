@@ -67,7 +67,7 @@ abstract class AbstractEvent
     public static function factory(string $event): ?AbstractEvent
     {
         if(self::exists($preEvent = self::pre($event))){
-            return self::$_eventObj[$preEvent] ?? (self::$_eventObj[$preEvent] = new $preEvent($event));
+            return self::$_eventObj[$preEvent] ?? (self::$_eventObj[$preEvent] = new self::$_events[$preEvent]($event));
         }
         return null;
     }
@@ -104,6 +104,9 @@ abstract class AbstractEvent
      */
     public static function pre(string $event): ?string
     {
+        if (isset(self::$_events[$event])) {
+            return $event;
+        }
         if (strpos($event, 'pusher:') === 0) {
             return self::CLIENT_EVENT;
         }

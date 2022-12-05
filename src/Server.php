@@ -26,14 +26,19 @@ use Workerman\Worker;
 class Server implements ServerInterface
 {
     /**
-     * @var string version
+     * @var string $version version
      */
     public static string $version = '0.0.1';
 
     /**
-     * @var null|mixed
+     * @var bool $debug debug mode
      */
-    protected $_buffer = null;
+    public static bool $debug = false;
+
+    /**
+     * @var AbstractEvent|null 仅用于单元测试
+     */
+    public static ?AbstractEvent $eventFactory = null;
 
     /**
      * @var TcpConnection[] = [
@@ -83,6 +88,7 @@ class Server implements ServerInterface
     protected int $_keepaliveTimeout = 60;
 
     /**
+     * @desc debug模式下打印字符串 "{$service->name} listen: $listen" . PHP_EOL"
      * @param array $services = [
      *      class_name => [
      *          'handler'     => class_name,
@@ -97,7 +103,9 @@ class Server implements ServerInterface
     {
         // init service
         foreach ($services as $service){
-            $handler = Container::make($service['handler'], $services['constructor'] ?? []);
+            $handler = self::isDebug() ?
+                new $service['handler']($services['constructor'] ?? []) :
+                Container::make($service['handler'], $services['constructor'] ?? []);
             $listen  = $service['listen'] ?? '';
             $context = $service['context'] ?? [];
             if($handler instanceof ServerInterface){
@@ -117,26 +125,12 @@ class Server implements ServerInterface
                 $service->name = 'workbunny/webman-push-server/api-service';
                 if($listen) {
                     echo "{$service->name} listen: $listen" . PHP_EOL;
-                    $service->listen();
+                    if(!self::isDebug()){
+                        $service->listen();
+                    }
                 }
             }
         }
-    }
-
-    /**
-     * @param mixed|null $buffer
-     */
-    public function setBuffer($buffer): void
-    {
-        $this->_buffer = $buffer;
-    }
-
-    /**
-     * @return mixed|null
-     */
-    public function getBuffer()
-    {
-        return $this->_buffer;
     }
 
     /**
@@ -144,7 +138,7 @@ class Server implements ServerInterface
      */
     public static function isDebug(): bool
     {
-        return config('plugin.workbunny.webman-push-server.app.debug', false);
+        return self::$debug;
     }
 
     /**
@@ -158,7 +152,9 @@ class Server implements ServerInterface
     /** @inheritDoc */
     public static function getConfig(string $key, $default = null)
     {
-        return config('plugin.workbunny.webman-push-server.app.push-server.' . $key, $default);
+        return self::isDebug() ?
+            config('plugin.workbunny.webman-push-server.app.push-server.' . $key, $default) :
+            \config('plugin.workbunny.webman-push-server.app.push-server.' . $key, $default);
     }
 
     /** @inheritDoc */
@@ -171,29 +167,8 @@ class Server implements ServerInterface
     }
 
     /**
-     * TODO 单元测试
-     * @param $data
-     * @param TcpConnection|null $connection
-     * @return void
-     */
-    public function execute($data, ?TcpConnection $connection = null): void
-    {
-        if(is_string($data)){
-            $this->_setConnectionProperty($connection, 'clientNotSendPingCount', 0);
-            if(!$data = json_decode($data, true)){
-                return;
-            }
-
-            if($factory = AbstractEvent::factory($data['event'])){
-                $factory->response($this, $connection, $data);
-                return;
-            }
-            $this->error($connection,null, 'Client event rejected - Unknown event');
-        }
-    }
-
-    /**
      * 发布事件
+     * @desc debug模式下会输出字符串 publishToClients
      * @param string $appKey
      * @param string $channel
      * @param string $event
@@ -225,18 +200,10 @@ class Server implements ServerInterface
      */
     public function error(TcpConnection $connection, ?string $code, ?string $message = null, array $extra = []): void
     {
-        $response = json_encode([
-            'event' => EVENT_ERROR,
-            'data'  => array_merge([
-                'code'    => $code,
-                'message' => $message
-            ], $extra)
-        ], JSON_UNESCAPED_UNICODE);
-        if(self::isDebug()){
-            $this->_buffer = $response;
-            return;
-        }
-        $connection->send($response);
+        $this->send($connection, null, EVENT_ERROR, array_merge([
+            'code'    => $code,
+            'message' => $message
+        ], $extra));
     }
 
     /**
@@ -258,18 +225,18 @@ class Server implements ServerInterface
         if($data){
             $response['data'] = $data;
         }
-        if(self::isDebug()){
-            $this->_buffer = $response;
-            return;
-        }
         $connection->send($response ? json_encode($response, JSON_UNESCAPED_UNICODE) : '{}');
-        if(AbstractEvent::pre($event) === AbstractEvent::SERVER_EVENT) {
-            try {
-                HookServer::publish( AbstractEvent::SERVER_EVENT, array_merge($response, [
-                    'id' => uuid(),
-                ]));
-            }catch (RedisException $exception){
-                error_log($exception->getMessage() . PHP_EOL);
+
+        // 回执的client-event也认定为server-event事件
+        if($event){
+            if(AbstractEvent::pre($event) === AbstractEvent::SERVER_EVENT or AbstractEvent::pre($event) === AbstractEvent::CLIENT_EVENT) {
+                try {
+                    HookServer::publish( AbstractEvent::SERVER_EVENT, array_merge($response, [
+                        'id' => uuid(),
+                    ]));
+                }catch (RedisException $exception){
+                    error_log($exception->getMessage() . PHP_EOL);
+                }
             }
         }
     }
@@ -331,6 +298,17 @@ class Server implements ServerInterface
      * @param TcpConnection $connection
      * @param string $appKey
      * @param string $channel
+     * @return TcpConnection|null
+     */
+    public function _getConnection(TcpConnection $connection, string $appKey, string $channel): ?TcpConnection
+    {
+        return $this->_connections[$appKey][$channel][$this->_getConnectionProperty($connection, 'socketId')] ?? null;
+    }
+
+    /**
+     * @param TcpConnection $connection
+     * @param string $appKey
+     * @param string $channel
      * @return void
      */
     public function _unsetConnection(TcpConnection $connection, string $appKey, string $channel): void
@@ -340,7 +318,7 @@ class Server implements ServerInterface
 
     /**
      * @param TcpConnection $connection
-     * @param string $property = clientNotSendPingCount (int) | appKey (string) | socketId (string) | channels (array)
+     * @param string $property = clientNotSendPingCount (int) | appKey (string) | queryString (string) | socketId (string) | channels = [ channel => ''|uid]
      * @param mixed|null $value
      * @return void
      */
@@ -351,7 +329,7 @@ class Server implements ServerInterface
 
     /**
      * @param TcpConnection $connection
-     * @param string $property = clientNotSendPingCount (int) | appKey (string) | socketId (string) | channels = [ channel => ''|uid]
+     * @param string $property = clientNotSendPingCount (int) | appKey (string) | queryString (string) | socketId (string) | channels = [ channel => ''|uid]
      * @param mixed|null $default
      * @return mixed|null
      */
@@ -473,13 +451,17 @@ class Server implements ServerInterface
             $this->_setConnectionProperty($connection, 'clientNotSendPingCount', 0);
 
             // /app/1234567890abcdefghig?protocol=7&client=js&version=3.2.4&flash=false
-            if (!preg_match('/ \/app\/([^\/^\?^ ]+)/', $header, $match)) {
+            if (!$parse = parse_url($header)) {
+                $this->error($connection, null, 'Invalid header');
+                $connection->pauseRecv();
+                return;
+            }
+            if (!preg_match('/\/app\/([^\/^\?^]+)/', $parse['path'], $match)) {
                 $this->error($connection, null, 'Invalid app');
                 $connection->pauseRecv();
                 return;
             }
-
-            if(!self::getConfig('app_query')($appKey = $match[1])){
+            if(!self::getConfig('apps_query')($appKey = $match[1])){
                 $this->error($connection, null, "Invalid app_key");
                 $connection->pauseRecv();
                 return;
@@ -487,20 +469,18 @@ class Server implements ServerInterface
 
             $this->_setConnectionProperty($connection, 'clientNotSendPingCount', 0);
             $this->_setConnectionProperty($connection, 'appKey', $appKey);
+            $this->_setConnectionProperty($connection, 'queryString', $parse['query']);
             $this->_setConnectionProperty($connection, 'socketId', $socketId = $this->_createSocketId());
             $this->_setConnectionProperty($connection, 'channels', ['' => '']);
             $this->_setConnection($connection, $appKey, '');
 
             /**
              * 向客户端发送链接成功的消息
-             * {"event":"pusher:connection_established","data":"{\"socket_id\":\"208836.27464492\",\"activity_timeout\":120}"}
+             * {"event":"pusher:connection_established","data":"{"socket_id":"208836.27464492","activity_timeout":120}"}
              */
-            $this->send($connection, null, null, [
-                'event' => EVENT_CONNECTION_ESTABLISHED,
-                'data'  => json_encode([
-                    'socket_id'        => $socketId,
-                    'activity_timeout' => 55
-                ])
+            $this->send($connection, null, EVENT_CONNECTION_ESTABLISHED, [
+                'socket_id'        => $socketId,
+                'activity_timeout' => 55
             ]);
         });
     }
@@ -508,7 +488,19 @@ class Server implements ServerInterface
     /** @inheritDoc */
     public function onMessage(TcpConnection $connection, $data): void
     {
-        $this->execute($data, $connection);
+        if(is_string($data)){
+            $this->_setConnectionProperty($connection, 'clientNotSendPingCount', 0);
+            if(!$data = json_decode($data, true)){
+                return;
+            }
+
+            self::$eventFactory = null;
+            if(self::$eventFactory = $factory = AbstractEvent::factory($data['event'])){
+                $factory->response($this, $connection, $data);
+                return;
+            }
+            $this->error($connection,null, 'Client event rejected - Unknown event');
+        }
     }
 
     /** @inheritDoc */

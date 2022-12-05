@@ -47,6 +47,7 @@ class ApiService implements ServerInterface
      */
     public function __construct()
     {
+        ApiRoute::initCollector();
         ApiRoute::initRoutes();
         ApiRoute::initDispatcher();
     }
@@ -72,14 +73,14 @@ class ApiService implements ServerInterface
     public function execute($request, ?TcpConnection $connection = null): void
     {
         if(!$request instanceof Request){
-            $this->send($connection, \Workbunny\WebmanPushServer\response(400, 'Bad Request. '));
+            $this->send(\Workbunny\WebmanPushServer\response(400, 'Bad Request. '), $connection);
             return;
         }
         $res = ApiRoute::getDispatcher()->dispatch($request->method(), $request->path());
         $handler = $res[1] ?? null;
         $params = $res[2] ?? [];
         if(!$handler instanceof Closure) {
-            $this->send($connection, \Workbunny\WebmanPushServer\response(404, 'Not Found'));
+            $this->send(\Workbunny\WebmanPushServer\response(404, 'Not Found'), $connection);
             return;
         }
         $response = call_user_func(array_reduce(
@@ -94,18 +95,18 @@ class ApiService implements ServerInterface
             }
         ), Server::getServer(), $request, $params);
         if(!$response instanceof Response){
-            $this->send($connection, \Workbunny\WebmanPushServer\response(500, 'Server Error'));
+            $this->send(\Workbunny\WebmanPushServer\response(500, 'Server Error'), $connection);
             return;
         }
-        $this->send($connection, $response);
+        $this->send($response, $connection);
     }
 
     /**
-     * @param TcpConnection $connection
      * @param Response $response
+     * @param TcpConnection|null $connection debug模式下传入null
      * @return void
      */
-    public function send(TcpConnection $connection, Response $response): void
+    public function send(Response $response, ?TcpConnection $connection = null): void
     {
         $response->withHeader('Content-Type', 'application/json');
         $response->withHeader('Server', 'workbunny/webman-push-server');

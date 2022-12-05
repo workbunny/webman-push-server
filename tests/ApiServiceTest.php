@@ -38,6 +38,7 @@ class ApiServiceTest extends TestCase
      */
     protected function setUp(): void
     {
+
         $this->worker = new Worker();
         $this->service = new ApiService();
         ApiRoute::start($this->worker);

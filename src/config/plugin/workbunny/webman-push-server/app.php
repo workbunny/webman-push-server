@@ -11,7 +11,6 @@
  */
 declare(strict_types=1);
 
-use Workbunny\WebmanPushServer\ApiService;
 use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_CHANNEL_OCCUPIED;
 use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_CHANNEL_VACATED;
 use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_CLIENT_EVENT;
@@ -23,10 +22,10 @@ return [
     'enable'      => true,
     'debug'       => false, // 仅用于测试用例使用，请勿修改
     'apps'        => [
-        'APP_KEY_TO_REPLACE' => [
-            'app_id'     => 'APP_ID_TO_REPLACE',
-            'app_key'    => 'APP_KEY_TO_REPLACE',
-            'app_secret' => 'APP_SECRET_TO_REPLACE',
+        'workbunny' => [
+            'app_id'     => '1',
+            'app_key'    => 'workbunny',
+            'app_secret' => 'U2FsdGVkX1+vlfFH8Q9XdZ9t9h2bABGYAZltEYAX6UM=',
         ]
     ],
     // 推送服务配置

@@ -29,6 +29,7 @@ use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_MEMBER_ADDED;
 class Subscribe extends AbstractEvent
 {
     /**
+     * @desc {"event":"pusher:subscribe","data":{"auth":"b054014693241bcd9c26:10e3b628cb78e8bc4d1f44d47c9294551b446ae6ec10ef113d3d7e84e99763e6","channel_data":"{\"user_id\":100,\"user_info\":{\"name\":\"123\"}}","channel":"presence-channel"}}
      * @inheritDoc
      */
     public function response(Server $pushServer, TcpConnection $connection, array $request): void
@@ -38,8 +39,7 @@ class Subscribe extends AbstractEvent
         $auth = ($appKey = $pushServer->_getConnectionProperty($connection, 'appKey')) . ':' . hash_hmac(
                 'sha256',
                 $pushServer->_getConnectionProperty($connection, 'socketId') . ':' . $channel . ':' . $request['data']['channel_data'],
-                Server::getConfig('app_query')($appKey)['app_secret'],
-                false
+                Server::getConfig('apps_query')($appKey)['app_secret']
             );
         // private- 和 presence- 开头的channel需要验证
         switch ($channelType = $pushServer->_getChannelType($channel)){

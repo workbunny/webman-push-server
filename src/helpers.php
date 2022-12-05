@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Workbunny\WebmanPushServer;
 
 use support\Response;
+use Webman\Config;
 
 if (!function_exists('response')) {
     /**
@@ -28,6 +29,19 @@ if (!function_exists('response')) {
             'Content-Type' => 'application/json',
             'Server'       => 'workbunny'
         ], $header), is_array($data) ? json_encode($data, JSON_UNESCAPED_UNICODE) : $data);
+    }
+}
+
+if (!function_exists('config')){
+    /**
+     * @param string|null $key
+     * @param $default
+     * @return array|mixed|null
+     */
+    function config(string $key = null, $default = null)
+    {
+        Config::load(__DIR__ . '/config', ['route']);
+        return Config::get($key, $default);
     }
 }
 
