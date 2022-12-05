@@ -36,7 +36,7 @@ abstract class AbstractEvent
         EVENT_SUBSCRIBE     => Subscribe::class,
         EVENT_UNSUBSCRIBE   => Unsubscribe::class,
         self::CLIENT_EVENT  => ClientEvent::class,
-        self::SERVER_EVENT  => ServerEvent::class
+//        self::SERVER_EVENT  => ServerEvent::class
     ];
 
     /**
