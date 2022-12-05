@@ -123,20 +123,31 @@ class ServerBaseTest extends BaseTest
     {
         $this->setServer(true);
 
+        // 无效的header
         $mockConnection = new MockTcpConnection();
-
-        // 手动触发 onConnect 回调
         $this->getServer()->onConnect($mockConnection);
         $this->assertEquals(
             true,
             ($onWebSocketConnect = $this->getServer()->_getConnectionProperty($mockConnection, 'onWebSocketConnect')) instanceof Closure
         );
 
-        // 手动触发 onWebSocketConnect 回调
-        $onWebSocketConnect($mockConnection, "12345");
+        $onWebSocketConnect($mockConnection, '');
         $this->assertEquals(0, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
         $this->assertEquals(true, $mockConnection->isPaused());
-        $this->assertEquals([], $mockConnection->getSendBuffer());
+        $this->assertEquals('{"event":"pusher:error","data":{"code":null,"message":"Invalid app"}}', $mockConnection->getSendBuffer());
+
+        // 无效的appKey测试
+        $mockConnection = new MockTcpConnection();
+        $this->getServer()->onConnect($mockConnection);
+        $this->assertEquals(
+            true,
+            ($onWebSocketConnect = $this->getServer()->_getConnectionProperty($mockConnection, 'onWebSocketConnect')) instanceof Closure
+        );
+
+        $onWebSocketConnect($mockConnection, "/app/{$this->_auth_key}cc?{$this->_query_string}");
+        $this->assertEquals(0, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
+        $this->assertEquals(true, $mockConnection->isPaused());
+        $this->assertEquals('{"event":"pusher:error","data":{"code":null,"message":"Invalid app_key"}}', $mockConnection->getSendBuffer());
     }
 
     /**
