@@ -4,7 +4,20 @@
 
 **<p align="center">🐇  Webman plugin for push server implementation. 🐇</p>**
 
-# Webman-push-server
+<div align="center">
+    <a href="https://github.com/workbunny/webman-push-server/actions">
+        <img src="https://github.com/workbunny/webman-push-server/actions/workflows/CI.yml/badge.svg" alt="Build Status">
+    </a>
+    <a href="https://github.com/workbunny/webman-push-server/releases">
+        <img alt="Latest Stable Version" src="https://badgen.net/packagist/v/workbunny/webman-push-server/latest">
+    </a>
+    <a href="https://github.com/workbunny/webman-push-server/blob/main/composer.json">
+        <img alt="PHP Version Require" src="https://badgen.net/packagist/php/workbunny/webman-push-server">
+    </a>
+    <a href="https://github.com/workbunny/webman-push-server/blob/main/LICENSE">
+        <img alt="GitHub license" src="https://badgen.net/packagist/license/workbunny/webman-push-server">
+    </a>
+</div>
 
 ## 简介
 
