@@ -20,7 +20,6 @@ use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_SERVER_EVENT;
 
 return [
     'enable'      => true,
-    'debug'       => false, // 仅用于测试用例使用，请勿修改
     'apps'        => [
         'workbunny' => [
             'app_id'     => '1',

@@ -22,8 +22,8 @@
 ## 简介
 
 - **目前版本为alpha版**，未发布正式，请勿用于生产环境，如遇问题，欢迎 **[issue](https://github.com/workbunny/webman-push-server/issues) & PR**；
-- **本项目 fork from [webman/push](https://www.workerman.net/plugin/2)**，是webman/push的**多进程持久化存储版本的push-server**；
-- **一比一复刻 pusher-channel，是完整的推送服务器实现；**
+- **本项目 fork from [webman/push](https://www.workerman.net/plugin/2)**，利用redis实现了多进程持久化存储；
+- **1：1复刻 pusher-channel 服务，是完整的推送服务器实现；**
 - 本插件可用于实现消息推送、单聊、群聊、直播间、站内推送等多种即时通讯场景；
 - 本插件兼容 pusher-channel 的客户端，包含JS、安卓(java)、IOS(swift)、IOS(Obj-C)、uniapp等；后端推送SDK支持PHP、Node、Ruby、Asp、Java、Python、Go等；客户端自带心跳和断线自动重连，使用起来非常简单稳定；
 - 本插件包含
@@ -31,7 +31,6 @@
 	- 基于http的推送APIs
 	- 基于http-api的后端推送SDK
 	- 基于redis-stream的持久化服务端事件订阅服务
-
 
 ## 依赖
 
@@ -50,7 +49,7 @@ composer require workbunny/webman-push-server
 
 - 公共频道（public）
 
-**客户端仅可监听公共频道，不可向公共频道推送消息；** 通常来说服务端启动时可启动一个公共频道，所有客户端在连接时订阅该频道，即可实现全站广播；
+**客户端仅可监听公共频道，不可向公共频道推送消息；**
 
 - 私有频道（private）
 

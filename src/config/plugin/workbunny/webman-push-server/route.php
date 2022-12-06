@@ -11,7 +11,7 @@
  */
 declare(strict_types=1);
 
-use Pusher\Pusher;
+use Workbunny\WebmanPushServer\ApiClient;
 use Workerman\Protocols\Http\Request;
 use support\Response;
 use Workbunny\WebmanPushServer\ApiRoute;
@@ -31,6 +31,33 @@ ApiRoute::get('/index', function () {
  */
 ApiRoute::get('/plugin/workbunny/webman-push-server/push.js', function () {
     return response(200, '')->file(base_path().'/vendor/workbunny/webman-push-server/push.js');
+});
+
+/**
+ * 订阅鉴权
+ * @url /subscribe/auth
+ * @method POST
+ */
+ApiRoute::post('/subscribe/auth', function (Server $server, Request $request) {
+    if($channelName = $request->post('channel_name')){
+        return response(400, ['error' => 'Required channel_name']);
+    }
+    if($socketId = $request->post('socket_id')){
+        return response(400, ['error' => 'Required socket_id']);
+    }
+
+    $response['channel_data'] = [
+        'user_id' => '100',
+        'user_info' => "{\'name\':\'John\',\'sex\':\'man\'}"
+    ];
+    $response['auth'] = ApiClient::subscribeAuth(
+        'workbunny',
+        'U2FsdGVkX1+vlfFH8Q9XdZ9t9h2bABGYAZltEYAX6UM=',
+        $socketId,
+        $channelName,
+        $response['channel_data']
+    );
+    return response(200, $response);
 });
 
 /**
@@ -204,7 +231,7 @@ ApiRoute::addGroup('/apps/{appId}', function () {
         }
         $params = $request->get();
         unset($params['auth_signature']);
-        $realAuthSignature = Pusher::build_auth_query_params($appKey, $apps['app_secret'], $request->method(), $request->path(), $params)['auth_signature'];
+        $realAuthSignature = ApiClient::build_auth_query_params($appKey, $apps['app_secret'], $request->method(), $request->path(), $params)['auth_signature'];
         if ($request->get('auth_signature') !== $realAuthSignature) {
             return response(401,['error' => 'Invalid signature']);
         }

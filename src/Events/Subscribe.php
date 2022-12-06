@@ -29,38 +29,50 @@ use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_MEMBER_ADDED;
 class Subscribe extends AbstractEvent
 {
     /**
-     * @desc {"event":"pusher:subscribe","data":{"auth":"b054014693241bcd9c26:10e3b628cb78e8bc4d1f44d47c9294551b446ae6ec10ef113d3d7e84e99763e6","channel_data":"{\"user_id\":100,\"user_info\":{\"name\":\"123\"}}","channel":"presence-channel"}}
+     * @param Server $pushServer
+     * @param TcpConnection $connection
+     * @param array $request = [
+     *      'event' => 'pusher:subscribe',
+     *      'data'  => [
+     *          'channel'      => 'presence-channel',
+     *          'auth'         => 'b054014693241bcd9c26:10e3b628cb78e8bc4d1f44d47c9294551b446ae6ec10ef113d3d7e84e99763e6',
+     *          'channel_data' => [
+     *              'user_id'   => 100,
+     *              'user_info' => "{\'name\':\'123\'}"
+     *          ]
+     *      ]
+     * ]
+     * @return void
      * @inheritDoc
      */
     public function response(Server $pushServer, TcpConnection $connection, array $request): void
     {
         $channel = $request['data']['channel'] ?? '';
-        $channelData = $request['data']['channel_data'] ?? '';
+        $channelData = $request['data']['channel_data'] ?? [];
         $clientAuth = $request['data']['auth'] ?? '';
-        $auth = ($appKey = $pushServer->_getConnectionProperty($connection, 'appKey')) . ':' . hash_hmac(
-                'sha256',
-                $pushServer->_getConnectionProperty($connection, 'socketId') . ':' . $channel . ':' . $channelData,
-                Server::getConfig('apps_query')($appKey)['app_secret']
-            );
+        $auth = self::auth(
+            $appKey = $pushServer->_getConnectionProperty($connection, 'appKey'),
+            Server::getConfig('apps_query')($appKey)['app_secret'],
+            $pushServer->_getConnectionProperty($connection, 'socketId'),
+            $channel,
+            $channelData
+        );
         // private- 和 presence- 开头的channel需要验证
         switch ($channelType = $pushServer->_getChannelType($channel)){
             case CHANNEL_TYPE_PRESENCE:
-                // {"event":"pusher:subscribe","data":{"auth":"b054014693241bcd9c26:10e3b628cb78e8bc4d1f44d47c9294551b446ae6ec10ef113d3d7e84e99763e6","channel_data":"{\"user_id\":100,\"user_info\":{\"name\":\"123\"}}","channel":"presence-channel"}}
                 if (!$channelData) {
                     $pushServer->error($connection, null, 'Empty channel_data');
                     return;
                 }
-                // {"event":"pusher:error","data":{"code":null,"message":"Received invalid JSON"}}
                 if ($clientAuth !== $auth) {
                     $pushServer->error($connection, null, 'Received invalid JSON '.$auth);
                     return;
                 }
-                $userData = @json_decode($request['data']['channel_data'], true);
-                if (!$userData || !isset($userData['user_id']) or !isset($userData['user_info'])) {
+                if (!isset($channelData['user_id']) or !isset($channelData['user_info'])) {
                     $pushServer->error($connection,null, 'Bad channel_data');
                     return;
                 }
-                self::subscribeChannel($pushServer, $connection, $channel, $channelType, $userData['user_id'], $userData['user_info']);
+                self::subscribeChannel($pushServer, $connection, $channel, $channelType, (string)$channelData['user_id'], (string)$channelData['user_info']);
                 break;
             case CHANNEL_TYPE_PRIVATE:
                 if ($clientAuth !== $auth) {
@@ -76,6 +88,23 @@ class Subscribe extends AbstractEvent
                 $pushServer->error($connection, null, 'Bad channel_type');
                 break;
         }
+    }
+
+    /**
+     * @param string $appKey
+     * @param string $appSecret
+     * @param string $socketId
+     * @param string $channel
+     * @param array $channelData
+     * @return string
+     */
+    public static function auth(string $appKey, string $appSecret, string $socketId, string $channel, array $channelData = []): string
+    {
+        if($channelData){
+            ksort($channelData);
+            return $appKey . ':' . hash_hmac('sha256', $socketId . ':' . $channel . ':' . json_encode($channelData, JSON_UNESCAPED_UNICODE), $appSecret);
+        }
+        return $appKey . ':' . hash_hmac('sha256', $socketId . ':' . $channel, $appSecret);
     }
 
     /**
