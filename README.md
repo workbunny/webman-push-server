@@ -63,13 +63,13 @@ composer require workbunny/webman-push-server
 
 ### 事件类型：
 
-- **pusher:client-** 前缀的事件
+- **client-** 前缀的事件
 
-拥有 **pusher:client-** 前缀的事件是客户端发起的事件，客户端在推送消息时一定会带有该前缀；
+拥有 **client-** 前缀的事件是客户端发起的事件，客户端在推送消息时一定会带有该前缀；
 
 - **pusher:** 前缀的事件
 
-拥有 **pusher:** 前缀，但不包含 **client-** 前缀的事件一般用于服务端消息、公共消息，比如在公共频道由服务端推送的消息、客户端发起的订阅公共消息；
+拥有 **pusher:** 前缀的事件一般用于服务端消息、公共消息，比如在公共频道由服务端推送的消息、客户端发起的订阅公共消息；
 
 - **pusher_internal:** 前缀的事件
 
@@ -90,7 +90,7 @@ composer require workbunny/webman-push-server
 var connection = new Push({
 url: 'ws://127.0.0.1:3131', // websocket地址
 app_key: '<app_key，在config/plugin/webman/push/app.php里获取>',
-auth: '/plugin/webman/push/auth' // 订阅鉴权(仅限于私有频道)
+auth: '<需要自行实现一个鉴权接口，用于私有和状态频道>'
 });
 // 假设用户uid为1
 var uid = 1;

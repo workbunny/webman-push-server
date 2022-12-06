@@ -42,7 +42,7 @@ class Server implements ServerInterface
     public static ?AbstractEvent $eventFactory = null;
 
     /**
-     * @var TcpConnection[][] = [
+     * @var TcpConnection[][][] = [
      *      'appKey_1' => [
      *          'channel_1' => [
      *              'socketId_1' => TcpConnection_1, @see self::_getConnectionProperty()
@@ -255,7 +255,6 @@ class Server implements ServerInterface
         $channelConnections = $this->_connections[$appKey];
         foreach ($channelConnections as $channel => $channelConnection){
             if(isset($channelConnection[$socketId])){
-                /** @var TcpConnection $connection */
                 $connection = $channelConnection[$socketId];
                 $this->send($connection, $channel, EVENT_TERMINATE_CONNECTION, $data);
                 $this->onClose($connection);
@@ -424,11 +423,13 @@ class Server implements ServerInterface
         // 心跳检查
         $this->_heartbeatTimer = Timer::add($this->_keepaliveTimeout / 2, function (){
             foreach ($this->_connections as $appKeyConnections) {
-                foreach ($appKeyConnections as $connection){
-                    if (($count = $this->_getConnectionProperty($connection, 'clientNotSendPingCount')) > 1) {
-                        $connection->destroy();
+                foreach ($appKeyConnections as $channelConnections){
+                    foreach ($channelConnections as $connection){
+                        if (($count = $this->_getConnectionProperty($connection, 'clientNotSendPingCount')) > 1) {
+                            $connection->destroy();
+                        }
+                        $this->_setConnectionProperty($connection, 'clientNotSendPingCount', $count + 1);
                     }
-                    $this->_setConnectionProperty($connection, 'clientNotSendPingCount', $count + 1);
                 }
             }
         });
