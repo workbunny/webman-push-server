@@ -198,7 +198,7 @@ ApiRoute::addGroup('/apps/{appId}', function () {
         if (!($appKey = $request->get('auth_key'))) {
             return response(400,['error' => 'Required auth_key']);
         }
-        $apps = config_path('plugin.workbunny.webman-push-server.app.push-server.apps_query')($appKey, $appId);
+        $apps = config('plugin.workbunny.webman-push-server.app.push-server.apps_query')($appKey, $appId);
         if(!$apps){
             return response(401,['error' => 'Invalid auth_key']);
         }
