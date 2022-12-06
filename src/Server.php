@@ -424,11 +424,14 @@ class Server implements ServerInterface
         // 心跳检查
         $this->_heartbeatTimer = Timer::add($this->_keepaliveTimeout / 2, function (){
             foreach ($this->_connections as $appKeyConnections) {
-                foreach ($appKeyConnections as $connection){
-                    if (($count = $this->_getConnectionProperty($connection, 'clientNotSendPingCount')) > 1) {
-                        $connection->destroy();
+                foreach ($appKeyConnections as  $connections){
+                    foreach ($connections as  $connection)
+                    {
+                        if (($count = $this->_getConnectionProperty($connection, 'clientNotSendPingCount')) > 1) {
+                            $value->destroy();
+                        }
+                        $this->_setConnectionProperty($connection, 'clientNotSendPingCount', $count + 1);
                     }
-                    $this->_setConnectionProperty($connection, 'clientNotSendPingCount', $count + 1);
                 }
             }
         });
