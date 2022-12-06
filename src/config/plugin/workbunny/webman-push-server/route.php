@@ -34,7 +34,7 @@ ApiRoute::get('/plugin/workbunny/webman-push-server/push.js', function () {
 });
 
 /**
- * 订阅鉴权
+ * 订阅鉴权 TODO 该接口建议自行业务实现
  * @url /subscribe/auth
  * @method POST
  */
@@ -46,17 +46,21 @@ ApiRoute::post('/subscribe/auth', function (Server $server, Request $request) {
         return response(400, ['error' => 'Required socket_id']);
     }
 
+    // 模拟从 数据库/session 获取用户数据的操作
     $response['channel_data'] = [
         'user_id' => '100',
         'user_info' => "{\'name\':\'John\',\'sex\':\'man\'}"
     ];
+
+    // 模拟加密过程
     $response['auth'] = ApiClient::subscribeAuth(
-        'workbunny',
-        'U2FsdGVkX1+vlfFH8Q9XdZ9t9h2bABGYAZltEYAX6UM=',
+        'workbunny', // TODO 动态配置
+        'U2FsdGVkX1+vlfFH8Q9XdZ9t9h2bABGYAZltEYAX6UM=', // TODO 动态配置
         $socketId,
         $channelName,
         $response['channel_data']
     );
+    // 返回格式 {"auth": "workbunny:xxxxxxxxxxxxxxxx, "channel_data": "{\'name\':\'John\',\'sex\':\'man\'}"};
     return response(200, $response);
 });
 
