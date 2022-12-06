@@ -463,7 +463,7 @@ class Server implements ServerInterface
                 $connection->pauseRecv();
                 return;
             }
-            if (!preg_match('/\/app\/([^\/^\?^]+)/', $parse['path'], $match)) {
+            if (!preg_match('/ \/app\/([^\/^\?^ ]+)/', $parse['path'], $match)) {
                 $this->error($connection, null, 'Invalid app');
                 $connection->pauseRecv();
                 return;
@@ -476,7 +476,7 @@ class Server implements ServerInterface
 
             $this->_setConnectionProperty($connection, 'clientNotSendPingCount', 0);
             $this->_setConnectionProperty($connection, 'appKey', $appKey);
-            $this->_setConnectionProperty($connection, 'queryString', $parse['query']);
+            $this->_setConnectionProperty($connection, 'queryString', $parse['query'] ?? '');
             $this->_setConnectionProperty($connection, 'socketId', $socketId = $this->_createSocketId());
             $this->_setConnectionProperty($connection, 'channels', ['' => '']);
             $this->_setConnection($connection, $appKey, '');
