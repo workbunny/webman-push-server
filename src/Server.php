@@ -21,6 +21,7 @@ use Tests\MockClass\MockRedis;
 use Workbunny\WebmanPushServer\Events\AbstractEvent;
 use Workbunny\WebmanPushServer\Events\Unsubscribe;
 use Workerman\Connection\TcpConnection;
+use Workerman\Protocols\Http\Request;
 use Workerman\Timer;
 use Workerman\Worker;
 
@@ -452,16 +453,10 @@ class Server implements ServerInterface
     {
         // 设置websocket握手事件回调
         $this->_setConnectionProperty($connection, 'onWebSocketConnect', function(TcpConnection $connection, string $header) {
+            $request = new Request($header);
             // 客户端有多少次没在规定时间发送心跳
             $this->_setConnectionProperty($connection, 'clientNotSendPingCount', 0);
-
-            // /app/1234567890abcdefghig?protocol=7&client=js&version=3.2.4&flash=false
-            if (!$parse = parse_url($header)) {
-                $this->error($connection, null, 'Invalid header');
-                $connection->pauseRecv();
-                return;
-            }
-            if (!preg_match('/\/app\/([^\/^\?^]+)/', $parse['path'], $match)) {
+            if (!preg_match('/\/app\/([^\/^\?^]+)/', $request->path() ?? '', $match)) {
                 $this->error($connection, null, 'Invalid app');
                 $connection->pauseRecv();
                 return;
@@ -474,7 +469,7 @@ class Server implements ServerInterface
 
             $this->_setConnectionProperty($connection, 'clientNotSendPingCount', 0);
             $this->_setConnectionProperty($connection, 'appKey', $appKey);
-            $this->_setConnectionProperty($connection, 'queryString', $parse['query']);
+            $this->_setConnectionProperty($connection, 'queryString', $request->queryString() ?? '');
             $this->_setConnectionProperty($connection, 'socketId', $socketId = $this->_createSocketId());
             $this->_setConnectionProperty($connection, 'channels', ['' => '']);
             $this->_setConnection($connection, $appKey, '');

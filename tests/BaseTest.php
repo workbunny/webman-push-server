@@ -21,9 +21,7 @@ use Workbunny\WebmanPushServer\Server;
 
 abstract class BaseTest extends TestCase
 {
-    protected string $_auth_key = 'workbunny';
-
-    protected string $_query_string = 'protocol=7&client=js&version=3.2.4&flash=false';
+    protected string $_websocket_header = "GET /app/workbunny?protocol=7&client=js&version=3.2.4&flash=false HTTP/1.1\r\nConnection: Upgrade\r\nUpgrade: websocket\r\n\r\n";
 
     /**
      * @var array[]

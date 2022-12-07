@@ -93,10 +93,10 @@ class ServerBaseTest extends BaseTest
         );
 
         // 手动触发 onWebSocketConnect 回调
-        $onWebSocketConnect($mockConnection, "/app/{$this->_auth_key}?{$this->_query_string}");
+        $onWebSocketConnect($mockConnection, $this->_websocket_header);
         $this->assertEquals(0, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
-        $this->assertEquals($this->_auth_key, $appKey = $this->getServer()->_getConnectionProperty($mockConnection, 'appKey', 'unknown'));
-        $this->assertEquals($this->_query_string, $this->getServer()->_getConnectionProperty($mockConnection, 'queryString', 'unknown'));
+        $this->assertEquals('workbunny', $appKey = $this->getServer()->_getConnectionProperty($mockConnection, 'appKey', 'unknown'));
+        $this->assertEquals('protocol=7&client=js&version=3.2.4&flash=false', $this->getServer()->_getConnectionProperty($mockConnection, 'queryString', 'unknown'));
         $this->assertNotNull($this->getServer()->_getConnectionProperty($mockConnection, 'socketId'));
         $this->assertEquals(['' => ''], $this->getServer()->_getConnectionProperty($mockConnection, 'channels'));
         $this->assertEquals($mockConnection, $this->getServer()->_getConnection($mockConnection, $appKey, ''));
@@ -119,7 +119,7 @@ class ServerBaseTest extends BaseTest
      * @covers \Workbunny\WebmanPushServer\HookServer::publish
      * @throws Exception
      */
-    public function testServerOnConnectInvalidHeaderError()
+    public function testServerOnConnectInvalidAppError()
     {
         $this->setServer(true);
 
@@ -135,8 +135,23 @@ class ServerBaseTest extends BaseTest
         $this->assertEquals(0, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
         $this->assertEquals(true, $mockConnection->isPaused());
         $this->assertEquals('{"event":"pusher:error","data":{"code":null,"message":"Invalid app"}}', $mockConnection->getSendBuffer());
+    }
 
-        // 无效的appKey测试
+    /**
+     * 测试 onConnect触发Invalid header错误
+     * @covers \Workbunny\WebmanPushServer\Server::onConnect
+     * @covers \Workbunny\WebmanPushServer\Server::_setConnectionProperty
+     * @covers \Workbunny\WebmanPushServer\Server::_getConnectionProperty
+     * @covers \Workbunny\WebmanPushServer\Server::_getConnection
+     * @covers \Workbunny\WebmanPushServer\Server::_setConnection
+     * @covers \Workbunny\WebmanPushServer\HookServer::publish
+     * @throws Exception
+     */
+    public function testServerOnConnectInvalidAppKeyError()
+    {
+        $this->setServer(true);
+
+        // 无效的akk_key
         $mockConnection = new MockTcpConnection();
         $this->getServer()->onConnect($mockConnection);
         $this->assertEquals(
@@ -144,7 +159,7 @@ class ServerBaseTest extends BaseTest
             ($onWebSocketConnect = $this->getServer()->_getConnectionProperty($mockConnection, 'onWebSocketConnect')) instanceof Closure
         );
 
-        $onWebSocketConnect($mockConnection, "/app/{$this->_auth_key}cc?{$this->_query_string}");
+        $onWebSocketConnect($mockConnection, "GET /app/none?protocol=7&client=js&version=3.2.4&flash=false HTTP/1.1\r\nConnection: Upgrade\r\nUpgrade: websocket\r\n\r\n");
         $this->assertEquals(0, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
         $this->assertEquals(true, $mockConnection->isPaused());
         $this->assertEquals('{"event":"pusher:error","data":{"code":null,"message":"Invalid app_key"}}', $mockConnection->getSendBuffer());

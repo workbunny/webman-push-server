@@ -45,7 +45,7 @@ class ServerEventHandlerTest extends BaseTest
         $this->getServer()->onConnect($mockConnection);
         $onWebSocketConnect = $this->getServer()->_getConnectionProperty($mockConnection, 'onWebSocketConnect');
         // 手动触发 onWebSocketConnect 回调
-        $onWebSocketConnect($mockConnection, "/app/{$this->_auth_key}?{$this->_query_string}");
+        $onWebSocketConnect($mockConnection, $this->_websocket_header);
         // 手动触发 onMessage 回调
         $this->getServer()->onMessage($mockConnection, json_encode([
             'event' => EVENT_PING
@@ -72,7 +72,7 @@ class ServerEventHandlerTest extends BaseTest
         $this->getServer()->onConnect($mockConnection);
         $onWebSocketConnect = $this->getServer()->_getConnectionProperty($mockConnection, 'onWebSocketConnect');
         // 手动触发 onWebSocketConnect 回调
-        $onWebSocketConnect($mockConnection, "/app/{$this->_auth_key}?{$this->_query_string}");
+        $onWebSocketConnect($mockConnection, $this->_websocket_header);
         // 手动触发 onMessage 回调
         $this->getServer()->onMessage($mockConnection, json_encode([
             'event' => EVENT_SUBSCRIBE,
@@ -101,7 +101,7 @@ class ServerEventHandlerTest extends BaseTest
         $this->getServer()->onConnect($mockConnection);
         $onWebSocketConnect = $this->getServer()->_getConnectionProperty($mockConnection, 'onWebSocketConnect');
         // 手动触发 onWebSocketConnect 回调
-        $onWebSocketConnect($mockConnection, "/app/{$this->_auth_key}?{$this->_query_string}");
+        $onWebSocketConnect($mockConnection, $this->_websocket_header);
         // 手动触发 onMessage 回调
         $this->getServer()->onMessage($mockConnection, json_encode([
             'event' => EVENT_UNSUBSCRIBE,
@@ -130,7 +130,7 @@ class ServerEventHandlerTest extends BaseTest
         $this->getServer()->onConnect($mockConnection);
         $onWebSocketConnect = $this->getServer()->_getConnectionProperty($mockConnection, 'onWebSocketConnect');
         // 手动触发 onWebSocketConnect 回调
-        $onWebSocketConnect($mockConnection, "/app/{$this->_auth_key}?{$this->_query_string}");
+        $onWebSocketConnect($mockConnection, $this->_websocket_header);
         // 手动触发 onMessage 回调
         $this->getServer()->onMessage($mockConnection, json_encode([
             'event' => 'client-test',
@@ -165,7 +165,7 @@ class ServerEventHandlerTest extends BaseTest
         $this->getServer()->onConnect($mockConnection);
         $onWebSocketConnect = $this->getServer()->_getConnectionProperty($mockConnection, 'onWebSocketConnect');
         // 手动触发 onWebSocketConnect 回调
-        $onWebSocketConnect($mockConnection, "/app/{$this->_auth_key}?{$this->_query_string}");
+        $onWebSocketConnect($mockConnection, $this->_websocket_header);
         // 手动触发 onMessage 回调
         $this->getServer()->onMessage($mockConnection, json_encode([
             'event' => EVENT_PONG,
@@ -182,7 +182,7 @@ class ServerEventHandlerTest extends BaseTest
         $this->getServer()->onConnect($mockConnection);
         $onWebSocketConnect = $this->getServer()->_getConnectionProperty($mockConnection, 'onWebSocketConnect');
         // 手动触发 onWebSocketConnect 回调
-        $onWebSocketConnect($mockConnection, "/app/{$this->_auth_key}?{$this->_query_string}");
+        $onWebSocketConnect($mockConnection, $this->_websocket_header);
         // 手动触发 onMessage 回调
         $this->getServer()->onMessage($mockConnection, json_encode([
             'event' => EVENT_MEMBER_REMOVED

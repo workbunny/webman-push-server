@@ -20,6 +20,7 @@ use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_SERVER_EVENT;
 
 return [
     'enable'      => true,
+    // 默认app_key配置
     'apps'        => [
         'workbunny' => [
             'app_id'     => '1',
@@ -29,7 +30,9 @@ return [
     ],
     // 推送服务配置
     'push-server' => [
+        // redis通道
         'redis_channel' => 'default',
+        // 验证app_key
         'apps_query'    => function (?string $appKey, ?string $appId = null): array
         {
             $apps = config('plugin.workbunny.webman-push-server.app.apps', []);
@@ -46,10 +49,15 @@ return [
     ],
     // hook消费者配置
     'hook-server' => [
+        // redis通道
         'redis_channel'  => 'default',
+        // 队列名
         'queue_key'      => 'workbunny:webman-push-server:webhook-stream',
+        // 消费数
         'prefetch_count' => 5,
+        // 队列长度
         'queue_limit'    => 4096,
+
         'webhook_url'    => 'http://127.0.0.1:8787/plugin/workbunny/webman-push-server/webhook',
         'webhook_secret' => 'YOUR_WEBHOOK_SECRET',
         'events'         => [
