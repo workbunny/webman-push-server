@@ -32,6 +32,7 @@ return [
     'push-server' => [
         // redis通道
         'redis_channel' => 'default',
+        'heartbeat'     => 60,
         // 验证app_key
         'apps_query'    => function (?string $appKey, ?string $appId = null): array
         {

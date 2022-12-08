@@ -106,6 +106,7 @@ class Server implements ServerInterface
      */
     public function __construct(array $services)
     {
+        $this->_keepaliveTimeout = self::getConfig('heartbeat', 60);
         // init service
         foreach ($services as $service){
             $handler = self::isDebug() ?
@@ -434,18 +435,22 @@ class Server implements ServerInterface
     {
         self::$_server = $this;
         // 心跳检查
-        $this->_heartbeatTimer = Timer::add($this->_keepaliveTimeout / 2, function (){
-            foreach ($this->_connections as $appKeyConnections) {
-                foreach ($appKeyConnections as $channelConnections){
-                    foreach ($channelConnections as $connection){
-                        if (($count = $this->_getConnectionProperty($connection, 'clientNotSendPingCount')) > 1) {
-                            $connection->destroy();
+        if($this->_keepaliveTimeout > 0){
+            $this->_heartbeatTimer = Timer::add($this->_keepaliveTimeout / 2, function (){
+                foreach ($this->_connections as $appKey => $appKeyConnections) {
+                    foreach ($appKeyConnections as $channel => $channelConnections){
+                        foreach ($channelConnections as $connection){
+                            if (($count = $this->_getConnectionProperty($connection, 'clientNotSendPingCount')) > 1) {
+                                $connection->destroy();
+                                $this->_unsetConnection($connection, $appKey, $channel);
+                                continue;
+                            }
+                            $this->_setConnectionProperty($connection, 'clientNotSendPingCount', $count + 1);
                         }
-                        $this->_setConnectionProperty($connection, 'clientNotSendPingCount', $count + 1);
                     }
                 }
-            }
-        });
+            });
+        }
     }
 
     /** @inheritDoc */

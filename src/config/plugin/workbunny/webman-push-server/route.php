@@ -39,10 +39,10 @@ ApiRoute::get('/plugin/workbunny/webman-push-server/push.js', function () {
  * @method POST
  */
 ApiRoute::post('/subscribe/auth', function (Server $server, Request $request) {
-    if($channelName = $request->post('channel_name')){
+    if(!$channelName = $request->post('channel_name')){
         return response(400, ['error' => 'Required channel_name']);
     }
-    if($socketId = $request->post('socket_id')){
+    if(!$socketId = $request->post('socket_id')){
         return response(400, ['error' => 'Required socket_id']);
     }
 
