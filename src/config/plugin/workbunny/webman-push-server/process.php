@@ -12,6 +12,7 @@
 declare(strict_types=1);
 
 use Workbunny\WebmanPushServer\ApiService;
+use Workbunny\WebmanPushServer\ChannelServer;
 use Workbunny\WebmanPushServer\HookServer;
 use Workbunny\WebmanPushServer\Server;
 
@@ -41,5 +42,12 @@ return [
         'count'       => cpu_count(),
         'reloadable'  => false, // 执行reload不重启
         'reusePort'   => true
-    ]
+    ],
+    // channel server
+    'channel-server' => [
+        'handler'     => ChannelServer::class,
+        'listen'      => 'frame://0.0.0.0:2206',
+        'reloadable'  => false, // 执行reload不重启
+        'reusePort'   => true
+    ],
 ];

@@ -17,42 +17,57 @@ use support\Response;
 use Workbunny\WebmanPushServer\ApiRoute;
 use Workbunny\WebmanPushServer\Server;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRESENCE;
+use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRIVATE;
 use function Workbunny\WebmanPushServer\response;
 
 /**
- * 欢迎界面
+ * @url GET /index
  */
 ApiRoute::get('/index', function () {
     return response(200, 'Hello Workbunny!');
 });
 
 /**
- * 推送js客户端文件
+ * @url GET /plugin/workbunny/webman-push-server/push.js
  */
 ApiRoute::get('/plugin/workbunny/webman-push-server/push.js', function () {
     return response(200, '')->file(base_path().'/vendor/workbunny/webman-push-server/push.js');
 });
 
 /**
- * 订阅鉴权 TODO 该接口建议自行业务实现
- * @url /subscribe/auth
- * @method POST
+ * TODO 该接口是样例接口，请自行实现业务
+ * 订阅状态频道鉴权接口
+ * @url POST /subscribe/presence/auth
  */
-ApiRoute::post('/subscribe/auth', function (Server $server, Request $request) {
+ApiRoute::post('/subscribe/presence/auth', function (Server $server, Request $request) {
     if(!$channelName = $request->post('channel_name')){
         return response(400, ['error' => 'Required channel_name']);
+    }
+    if($server->_getChannelType($channelName) !== CHANNEL_TYPE_PRESENCE){
+        return response(400, ['error' => 'Invalid channel_name']);
     }
     if(!$socketId = $request->post('socket_id')){
         return response(400, ['error' => 'Required socket_id']);
     }
+    $channelData = $request->post('channel_data');
 
-    // 模拟从 数据库/session 获取用户数据的操作
-    $response['channel_data'] = [
+    /**
+     * TODO 通道是否可以进行监听取决与业务是否对用户进行授权，常规实现方式是通过用户信息与 channel 进行绑定授权，自行实现
+     */
+
+    /**
+     * TODO channel_data 信息获取实现方式推荐如下
+     * TODO 1. 前端通过查询接口获取 channel_data 相关信息，再将数据传入该接口，随后与 session 进行校验等
+     * TODO 2. 通过 socketId 等信息查询数据库获取 channel_data 相关信息
+     * TODO 3. 通过 session 比对信息，获取 channel_data 相关信息
+     * TODO 以上方式任选一种适合自己的实现，以下为模拟操作
+     */
+    $response['channel_data'] = $channelData ?? [
         'user_id' => '100',
         'user_info' => "{\'name\':\'John\',\'sex\':\'man\'}"
     ];
 
-    // 模拟加密过程
+    // 获取加密sign
     $response['auth'] = ApiClient::subscribeAuth(
         'workbunny', // TODO 动态配置
         'U2FsdGVkX1+vlfFH8Q9XdZ9t9h2bABGYAZltEYAX6UM=', // TODO 动态配置
@@ -61,6 +76,37 @@ ApiRoute::post('/subscribe/auth', function (Server $server, Request $request) {
         $response['channel_data']
     );
     // 返回格式 {"auth": "workbunny:xxxxxxxxxxxxxxxx, "channel_data": "{\'name\':\'John\',\'sex\':\'man\'}"};
+    return response(200, $response);
+});
+
+/**
+ * TODO 该接口是样例接口，请自行实现业务
+ * 订阅私有频道鉴权接口
+ * @url POST /subscribe/private/auth
+ */
+ApiRoute::post('/subscribe/private/auth', function (Server $server, Request $request) {
+    if(!$channelName = $request->post('channel_name')){
+        return response(400, ['error' => 'Required channel_name']);
+    }
+    if($server->_getChannelType($channelName) !== CHANNEL_TYPE_PRIVATE){
+        return response(400, ['error' => 'Invalid channel_name']);
+    }
+    if(!$socketId = $request->post('socket_id')){
+        return response(400, ['error' => 'Required socket_id']);
+    }
+
+    /**
+     * TODO 通道是否可以进行监听取决与业务是否对用户进行授权，常规实现方式是通过用户信息与 channel 进行绑定授权，请根据业务自行实现
+     */
+
+    // 获取加密sign
+    $response['auth'] = ApiClient::subscribeAuth(
+        'workbunny', // TODO 动态配置
+        'U2FsdGVkX1+vlfFH8Q9XdZ9t9h2bABGYAZltEYAX6UM=', // TODO 动态配置
+        $socketId,
+        $channelName
+    );
+    // 返回格式 {"auth": "workbunny:xxxxxxxxxxxxxxxx"}"};
     return response(200, $response);
 });
 
@@ -93,7 +139,7 @@ ApiRoute::addGroup('/apps/{appId}', function () {
                 $channelType = $server->_getChannelType($channel);
                 if($prefix !== null and $channelType !== $prefix){
                     continue;
-                    
+
                 }
                 $channels[$channel] = Server::getStorage()->hMGet($key, $fields) ?? [];
             }
@@ -242,14 +288,3 @@ ApiRoute::addGroup('/apps/{appId}', function () {
     }
     return $next($next, $server, $request, $urlParams);
 });
-
-
-
-
-
-
-
-
-
-
-

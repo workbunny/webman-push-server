@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Workbunny\WebmanPushServer;
 
+use Channel\Client;
 use Exception;
 use RedisException;
 use support\Container;
@@ -27,6 +28,8 @@ use Workerman\Worker;
 
 class Server implements ServerInterface
 {
+    const PRIVATE_CHANNEL_PUBLISH_TO_CLIENT = 'publish-to-client';
+
     /**
      * @var string $version version
      */
@@ -184,17 +187,14 @@ class Server implements ServerInterface
     }
 
     /**
-     * 发布事件
-     * @desc debug模式下会输出字符串 publishToClients
-     * @param string $appKey
-     * @param string $channel
-     * @param string $event
-     * @param mixed $data
-     * @param string|null $socketId
+     * 向当前进程发布消息
+     * @link self::publishToClients()
+     * @param array $data = [ string $appKey, string $channel, string $event, $data, ?string $socketId = null ]
      * @return void
      */
-    public function publishToClients(string $appKey, string $channel, string $event, $data, ?string $socketId = null)
+    public function publish(array $data)
     {
+        list($appKey, $channel, $event, $data, $socketId) = $data;
         if (!isset($this->_connections[$appKey][$channel])) {
             return;
         }
@@ -205,6 +205,22 @@ class Server implements ServerInterface
             $this->_setConnectionProperty($connection, 'clientNotSendPingCount', 0);
             $this->send($connection, $channel, $event, $data);
         }
+    }
+
+    /**
+     * 广播事件
+     * @param string $appKey
+     * @param string $channel
+     * @param string $event
+     * @param mixed $data
+     * @param string|null $socketId
+     * @return void
+     */
+    public function publishToClients(string $appKey, string $channel, string $event, $data, ?string $socketId = null)
+    {
+        Client::publish(self::PRIVATE_CHANNEL_PUBLISH_TO_CLIENT, [
+            $appKey, $channel, $event, $data, $socketId
+        ]);
     }
 
     /**
@@ -434,6 +450,8 @@ class Server implements ServerInterface
     public function onWorkerStart(Worker $worker): void
     {
         self::$_server = $this;
+        // 订阅channel
+        Client::on(self::PRIVATE_CHANNEL_PUBLISH_TO_CLIENT, [$this, 'publish']);
         // 心跳检查
         if($this->_keepaliveTimeout > 0){
             $this->_heartbeatTimer = Timer::add($this->_keepaliveTimeout / 2, function (){
