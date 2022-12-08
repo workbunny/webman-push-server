@@ -149,6 +149,16 @@ var user_channel = connection.subscribe('presence-group-' + uid, push);
 // 订阅发生前，浏览器会发起一个ajax鉴权请求(ajax地址为new Push时auth参数配置的地址)，开发者可以在这里判断，当前用户是否有权限监听这个频道。这样就保证了订阅的安全性。
 ```
 
+**示例：鉴权的接口服务**
+
+```php
+	    $channel = $request->input("channel_name");
+            $socket_id = $request->input("socket_id");
+            $signature = ApiClient::subscribeAuth('workbunny','U2FsdGVkX1+vlfFH8Q9XdZ9t9h2bABGYAZltEYAX6UM=',$socket_id,$channel);
+            return json_encode(["auth" => $signature]);
+```
+
+
 #### 4.客户端（javascript）推送
 
 ##### Tips：
