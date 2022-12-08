@@ -33,6 +33,7 @@ return [
         // redis通道
         'redis_channel' => 'default',
         'heartbeat'     => 60,
+        'channel_port'  => 2206,
         // 验证app_key
         'apps_query'    => function (?string $appKey, ?string $appId = null): array
         {

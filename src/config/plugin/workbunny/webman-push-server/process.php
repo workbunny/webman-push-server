@@ -46,7 +46,7 @@ return [
     // channel server
     'channel-server' => [
         'handler'     => ChannelServer::class,
-        'listen'      => 'frame://0.0.0.0:2206',
+        'listen'      => 'frame://0.0.0.0:' . config('plugin.workbunny.webman-push-server.app.push-server.channel_port'),
         'reloadable'  => false, // 执行reload不重启
         'reusePort'   => true
     ],
