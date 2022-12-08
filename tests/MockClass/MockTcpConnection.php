@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Tests\MockClass;
 
 use Workerman\Connection\TcpConnection;
+use Workerman\Protocols\Http\Response;
 
 class MockTcpConnection extends TcpConnection
 {
@@ -30,17 +31,17 @@ class MockTcpConnection extends TcpConnection
     }
 
     /**
-     * @return string
+     * @return string|Response
      */
-    public function getSendBuffer(): string
+    public function getSendBuffer()
     {
         return $this->_sendBuffer;
     }
 
     /**
-     * @param string $sendBuffer
+     * @param string|Response $sendBuffer
      */
-    public function setSendBuffer(string $sendBuffer): void
+    public function setSendBuffer($sendBuffer): void
     {
         $this->_sendBuffer = $sendBuffer;
     }

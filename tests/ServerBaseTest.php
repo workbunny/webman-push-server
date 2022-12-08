@@ -17,7 +17,9 @@ use Closure;
 use Exception;
 use Tests\MockClass\MockRedisStream;
 use Tests\MockClass\MockTcpConnection;
+use Workbunny\WebmanPushServer\ApiService;
 use Workbunny\WebmanPushServer\HookServer;
+use Workbunny\WebmanPushServer\ServerInterface;
 
 class ServerBaseTest extends BaseTest
 {
@@ -27,7 +29,12 @@ class ServerBaseTest extends BaseTest
      */
     public function testServerInit(){
         $this->setServer();
+        // 判断是否监听了api-service
         $this->expectOutputString('workbunny/webman-push-server/api-service listen: http://0.0.0.0:8002' . PHP_EOL);
+        // 判断是否生成了api-service
+        $this->assertArrayHasKey(ApiService::class, $this->getServer()::getServices());
+        // 判断api-service是否是ServerInterface
+        $this->assertEquals(true, $this->getServer()::getServices(ApiService::class) instanceof ServerInterface);
     }
 
     /**

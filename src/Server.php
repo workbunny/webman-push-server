@@ -83,6 +83,9 @@ class Server implements ServerInterface
     /** @var Server|null  */
     protected static ?Server $_server = null;
 
+    /** @var ServerInterface[]  */
+    protected static array $_services = [];
+
     /** @var int|null 心跳定时器 */
     protected ?int $_heartbeatTimer = null;
 
@@ -125,6 +128,7 @@ class Server implements ServerInterface
                 }
                 $service->reusePort = true;
                 $service->name = 'workbunny/webman-push-server/api-service';
+                self::$_services[get_class($handler)] = $handler;
                 if($listen) {
                     echo "{$service->name} listen: $listen" . PHP_EOL;
                     if(!self::isDebug()){
@@ -141,6 +145,14 @@ class Server implements ServerInterface
     public static function isDebug(): bool
     {
         return self::$debug;
+    }
+
+    /**
+     * @return ServerInterface[]|ServerInterface|null
+     */
+    public static function getServices(?string $class = null)
+    {
+        return $class === null ? self::$_services : (self::$_services[$class] ?? null);
     }
 
     /**
