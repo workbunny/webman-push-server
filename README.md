@@ -21,7 +21,7 @@
 
 ## 简介
 
-- **目前版本为alpha版**，未发布正式，请勿用于生产环境，如遇问题，欢迎 **[issue](https://github.com/workbunny/webman-push-server/issues) & PR**；
+- **目前版本为beta版**，尚未发布正式，如遇问题，欢迎 **[issue](https://github.com/workbunny/webman-push-server/issues) & PR**；
 - **本项目 fork from [webman/push](https://www.workerman.net/plugin/2)**，利用redis实现了多进程持久化存储；
 - **1：1复刻 pusher-channel 服务，是完整的推送服务器实现；**
 - 本插件可用于实现消息推送、单聊、群聊、直播间、站内推送等多种即时通讯场景；
