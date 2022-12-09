@@ -178,6 +178,29 @@ user_channel.trigger('client-message', {form_uid:2, content:"hello"});
   - hook多进程消费服务，用于消费事件钩子，进行webhook通知
   - 配置位于config/plugin/workbunny/webman-push-server/app.php
 
+服务端推送（PHP示例）：
+```php
+use Workbunny\WebmanPushServer\ApiClient;
+try {
+$pusher = new ApiClient(
+    'APP_KEY', 
+    'APP_SECRET',
+    'APP_ID',
+    //["host":webhook API 地址]
+    ['host'=>"HOOK_ADDS",'scheme'=>'HTTP/HTTPS']
+);
+$pusher->trigger(
+    "private-d", // 频道（channel）
+    "client-a", // 事件
+    "23423432"// 消息体
+);
+} catch (GuzzleException|ApiErrorException|PusherException $e) {
+dump($e);
+}
+
+```
+
+
 #### 1.HOOK服务
 
 ##### 支持的HOOK事件：
