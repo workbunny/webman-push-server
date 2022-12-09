@@ -12,7 +12,9 @@
 declare(strict_types=1);
 
 use Workbunny\WebmanPushServer\Commands\ApisCommand;
+use Workbunny\WebmanPushServer\Commands\HookResetCommand;
 
 return [
-    ApisCommand::class
+    ApisCommand::class,
+    HookResetCommand::class
 ];

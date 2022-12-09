@@ -15,6 +15,7 @@ namespace Tests;
 
 use Exception;
 use Tests\MockClass\MockTcpConnection;
+use Workbunny\WebmanPushServer\ApiClient;
 use Workbunny\WebmanPushServer\ApiService;
 use Workbunny\WebmanPushServer\Events\ClientEvent;
 use Workbunny\WebmanPushServer\Events\Ping;
@@ -23,6 +24,7 @@ use Workbunny\WebmanPushServer\Events\Unsubscribe;
 use Workbunny\WebmanPushServer\Server;
 use Workerman\Protocols\Http;
 use Workerman\Protocols\Http\Response;
+use Workerman\Worker;
 use const Workbunny\WebmanPushServer\EVENT_MEMBER_REMOVED;
 use const Workbunny\WebmanPushServer\EVENT_PING;
 use const Workbunny\WebmanPushServer\EVENT_PONG;
@@ -41,14 +43,45 @@ class ApiServiceRouteHandlerTest extends BaseTest
     public function testApiServiceChannels(){
         $this->setServer(true);
 
-        $mockConnection = new MockTcpConnection();
-        $request = new Http\Request("GET /index HTTP/1.1\r\nConnection: keep-alive\r\n");
+        Server::setServer($this->getServer());
 
+        // required auth_key
+        $mockConnection = new MockTcpConnection();
+        $request = new Http\Request("GET /apps/1/channels HTTP/1.1\r\nConnection: keep-alive\r\n");
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
-
         $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
-        $this->assertEquals('Hello Workbunny!', $mockConnection->getSendBuffer()->rawBody());
+        $this->assertEquals('{"error":"Required auth_key"}', $mockConnection->getSendBuffer()->rawBody());
+        $this->assertEquals(400, $mockConnection->getSendBuffer()->getStatusCode());
+        $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
+
+        // invalid auth_key
+        $mockConnection = new MockTcpConnection();
+        $request = new Http\Request("GET /apps/1/channels?auth_key=test HTTP/1.1\r\nConnection: keep-alive\r\n");
+        // 手动触发 onMessage 回调
+        Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
+        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertEquals('{"error":"Invalid auth_key"}', $mockConnection->getSendBuffer()->rawBody());
+        $this->assertEquals(401, $mockConnection->getSendBuffer()->getStatusCode());
+        $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
+
+        // invalid auth_key
+        $mockConnection = new MockTcpConnection();
+        $request = new Http\Request("GET /apps/1/channels?auth_key=workbunny&auth_signature=abc HTTP/1.1\r\nConnection: keep-alive\r\n");
+        // 手动触发 onMessage 回调
+        Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
+        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertEquals('{"error":"Invalid signature"}', $mockConnection->getSendBuffer()->rawBody());
+        $this->assertEquals(401, $mockConnection->getSendBuffer()->getStatusCode());
+        $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
+
+        // successful
+        $mockConnection = new MockTcpConnection();
+        $request = new Http\Request("GET /apps/1/channels?auth_key=workbunny&auth_signature=test HTTP/1.1\r\nConnection: keep-alive\r\n");
+        // 手动触发 onMessage 回调
+        Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
+        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertEquals('{"channels":[]}', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(200, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
     }
@@ -63,13 +96,29 @@ class ApiServiceRouteHandlerTest extends BaseTest
         $this->setServer(true);
 
         $mockConnection = new MockTcpConnection();
-        $request = new Http\Request("GET /index HTTP/1.1\r\nConnection: keep-alive\r\n");
-
+        $request = new Http\Request("GET /apps/1/channels/private-test?auth_key=workbunny&auth_signature=test HTTP/1.1\r\nConnection: keep-alive\r\n");
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
-
         $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
-        $this->assertEquals('Hello Workbunny!', $mockConnection->getSendBuffer()->rawBody());
+        $this->assertEquals('{"occupied":true,"type":null}', $mockConnection->getSendBuffer()->rawBody());
+        $this->assertEquals(200, $mockConnection->getSendBuffer()->getStatusCode());
+        $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
+
+        $mockConnection = new MockTcpConnection();
+        $request = new Http\Request("GET /apps/1/channels/private-test?auth_key=workbunny&auth_signature=test&info=subscription_count HTTP/1.1\r\nConnection: keep-alive\r\n");
+        // 手动触发 onMessage 回调
+        Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
+        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertEquals('{"occupied":true,"type":null,"subscription_count":null}', $mockConnection->getSendBuffer()->rawBody());
+        $this->assertEquals(200, $mockConnection->getSendBuffer()->getStatusCode());
+        $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
+
+        $mockConnection = new MockTcpConnection();
+        $request = new Http\Request("GET /apps/1/channels/private-test?auth_key=workbunny&auth_signature=test&info=subscription_count,user_count HTTP/1.1\r\nConnection: keep-alive\r\n");
+        // 手动触发 onMessage 回调
+        Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
+        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertEquals('{"occupied":true,"type":null,"subscription_count":null,"user_count":null}', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(200, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
     }
@@ -84,14 +133,14 @@ class ApiServiceRouteHandlerTest extends BaseTest
         $this->setServer(true);
 
         $mockConnection = new MockTcpConnection();
-        $request = new Http\Request("GET /index HTTP/1.1\r\nConnection: keep-alive\r\n");
+        $request = new Http\Request("POST /apps/1/events?auth_key=workbunny&auth_signature=test HTTP/1.1\r\nConnection: keep-alive\r\n");
 
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
 
         $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
-        $this->assertEquals('Hello Workbunny!', $mockConnection->getSendBuffer()->rawBody());
-        $this->assertEquals(200, $mockConnection->getSendBuffer()->getStatusCode());
+        $this->assertEquals('{"error":"Required channels"}', $mockConnection->getSendBuffer()->rawBody());
+        $this->assertEquals(400, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
     }
 
@@ -105,14 +154,14 @@ class ApiServiceRouteHandlerTest extends BaseTest
         $this->setServer(true);
 
         $mockConnection = new MockTcpConnection();
-        $request = new Http\Request("GET /index HTTP/1.1\r\nConnection: keep-alive\r\n");
+        $request = new Http\Request("POST /apps/1/batch_events?auth_key=workbunny&auth_signature=test HTTP/1.1\r\nConnection: keep-alive\r\n");
 
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
 
         $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
-        $this->assertEquals('Hello Workbunny!', $mockConnection->getSendBuffer()->rawBody());
-        $this->assertEquals(200, $mockConnection->getSendBuffer()->getStatusCode());
+        $this->assertEquals('{"error":"Required batch"}', $mockConnection->getSendBuffer()->rawBody());
+        $this->assertEquals(400, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
     }
 
@@ -126,14 +175,12 @@ class ApiServiceRouteHandlerTest extends BaseTest
         $this->setServer(true);
 
         $mockConnection = new MockTcpConnection();
-        $request = new Http\Request("GET /index HTTP/1.1\r\nConnection: keep-alive\r\n");
-
+        $request = new Http\Request("GET /apps/1/channels/private-test/users?auth_key=workbunny&auth_signature=test HTTP/1.1\r\nConnection: keep-alive\r\n");
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
-
         $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
-        $this->assertEquals('Hello Workbunny!', $mockConnection->getSendBuffer()->rawBody());
-        $this->assertEquals(200, $mockConnection->getSendBuffer()->getStatusCode());
+        $this->assertEquals('{"error":"Not Found [private-test]"}', $mockConnection->getSendBuffer()->rawBody());
+        $this->assertEquals(404, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
     }
 
@@ -147,13 +194,13 @@ class ApiServiceRouteHandlerTest extends BaseTest
         $this->setServer(true);
 
         $mockConnection = new MockTcpConnection();
-        $request = new Http\Request("GET /index HTTP/1.1\r\nConnection: keep-alive\r\n");
+        $request = new Http\Request("POST /apps/1/users/abc/terminate_connections?auth_key=workbunny&auth_signature=test HTTP/1.1\r\nConnection: keep-alive\r\n");
 
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
 
         $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
-        $this->assertEquals('Hello Workbunny!', $mockConnection->getSendBuffer()->rawBody());
+        $this->assertEquals('{}', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(200, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
     }

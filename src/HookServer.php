@@ -74,7 +74,6 @@ class HookServer implements ServerInterface
     }
 
     /**
-     * TODO 单元测试
      * @param string $event
      * @param array $data
      * @return bool|null

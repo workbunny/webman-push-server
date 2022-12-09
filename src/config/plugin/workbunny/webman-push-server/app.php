@@ -32,21 +32,19 @@ return [
     'push-server' => [
         // redis通道
         'redis_channel' => 'default',
+        // 心跳检查，0为不检查
         'heartbeat'     => 60,
+        // channel默认端口
         'channel_port'  => 2206,
         // 验证app_key
-        'apps_query'    => function (?string $appKey, ?string $appId = null): array
+        'apps_query'    => function (string $appKey, ?string $appId = null): array
         {
             $apps = config('plugin.workbunny.webman-push-server.app.apps', []);
-            if($appId !== null){
-                foreach ($apps as $app){
-                    if($app['app_id'] === $appId){
-                        return $app;
-                    }
-                }
-                return [];
+            $app = $apps[$appKey] ?? [];
+            if($appId === null){
+                return $app;
             }
-            return $apps[$appKey] ?? [];
+            return (($app['app_id'] ?? null) === $appId) ? $app : [];
         },
     ],
     // hook消费者配置
@@ -59,7 +57,7 @@ return [
         'prefetch_count' => 5,
         // 队列长度
         'queue_limit'    => 4096,
-
+        // webhook相关配置
         'webhook_url'    => 'http://127.0.0.1:8787/plugin/workbunny/webman-push-server/webhook',
         'webhook_secret' => 'YOUR_WEBHOOK_SECRET',
         'events'         => [

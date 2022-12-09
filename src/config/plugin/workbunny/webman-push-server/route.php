@@ -275,16 +275,16 @@ ApiRoute::addGroup('/apps/{appId}', function () {
         if (!($appKey = $request->get('auth_key'))) {
             return response(400,['error' => 'Required auth_key']);
         }
-        $apps = config('plugin.workbunny.webman-push-server.app.push-server.apps_query')($appKey, $appId);
+        $apps = Server::getConfig('apps_query')($appKey, $appId);
         if(!$apps){
             return response(401,['error' => 'Invalid auth_key']);
         }
         $params = $request->get();
         unset($params['auth_signature']);
-        $realAuthSignature = ApiClient::build_auth_query_params($appKey, $apps['app_secret'], $request->method(), $request->path(), $params)['auth_signature'];
+        $realAuthSignature = ApiClient::routeAuth($appKey, $apps['app_secret'], $request->method(), $request->path(), $params);
         if ($request->get('auth_signature') !== $realAuthSignature) {
             return response(401,['error' => 'Invalid signature']);
         }
     }
-    return $next($next, $server, $request, $urlParams);
+    return $next($server, $request, $urlParams);
 });

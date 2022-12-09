@@ -3,13 +3,12 @@ declare(strict_types=1);
 
 namespace Workbunny\WebmanPushServer\Commands;
 
+use ReflectionException;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Helper\Table;
-use Webman\Route;
 use Workbunny\WebmanPushServer\ApiRoute;
 
 class ApisCommand extends Command
@@ -29,6 +28,7 @@ class ApisCommand extends Command
      * @param InputInterface $input
      * @param OutputInterface $output
      * @return int
+     * @throws ReflectionException
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {

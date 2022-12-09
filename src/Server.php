@@ -160,6 +160,14 @@ class Server implements ServerInterface
     }
 
     /**
+     * @param Server|null $server
+     */
+    public static function setServer(?Server $server): void
+    {
+        self::$_server = $server;
+    }
+
+    /**
      * @return Server|null
      */
     public static function getServer(): ?Server
@@ -282,7 +290,7 @@ class Server implements ServerInterface
      */
     public function terminateConnections(string $appKey, string $socketId, array $data): void
     {
-        $channelConnections = $this->_connections[$appKey];
+        $channelConnections = $this->_connections[$appKey] ?? [];
         foreach ($channelConnections as $channel => $channelConnection){
             if(isset($channelConnection[$socketId])){
                 $connection = $channelConnection[$socketId];
@@ -449,7 +457,7 @@ class Server implements ServerInterface
      */
     public function onWorkerStart(Worker $worker): void
     {
-        self::$_server = $this;
+        self::setServer($this);
         // 订阅channel
         Client::connect('127.0.0.1', self::getConfig('channel_port', 2206));
         Client::on(self::PRIVATE_CHANNEL_PUBLISH_TO_CLIENT, [$this, 'publish']);
