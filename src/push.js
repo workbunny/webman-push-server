@@ -186,7 +186,26 @@ function createPrivateChannel(channel_name, push)
 
 function createPresenceChannel(channel_name, push)
 {
-    return createPrivateChannel(channel_name, push);
+    var channel = new Channel(push.connection, channel_name);
+    push.channels[channel_name] = channel;
+    channel.subscribeCb = function () {
+        __ajax({
+            url: push.config.auth,
+            type: 'POST',
+            data: {channel_name: channel_name, socket_id: push.connection.socket_id, channel_data: push.config.channel_data},
+            success: function (data) {
+                data = JSON.parse(data);
+                data.channel = channel_name;
+                push.connection.send(JSON.stringify({event:"pusher:subscribe", data:data}));
+            },
+            error: function (e) {
+                throw Error(e);
+            }
+        });
+    };
+    channel.processSubscribe();
+    return channel;
+    // return createPrivateChannel(channel_name, push);
 }
 
 /*window.addEventListener('online',  function(){

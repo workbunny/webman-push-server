@@ -43,36 +43,48 @@
 composer require workbunny/webman-push-server
 ```
 
-## 使用说明
+## 说明
 
-### 频道类型：
+### 配置说明
 
-- 公共频道（public）
+配置信息及对应功能在代码注释中均有解释，详见对应代码注释；
 
-**客户端仅可监听公共频道，不可向公共频道推送消息；**
+```
+|-- config
+    |-- plugin
+        |-- webman-push-server
+            |-- app.php        # 主配置信息
+            |-- bootstrap.php  # 自动加载
+            |-- command.php    # 支持命令
+            |-- process.php    # 启动进程
+            |-- route.php      # APIs路由信息
+```
 
-- 私有频道（private）
+push-server会启动以下三种类型进程：
 
-客户端可向私有频道推送/监听，一般用于端对端的通讯，服务端仅做转发；**该频道可以用于私聊场景；**
+- push-server：主服务；负责启动推送服务及其service
+- hook-server：事件消费服务；负责消费服务内部的钩子事件
+- channel-server：进程通道服务；负责多进程通讯
 
-- 状态频道（presence）
+### 频道说明：
 
-与私有频道保持一致，区别在于状态频道还保存有客户端的信息，任何用户的上下线都会收到该频道的广播通知，如user_id、user_info；
-**状态频道最多支持100个客户端；可以用于群聊场景；**
+push-server支持以下三种频道类型：
 
-### 事件类型：
+- 公共频道（public）：**客户端仅可监听公共频道，不可向公共频道推送消息；**
+- 私有频道（private）：客户端可向私有频道推送/监听，一般用于端对端的通讯，服务端仅做转发；**该频道可以用于私聊场景；**
+- 状态频道（presence）：与私有频道保持一致，区别在于状态频道还保存有客户端的信息，任何用户的上下线都会收到该频道的广播通知，如user_id、user_info；
+**状态频道最多支持100个客户端（客户端限制，实际上可以放开）；**
 
-- **client-** 前缀的事件
+### 事件说明：
 
-拥有 **client-** 前缀的事件是客户端发起的事件，客户端在推送消息时一定会带有该前缀；
+推送的 event 须遵守以下的约定规范：
 
-- **pusher:** 前缀的事件
+- **client-** 前缀的事件：拥有 **client-** 前缀的事件是客户端发起的事件，客户端在推送消息时一定会带有该前缀；
+- **pusher:** 前缀的事件：拥有 **pusher:** 前缀的事件一般用于服务端消息、公共消息，比如在公共频道由服务端推送的消息、客户端发起的订阅公共消息；
+- **pusher_internal:** 前缀的事件：拥有 **pusher_internal:** 前缀的事件是服务端的回执通知，一般是由客户端发起订阅、取消订阅等操作时，由服务端回执的事件信息带有该前缀的事件；
 
-拥有 **pusher:** 前缀的事件一般用于服务端消息、公共消息，比如在公共频道由服务端推送的消息、客户端发起的订阅公共消息；
 
-- **pusher_internal:** 前缀的事件
-
-拥有 **pusher_internal:** 前缀的事件是服务端的回执通知，一般是由客户端发起订阅、取消订阅等操作时，由服务端回执的事件信息带有该前缀的事件；
+## 使用
 
 ### 客户端 (javascript) 使用
 
@@ -84,81 +96,119 @@ composer require workbunny/webman-push-server
 
 #### 2.客户端订阅公共频道
 
+**TIps：频道和事件可以是任意符合约定前缀的字符串，不需要服务端预先配置。**
+
 ```javascript
 // 建立连接
 var connection = new Push({
-url: 'ws://127.0.0.1:3131', // websocket地址
-app_key: '<app_key，在config/plugin/webman/push/app.php里获取>',
-auth: '<需要自行实现一个鉴权接口，用于私有和状态频道>'
+    url: 'ws://127.0.0.1:8001', // websocket地址
+    app_key: '<app_key>', // 在config/plugin/workbunny/webman-push-server/app.php里配置
 });
-// 假设用户uid为1
-var uid = 1;
-// 浏览器监听user-1频道的消息，也就是用户uid为1的用户消息
-var user_channel = connection.subscribe('user-' + uid);
 
-// 当user-1频道有message事件的消息时
+// 监听 public-test 公共频道
+var user_channel = connection.subscribe('public-test');
+
+// 当 public-test 频道有message事件的消息回调
 user_channel.on('message', function(data) {
-// data里是消息内容
-console.log(data);
+    // data里是消息内容
+    console.log(data);
 });
-// 当user-1频道有friendApply事件时消息时
-user_channel.on('friendApply', function (data) {
-// data里是好友申请相关信息
-console.log(data);
-});
-
-// 假设群组id为2
-var group_id = 2;
-// 浏览器监听group-2频道的消息，也就是监听群组2的群消息
-var group_channel = connection.subscribe('group-' + group_id);
-// 当群组2有message消息事件时
-group_channel.on('message', function(data) {
-// data里是消息内容
-console.log(data);
-});
+// 取消监听 public-test 频道
+connection.unsubscribe('public-test')
+// 取消所有频道的监听
+connection.unsubscribeAll()
 ```
-**TIps：以上例子中subscribe实现频道订阅，message friendApply 是频道上的事件。频道和事件是任意字符串，不需要服务端预先配置。**
 
-#### 3.客户端（javascript）订阅私有/状态频道
+#### 3.客户端订阅私有/状态频道
 
-**Tips：您需要先实现一个用于鉴权的接口服务**
+**Tips：您需要先实现用于鉴权的接口服务**
+
+- 私有频道
+
+**Tips：样例鉴权接口详见 config/plugin/workbunny/webman-push-server/route.php**
 
 ```javascript
-var connection = new Push({
-url: 'ws://127.0.0.1:3131', // websocket地址
-app_key: '<app_key>',
-auth: '<YOUR_AUTH_URL>' // 您需要实现订阅鉴权接口服务
-});
-
-// 假设用户uid为1
-var uid = 1;
-// 浏览器监听private-user-1私有频道的消息
-var user_channel = connection.subscribe('private-user-' + uid);
-// 浏览器监听presence-group-1状态频道的消息
-var push = {
-    channel_data : {
-        user_id: 1,
-        user_info: {
-            name: 'SomeBody',
-            sex: 'Unknown'
-        }
-    }
-};
-var user_channel = connection.subscribe('presence-group-' + uid, push);
-
 // 订阅发生前，浏览器会发起一个ajax鉴权请求(ajax地址为new Push时auth参数配置的地址)，开发者可以在这里判断，当前用户是否有权限监听这个频道。这样就保证了订阅的安全性。
+var connection = new Push({
+    url: 'ws://127.0.0.1:8001', // websocket地址
+    app_key: '<app_key>',
+    auth: 'http://127.0.0.1:8002/subscribe/private/auth' // 该接口是样例接口，请根据源码自行实现业务
+});
+// 监听 private-test 私有频道
+var user_channel = connection.subscribe('private-test');
+// 当 private-test 频道有message事件的消息回调
+user_channel.on('message', function(data) {
+    // data里是消息内容
+    console.log(data);
+});
+// 取消监听 private-test 频道
+connection.unsubscribe('private-test')
+// 取消所有频道的监听
+connection.unsubscribeAll()
 ```
 
-#### 4.客户端（javascript）推送
+- 状态频道
+  
+**Tips：样例鉴权接口详见 config/plugin/workbunny/webman-push-server/route.php**
+
+```javascript
+// 方法一
+
+// 订阅发生前，浏览器会发起一个ajax鉴权请求(ajax地址为new Push时auth参数配置的地址)，开发者可以在这里判断，当前用户是否有权限监听这个频道。这样就保证了订阅的安全性。
+var connection = new Push({
+    url: 'ws://127.0.0.1:8001', // websocket地址
+    app_key: '<app_key>',
+    auth: 'http://127.0.0.1:8002/subscribe/presence/auth' // 该接口是样例接口，请根据源码自行实现业务
+});
+
+// 方法二
+
+// 先通过接口查询获得用户信息，组装成如下
+var channel_data = {
+    user_id: '100',
+    user_info: "{\'name\':\'John\',\'sex\':\'man\'}"
+}
+// 订阅发生前，浏览器会发起一个ajax鉴权请求(ajax地址为new Push时auth参数配置的地址)，开发者可以在这里判断，当前用户是否有权限监听这个频道。这样就保证了订阅的安全性。
+var connection = new Push({
+    url: 'ws://127.0.0.1:8001', // websocket地址
+    app_key: '<app_key>',
+    auth: 'http://127.0.0.1:8002/subscribe/presence/auth', // 该接口是样例接口，请根据源码自行实现业务
+    channel_data: channel_data
+});
+
+// 监听 presence-test 状态频道
+var user_channel = connection.subscribe('presence-test');
+// 当 presence-test 频道有message事件的消息回调
+user_channel.on('message', function(data) {
+    // data里是消息内容
+    console.log(data);
+});
+// 取消监听 presence-test 频道
+connection.unsubscribe('presence-test')
+// 取消所有频道的监听
+connection.unsubscribeAll()
+```
+
+#### 4.客户端推送
 
 ##### Tips：
 
-- **客户端间推送仅支持私有频道(private-开头的频道)，并且客户端只能触发以 client- 开头的事件。**
+- **客户端间推送仅支持私有频道(private-)/状态频道（presence-），并且客户端只能触发以 client- 开头的事件。**
 客户端触发事件推送的例子
 - **以下代码给所有订阅了 private-user-1 的客户端推送 client-message 事件的数据，而当前客户端不会收到自己的推送消息**
 
 ```javascript
+// 以上省略
+
+// 私有频道
 var user_channel = connection.subscribe('private-user-1');
+user_channel.on('client-message', function (data) {
+//
+});
+user_channel.trigger('client-message', {form_uid:2, content:"hello"});
+
+// 状态频道
+var user_channel = connection.subscribe('presence-user-1');
 user_channel.on('client-message', function (data) {
 //
 });
@@ -168,38 +218,15 @@ user_channel.trigger('client-message', {form_uid:2, content:"hello"});
 ### 服务端使用
 
 服务端会分别启动一下服务进程：
-- push-server
-  - 主服务进程，用于监听websocket协议信息
-  - 配置位于config/plugin/workbunny/webman-push-server/app.php
-  - api-service子服务
-    - api子服务，用于提供http-api接口服务
-    - 路由配置位于config/plugin/workbunny/webman-push-server/route.php
-- hook-server
-  - hook多进程消费服务，用于消费事件钩子，进行webhook通知
-  - 配置位于config/plugin/workbunny/webman-push-server/app.php
-
-服务端推送（PHP示例）：
-```php
-use Workbunny\WebmanPushServer\ApiClient;
-try {
-$pusher = new ApiClient(
-    'APP_KEY', 
-    'APP_SECRET',
-    'APP_ID',
-    //["host":webhook API 地址]
-    ['host'=>"HOOK_ADDS",'scheme'=>'HTTP/HTTPS']
-);
-$pusher->trigger(
-    "private-d", // 频道（channel）
-    "client-a", // 事件
-    "23423432"// 消息体
-);
-} catch (GuzzleException|ApiErrorException|PusherException $e) {
-dump($e);
-}
-
-```
-
+   - push-server
+     - 主服务进程，用于监听websocket协议信息
+     - 配置位于config/plugin/workbunny/webman-push-server/app.php
+     - api-service子服务
+       - api子服务，用于提供http-api接口服务
+       - 路由配置位于config/plugin/workbunny/webman-push-server/route.php
+   - hook-server
+     - hook多进程消费服务，用于消费事件钩子，进行webhook通知
+     - 配置位于config/plugin/workbunny/webman-push-server/app.php
 
 #### 1.HOOK服务
 
@@ -247,6 +274,28 @@ composer require pusher/pusher-php-server
 
 **Tpis: ApiClient 既是 pusher/pusher-php-server**
 
+**服务端推送（PHP示例）：**
+
+```php
+use Workbunny\WebmanPushServer\ApiClient;
+
+try {
+    $pusher = new ApiClient(
+        'APP_KEY', 
+        'APP_SECRET',
+        'APP_ID',
+        //["host":webhook API 地址]
+        ['host'=>"HOOK_ADDS",'scheme'=>'HTTP/HTTPS']
+    );
+    $pusher->trigger(
+        "private-d", // 频道（channel）
+        "client-a", // 事件
+        "23423432"// 消息体
+    );
+} catch (GuzzleException|ApiErrorException|PusherException $e) {
+    dump($e);
+}
+```
 
 ### 其他
 
@@ -273,9 +322,8 @@ server {
 
 ```javascript
 var connection = new Push({
-url: 'wss://example.com',
-app_key: '<app_key，在config/plugin/webman/push/app.php里获取>',
-auth: '/plugin/webman/push/auth' // 订阅鉴权(仅限于私有频道)
+    url: 'wss://example.com',
+    app_key: '<app_key>'
 });
 ```
 
