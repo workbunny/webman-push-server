@@ -139,7 +139,7 @@ class ApiServiceRouteHandlerTest extends BaseTest
         Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
 
         $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
-        $this->assertEquals('{"error":"Required channels"}', $mockConnection->getSendBuffer()->rawBody());
+        $this->assertEquals('{"error":"Required name"}', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(400, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
     }

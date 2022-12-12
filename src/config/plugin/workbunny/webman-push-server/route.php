@@ -189,10 +189,10 @@ ApiRoute::addGroup('/apps/{appId}', function () {
 //        if($channels = $request->post('channels') or !is_array($channels)){
 //            return response(400, ['error' => 'Required channels']);
 //        }
-        if($event = $request->post('name')){
+        if(!$event = $request->post('name')){
             return response(400, ['error' => 'Required name']);
         }
-        if($data = $request->post('data')){
+        if(!$data = $request->post('data')){
             return response(400, ['error' => 'Required data']);
         }
         $channels = ($channel !== null) ? [(string)$channel] : $channels;
