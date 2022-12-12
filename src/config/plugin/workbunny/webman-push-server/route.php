@@ -184,15 +184,18 @@ ApiRoute::addGroup('/apps/{appId}', function () {
      */
     ApiRoute::post('/events', function (Server $server, Request $request, array $urlParams): Response {
         $appKey = $request->get('auth_key');
-        if($channels = $request->post('channels') or !is_array($channels)){
-            return response(400, ['error' => 'Required channels']);
-        }
+        $channel = $request->post('channel');
+        $channels = $request->post('channels', []);
+//        if($channels = $request->post('channels') or !is_array($channels)){
+//            return response(400, ['error' => 'Required channels']);
+//        }
         if($event = $request->post('name')){
             return response(400, ['error' => 'Required name']);
         }
         if($data = $request->post('data')){
             return response(400, ['error' => 'Required data']);
         }
+        $channels = ($channel !== null) ? [(string)$channel] : $channels;
         foreach ($channels as $channel) {
             $socket_id = $package['socket_id'] ?? null;
             $server->publishToClients($appKey, $channel, $event, $data, $socket_id);

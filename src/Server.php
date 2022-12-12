@@ -33,7 +33,7 @@ class Server implements ServerInterface
     /**
      * @var string $version version
      */
-    public static string $version = '0.1.4';
+    public static string $version = '0.1.5';
 
     /**
      * @var bool $debug debug mode

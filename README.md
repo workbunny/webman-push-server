@@ -292,6 +292,17 @@ try {
         "client-a", // 事件
         "23423432"// 消息体
     );
+    
+    # or
+    
+    $pusher->trigger(
+        [
+            "private-a",
+            "private-d",
+        ], // 频道（channel）
+        "client-a", // 事件
+        "23423432"// 消息体
+    );
 } catch (GuzzleException|ApiErrorException|PusherException $e) {
     dump($e);
 }
