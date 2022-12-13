@@ -68,11 +68,15 @@ class Subscribe extends AbstractEvent
                     $pushServer->error($connection, null, 'Received invalid JSON '.$auth);
                     return;
                 }
-                if (!isset($channelData['user_id']) or !isset($channelData['user_info'])) {
-                    $pushServer->error($connection,null, 'Bad channel_data');
+                if (!isset($channelData['user_id']) or !is_string($channelData['user_id'])) {
+                    $pushServer->error($connection,null, 'Bad channel_data.user_id');
                     return;
                 }
-                self::subscribeChannel($pushServer, $connection, $channel, $channelType, (string)$channelData['user_id'], (string)$channelData['user_info']);
+                if (!isset($channelData['user_info']) or !is_string($channelData['user_info'])) {
+                    $pushServer->error($connection,null, 'Bad channel_data.user_info');
+                    return;
+                }
+                self::subscribeChannel($pushServer, $connection, $channel, $channelType, $channelData['user_id'], $channelData['user_info']);
                 break;
             case CHANNEL_TYPE_PRIVATE:
                 if ($clientAuth !== $auth) {
@@ -145,6 +149,7 @@ class Subscribe extends AbstractEvent
                 Server::getStorage()->hIncrBy($key ,'user_count', 1);
                 /** @see Server::$_storage */
                 Server::getStorage()->hMSet($pushServer->_getUserStorageKey($appKey, $channel, $userId),[
+                    'user_id'   => $userId,
                     'user_info' => $userInfo,
                     'socket_id' => $socketId
                 ]);

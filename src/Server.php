@@ -75,6 +75,7 @@ class Server implements ServerInterface
      *
      * user信息
      * app_{appKey1}:channel_{channel1}:uid_{uid1} = [
+     *      user_id    => user_id,      // 用户id
      *      user_info  => json string,  // 用户信息json
      *      socket_id  => socketId      // 客户端id
      * ]
@@ -391,7 +392,7 @@ class Server implements ServerInterface
         ) {
             foreach($keys as $key) {
                 $result = self::getStorage()->hGetAll($key);
-                $hash[$result['uid']] = json_decode($result['user_info'], true);
+                $hash[$result['user_id']] = $result['user_info'];
             }
         }
         return [
