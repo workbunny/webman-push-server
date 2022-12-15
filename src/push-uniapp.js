@@ -192,7 +192,11 @@ function createPresenceChannel(channel_name, push)
         __ajax({
             url: push.config.auth,
             type: 'POST',
-            data: {channel_name: channel_name, socket_id: push.connection.socket_id, channel_data: push.config.channel_data},
+            data: {
+                channel_name: channel_name,
+                socket_id: push.connection.socket_id,
+                channel_data: push.config.channel_data ? JSON.stringify(push.config.channel_data) : null
+            },
             success: function (data) {
                 data = JSON.parse(data);
                 data.channel = channel_name;

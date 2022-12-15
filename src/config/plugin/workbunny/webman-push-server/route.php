@@ -49,7 +49,7 @@ ApiRoute::post('/subscribe/presence/auth', function (Server $server, Request $re
     if(!$socketId = $request->post('socket_id')){
         return response(400, ['error' => 'Required socket_id']);
     }
-    $channelData = $request->post('channel_data');
+    $channelData = @json_decode($request->post('channel_data'), true);
 
     /**
      * TODO 通道是否可以进行监听取决与业务是否对用户进行授权，常规实现方式是通过用户信息与 channel 进行绑定授权，自行实现
