@@ -140,15 +140,15 @@ class HookServer implements ServerInterface
     /**
      * @param string $method
      * @param array $query
-     * @param array $data
+     * @param string $body
      * @return string
      */
-    protected function _sign(string $method, array $query, array $data): string
+    protected function _sign(string $method, array $query, string $body): string
     {
         ksort($query);
         return hash_hmac(
             'sha256',
-            $method . PHP_EOL . \parse_url(self::getConfig('webhook_url'), \PHP_URL_PATH) . PHP_EOL . http_build_query($query) . PHP_EOL . json_encode($data),
+            $method . PHP_EOL . \parse_url(self::getConfig('webhook_url'), \PHP_URL_PATH) . PHP_EOL . http_build_query($query) . PHP_EOL . $body,
             self::getConfig('webhook_secret'),
             false
         );
@@ -166,29 +166,32 @@ class HookServer implements ServerInterface
                 foreach ($res as $queue => $data){
                     $idArray = array_keys($data);
                     $messageArray = array_values($data);
-                    try {
-                        $this->_request($method = 'POST', [
-                            'header' => [
-                                'sign' => $this->_sign($method, $query = [
-                                    'id' => uuid(),
-                                ], $data = [
-                                    'time_ms' => microtime(true),
-                                    'events'  => $messageArray,
-                                ])
-                            ],
-                            'query'  => $query,
-                            'data'   => $data,
-                        ], function (Response $response) use ($queue, $group, $idArray, $data){
-                            if($response->getStatusCode() !== 200){
-                                // 重入队尾
-                                foreach ($data as $value){
-                                    $value['failed_count'] = ($value['failed_count'] ?? 0) + 1;
-                                    self::getStorage()->xAdd($queue,'*', $value);
-                                }
+                    $this->_request($method = 'POST', [
+                        'header' => [
+                            'sign' => $this->_sign($method, $query = ['id' => uuid()], $body = json_encode([
+                                'time_ms' => microtime(true),
+                                'events'  => $messageArray,
+                            ], JSON_UNESCAPED_UNICODE))
+                        ],
+                        'query'  => $query,
+                        'data'   => $body,
+                    ], function (Response $response) use ($queue, $group, $idArray, $data){
+                        if($response->getStatusCode() !== 200){
+                            // 重入队尾
+                            foreach ($data as $value){
+                                $value['failed_count'] = ($value['failed_count'] ?? 0) + 1;
+                                self::getStorage()->xAdd($queue,'*', $value);
                             }
-                            self::ack($queue, $group, $idArray);
-                        });
-                    }catch (\Throwable $throwable){}
+                        }
+                        self::ack($queue, $group, $idArray);
+                    }, function (\Throwable $throwable) use ($queue, $group, $idArray, $data){
+                        // 重入队尾
+                        foreach ($data as $value){
+                            $value['error_count'] = ($value['error_count'] ?? 0) + 1;
+                            self::getStorage()->xAdd($queue,'*', $value);
+                        }
+                        self::ack($queue, $group, $idArray);
+                    });
                 }
             }
         });
