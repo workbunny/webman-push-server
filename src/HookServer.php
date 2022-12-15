@@ -166,6 +166,7 @@ class HookServer implements ServerInterface
                 foreach ($res as $queue => $data){
                     $idArray = array_keys($data);
                     $messageArray = array_values($data);
+                    // TODO 对error_count/failed_count的判断，选择是否执行，还是放弃
                     $this->_request($method = 'POST', [
                         'header' => [
                             'sign' => $this->_sign($method, $query = ['id' => uuid()], $body = json_encode([
