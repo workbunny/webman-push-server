@@ -62,7 +62,7 @@ Push.prototype.createConnection = function () {
                 _this.pingTimeoutTimer = 0;
             }
            
-            params = JSON.parse(params.data);
+            params = paramsDataParse(params.data);
             var event = params.event;
             var channel_name = params.channel;
             
@@ -73,7 +73,7 @@ Push.prototype.createConnection = function () {
             if (event === 'pusher:error') {
                 throw Error(params.data.message);
             }
-            var data = JSON.parse(params.data), channel;
+            var data = paramsDataParse(params.data), channel;
             if (event === 'pusher_internal:subscription_succeeded') {
                 channel = _this.channels[channel_name];
                 channel.subscribed = true;
@@ -764,11 +764,10 @@ function formatParams(data){
     }
     return arr.join('&');
 }
-function removeProperty(obj) {
-    if (obj){
-        Object.keys(obj).forEach(item => {
-            if (obj[item] === '' || obj[item] === undefined || obj[item] === null || obj[item] === 'null') delete obj[item]
-        })
+
+function paramsDataParse(data){
+    if(typeof (data) === 'string'){
+        return JSON.parse(data);
     }
-    return obj
+    return data
 }

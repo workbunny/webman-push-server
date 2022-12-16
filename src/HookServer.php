@@ -121,8 +121,10 @@ class HookServer implements ServerInterface
     {
         $queryString = http_build_query($options['query'] ?? []);
         $headers = array_merge($options['header'] ?? [], [
-            'Connection' => 'keep-alive',
-            'Server'     => 'workbunny-push-server'
+            'Connection'   => 'keep-alive',
+            'Server'       => 'workbunny-push-server',
+            'Version'      => Server::$version,
+            'Content-type' => 'application/json'
         ]);
         self::getClient()->request(
             sprintf('%s?%s', self::getConfig('webhook_url'), $queryString),
@@ -140,15 +142,14 @@ class HookServer implements ServerInterface
     /**
      * @param string $method
      * @param array $query
-     * @param string $body
+     * @param array $body
      * @return string
      */
-    protected function _sign(string $method, array $query, string $body): string
+    protected function _sign(string $method, array $query, array $body): string
     {
         ksort($query);
-        return hash_hmac(
-            'sha256',
-            $method . PHP_EOL . \parse_url(self::getConfig('webhook_url'), \PHP_URL_PATH) . PHP_EOL . http_build_query($query) . PHP_EOL . $body,
+        return hash_hmac('sha256',
+            $method . PHP_EOL . \parse_url(self::getConfig('webhook_url'), \PHP_URL_PATH) . PHP_EOL . http_build_query($query) . PHP_EOL . ($body ? json_encode($body) : '{}'),
             self::getConfig('webhook_secret'),
             false
         );
@@ -169,10 +170,10 @@ class HookServer implements ServerInterface
                     // TODO 对error_count/failed_count的判断，选择是否执行，还是放弃
                     $this->_request($method = 'POST', [
                         'header' => [
-                            'sign' => $this->_sign($method, $query = ['id' => uuid()], $body = json_encode([
+                            'sign' => $this->_sign($method, $query = ['id' => uuid()], $body = [
                                 'time_ms' => microtime(true),
                                 'events'  => $messageArray,
-                            ], JSON_UNESCAPED_UNICODE))
+                            ])
                         ],
                         'query'  => $query,
                         'data'   => $body,
