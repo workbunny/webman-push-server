@@ -111,7 +111,7 @@ class HookServer implements ServerInterface
      * @param array $options = = [
      *  'header'  => [],
      *  'query'   => [],
-     *  'data'    => [],
+     *  'data'    => '',
      * ]
      * @param Closure|null $success = function(\Workerman\Http\Response $response){}
      * @param Closure|null $error = function(\Exception $exception){}
@@ -132,7 +132,7 @@ class HookServer implements ServerInterface
                 'method'    => $method,
                 'version'   => '1.1',
                 'headers'   => $headers,
-                'data'      => $options['data'] ?? [],
+                'data'      => $options['data'] ?? '{}',
                 'success'   => $success ?? function (Response $response) {},
                 'error'     => $error ?? function (\Exception $exception) {}
             ]
@@ -142,14 +142,14 @@ class HookServer implements ServerInterface
     /**
      * @param string $method
      * @param array $query
-     * @param array $body
+     * @param string $body
      * @return string
      */
-    protected function _sign(string $method, array $query, array $body): string
+    protected function _sign(string $method, array $query, string $body): string
     {
         ksort($query);
         return hash_hmac('sha256',
-            $method . PHP_EOL . \parse_url(self::getConfig('webhook_url'), \PHP_URL_PATH) . PHP_EOL . http_build_query($query) . PHP_EOL . ($body ? json_encode($body) : '{}'),
+            $method . PHP_EOL . \parse_url(self::getConfig('webhook_url'), \PHP_URL_PATH) . PHP_EOL . http_build_query($query) . PHP_EOL . $body,
             self::getConfig('webhook_secret'),
             false
         );
@@ -170,10 +170,10 @@ class HookServer implements ServerInterface
                     // TODO 对error_count/failed_count的判断，选择是否执行，还是放弃
                     $this->_request($method = 'POST', [
                         'header' => [
-                            'sign' => $this->_sign($method, $query = ['id' => uuid()], $body = [
+                            'sign' => $this->_sign($method, $query = ['id' => uuid()], $body = json_encode([
                                 'time_ms' => microtime(true),
                                 'events'  => $messageArray,
-                            ])
+                            ]))
                         ],
                         'query'  => $query,
                         'data'   => $body,
