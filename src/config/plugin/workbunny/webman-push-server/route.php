@@ -12,6 +12,7 @@
 declare(strict_types=1);
 
 use Workbunny\WebmanPushServer\ApiClient;
+use Workbunny\WebmanPushServer\HookServer;
 use Workerman\Protocols\Http\Request;
 use support\Response;
 use Workbunny\WebmanPushServer\ApiRoute;
@@ -32,6 +33,36 @@ ApiRoute::get('/index', function () {
  */
 ApiRoute::get('/plugin/workbunny/webman-push-server/push.js', function () {
     return response(200, '')->file(base_path().'/vendor/workbunny/webman-push-server/push.js');
+});
+
+/**
+ * TODO 该接口是样例接口，请自行实现业务
+ * webhook接口
+ * @url POST /webhook
+ */
+ApiRoute::post('/webhook', function (Server $server, Request $request) {
+    parse_str($request->queryString(), $query);
+    $sign = HookServer::sign(
+        'YOUR_WEBHOOK_SECRET',
+        'POST',
+        $query,
+        $request->rawBody()
+    );
+    if($request->header('sign') !== $sign){
+        return response(403, ['error' => 'Invalid Sign']);
+    }
+
+    if(!$timeMs = $request->post('time_ms')){
+        return response(400, ['error' => 'Required time_ms']);
+    }
+    if(!$events = $request->post('events', [])){
+        return response(400, ['error' => 'Required events']);
+    }
+
+    // TODO 根据业务进行数据处理，如日志
+    dump($timeMs, $events); // 打印
+
+    return response(200, '{}');
 });
 
 /**

@@ -140,17 +140,18 @@ class HookServer implements ServerInterface
     }
 
     /**
+     * @param string $secret
      * @param string $method
      * @param array $query
      * @param string $body
      * @return string
      */
-    protected function _sign(string $method, array $query, string $body): string
+    public static function sign(string $secret, string $method, array $query, string $body): string
     {
         ksort($query);
         return hash_hmac('sha256',
             $method . PHP_EOL . \parse_url(self::getConfig('webhook_url'), \PHP_URL_PATH) . PHP_EOL . http_build_query($query) . PHP_EOL . $body,
-            self::getConfig('webhook_secret'),
+            $secret,
             false
         );
     }
@@ -170,7 +171,7 @@ class HookServer implements ServerInterface
                     // TODO 对error_count/failed_count的判断，选择是否执行，还是放弃
                     $this->_request($method = 'POST', [
                         'header' => [
-                            'sign' => $this->_sign($method, $query = ['id' => uuid()], $body = json_encode([
+                            'sign' => self::sign(self::getConfig('webhook_secret'), $method, $query = ['id' => uuid()], $body = json_encode([
                                 'time_ms' => microtime(true),
                                 'events'  => $messageArray,
                             ]))

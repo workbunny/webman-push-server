@@ -58,8 +58,8 @@ return [
         // 队列长度
         'queue_limit'    => 4096,
         // webhook相关配置
-        'webhook_url'    => 'http://127.0.0.1:8787/plugin/workbunny/webman-push-server/webhook',
-        'webhook_secret' => 'YOUR_WEBHOOK_SECRET',
+        'webhook_url'    => 'http://127.0.0.1:8002/webhook', // 样例接口
+        'webhook_secret' => 'YOUR_WEBHOOK_SECRET', // 样例
         'events'         => [
             PUSH_SERVER_EVENT_MEMBER_ADDED, PUSH_SERVER_EVENT_MEMBER_REMOVED,
             PUSH_SERVER_EVENT_CLIENT_EVENT, PUSH_SERVER_EVENT_SERVER_EVENT,
