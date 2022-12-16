@@ -101,7 +101,7 @@ class HookServer implements ServerInterface
      */
     public static function ack(string $queue, string $group, array $idArray): void
     {
-        if(self::getStorage()->xAck($queue, $group, [$idArray])){
+        if(self::getStorage()->xAck($queue, $group, $idArray)){
             self::getStorage()->xDel($queue, $idArray);
         }
     }
