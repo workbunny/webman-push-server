@@ -86,7 +86,7 @@ class HookServer implements ServerInterface
         }
         return boolval(self::getStorage()->xAdd($queue,'*', [
             'name'   => $event,
-            'data'   => $data,
+            'data'   => json_encode($data,JSON_UNESCAPED_UNICODE),
             'time'   => microtime(true),
         ]));
     }
