@@ -142,7 +142,7 @@ class Client
      * @param array $data
      * @return bool
      */
-    public function trigger(string $channel, string $event, array $data): bool
+    public function trigger(string $channel, string $event, array $data = []): bool
     {
         if(strpos($event, 'client-') !== 0){
             throw new RuntimeException("Event $event should start with 'client-'");

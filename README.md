@@ -27,10 +27,11 @@
 - 本插件可用于实现消息推送、单聊、群聊、直播间、站内推送等多种即时通讯场景；
 - 本插件兼容 pusher-channel 的客户端，包含JS、安卓(java)、IOS(swift)、IOS(Obj-C)、uniapp等；后端推送SDK支持PHP、Node、Ruby、Asp、Java、Python、Go等；客户端自带心跳和断线自动重连，使用起来非常简单稳定；
 - 本插件包含
-	- 基于websocket的消息推送服务
-	- 基于http的推送APIs
-	- 基于http-api的后端推送SDK
-	- 基于redis-stream的持久化服务端事件订阅服务
+	- **Server.php：** 基于websocket的消息推送服务 
+    - **ApiService.php：** 基于http的推送APIs
+	- **ApiClient.php：** 基于http-api的后端推送SDK
+    - **Client.php：** 基于websocket的后端客户端
+	- **HookServer.php：** 基于redis-stream的持久化服务端事件订阅服务
 
 ## 依赖
 
@@ -213,6 +214,120 @@ user_channel.on('client-message', function (data) {
 //
 });
 user_channel.trigger('client-message', {form_uid:2, content:"hello"});
+```
+
+### 客户端（PHP）使用
+
+#### 1. 订阅/退订
+
+- 订阅
+```php
+use Workbunny\WebmanPushServer\Client;
+use Workerman\Connection\AsyncTcpConnection;
+use Workbunny\WebmanPushServer\EVENT_SUBSCRIBE;
+use Workbunny\WebmanPushServer\EVENT_SUBSCRIPTION_SUCCEEDED;
+
+$client = Client::connection('127.0.0.1:8001', [
+    'apk_key'        => 'workbunny',
+    'heartbeat'      => 60,
+    'query'          => [],
+    'context_option' => []
+])
+// 注册订阅成功回调
+$client->on(EVENT_SUBSCRIPTION_SUCCEEDED, function (AsyncTcpConnection $connection, string $buffer) {
+    // TODO 
+    dump($buffer);
+})
+
+// private通道
+$client->trigger('private-test', EVENT_SUBSCRIBE);
+
+// presence通道
+$client->trigger('presence-test', EVENT_SUBSCRIBE, [
+    'user_id'   => 100,
+    'user_info' => "{\'name\':\'John\',\'sex\':\'man\'}"
+]);
+```
+
+- 退订
+```php
+use Workbunny\WebmanPushServer\Client;
+use Workerman\Connection\AsyncTcpConnection;
+use Workbunny\WebmanPushServer\EVENT_UNSUBSCRIBE;
+use Workbunny\WebmanPushServer\EVENT_UNSUBSCRIPTION_SUCCEEDED;
+
+$client = Client::connection('127.0.0.1:8001', [
+    'apk_key'        => 'workbunny',
+    'heartbeat'      => 60,
+    'query'          => [],
+    'context_option' => []
+])
+// 注册退订成功回调
+$client->on(EVENT_UNSUBSCRIPTION_SUCCEEDED, function (AsyncTcpConnection $connection, string $buffer) {
+    // TODO 
+    dump($buffer);
+})
+
+// private通道
+$client->trigger('private-test', EVENT_UNSUBSCRIBE);
+
+// presence通道
+$client->trigger('presence-test', EVENT_UNSUBSCRIBE);
+
+// 退订所有
+foreach ($client->getChannels() as $channel){
+    $client->trigger($channel, EVENT_UNSUBSCRIBE);
+}
+```
+
+#### 2. 发布/监听
+
+- 发布
+```php
+use Workbunny\WebmanPushServer\Client;
+use Workerman\Connection\AsyncTcpConnection;
+use Workbunny\WebmanPushServer\EVENT_SUBSCRIBE;
+
+$client = Client::connection('127.0.0.1:8001', [
+    'apk_key'        => 'workbunny',
+    'heartbeat'      => 60,
+    'query'          => [],
+    'context_option' => []
+])
+
+// 订阅private通道
+$client->trigger('private-test', EVENT_SUBSCRIBE);
+
+// 发送
+if($client->getChannels('private-test')){
+    $client->trigger('private-test', 'client-test', [
+        'message' => 'hello world!'
+    ]);
+}
+```
+
+- 监听
+```php
+use Workbunny\WebmanPushServer\Client;
+use Workerman\Connection\AsyncTcpConnection;
+use Workbunny\WebmanPushServer\EVENT_SUBSCRIBE;
+
+$client = Client::connection('127.0.0.1:8001', [
+    'apk_key'        => 'workbunny',
+    'heartbeat'      => 60,
+    'query'          => [],
+    'context_option' => []
+])
+
+// 订阅 client-test 事件
+$client->on('client-test', function (AsyncTcpConnection $connection, string $buffer){
+    if($data = json_decode($buffer, true)){
+        if($data['channel'] === 'private-test'){
+            dump($data['data']);
+            dump($data['event']);
+        }
+    }
+});
 ```
 
 ### 服务端使用
