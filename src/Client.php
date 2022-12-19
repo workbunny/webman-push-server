@@ -61,7 +61,7 @@ class Client
      */
     public static function connection(string $address, array $config = []): Client
     {
-        if(self::$_client[$address] ?? null){
+        if(!self::$_client[$address] ?? null){
             self::$_client[$address] = new Client($address, $config);
         }
         return self::$_client[$address];
