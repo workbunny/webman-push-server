@@ -48,15 +48,21 @@ class Server implements ServerInterface
     /**
      * @var TcpConnection[][][] = [
      *      'appKey_1' => [
+     *          ''          => [                     @desc 空字符串通道为总通道，保存所有连接
+     *              'socketId_1' => TcpConnection_1, @see self::_getConnectionProperty()
+     *              'socketId_1' => TcpConnection_1, @see self::_getConnectionProperty()
+     *          ],
      *          'channel_1' => [
      *              'socketId_1' => TcpConnection_1, @see self::_getConnectionProperty()
      *          ],
      *          'channel_2' => [
      *              'socketId_2' => TcpConnection_2, @see self::_getConnectionProperty()
-     *              'socketId_3' => TcpConnection_3, @see self::_getConnectionProperty()
      *          ]
      *      ],
      *      'appKey_2' => [
+     *          ''          => [                     @desc 空字符串通道为总通道，保存所有连接
+     *              'socketId_4' => TcpConnection_4, @see self::_getConnectionProperty()
+     *          ],
      *         'channel_1' => [
      *             'socketId_4' => TcpConnection_4, @see self::_getConnectionProperty()
      *         ]
@@ -465,13 +471,12 @@ class Server implements ServerInterface
         // 心跳检查
         if($this->_keepaliveTimeout > 0 and $this->_heartbeatTimer !== null) {
             $this->_heartbeatTimer = Timer::add($this->_keepaliveTimeout / 2, function (){
-                foreach ($this->_connections as $appKey => $appKeyConnections) {
-                    foreach ($appKeyConnections as $channel => $channelConnections){
+                foreach ($this->_connections as $appKeyConnections) {
+                    if($channelConnections = $appKeyConnections[''] ?? []) {
                         foreach ($channelConnections as $connection){
                             $count = $this->_getConnectionProperty($connection, 'clientNotSendPingCount', 0);
                             if ($count > 1) {
                                 $connection->destroy();
-                                $this->_unsetConnection($connection, $appKey, $channel);
                                 continue;
                             }
                             $this->_setConnectionProperty($connection, 'clientNotSendPingCount', $count + 1);
@@ -573,7 +578,7 @@ class Server implements ServerInterface
                         break;
                 }
                 Unsubscribe::unsubscribeChannel($this, $connection, $channel, $type, $userId);
-                unset($this->_connections[$appKey][$channel][$socketId]);
+                $this->_unsetConnection($connection, $appKey, $channel);
             }
         }
     }
