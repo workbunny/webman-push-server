@@ -56,7 +56,7 @@ return [
         // 消费数
         'prefetch_count' => 5,
         // 队列长度
-        'queue_limit'    => 4096,
+        'queue_limit'    => 4096, // 0 为不限制
         // webhook相关配置
         'webhook_url'    => 'http://127.0.0.1:8002/webhook', // 样例接口
         'webhook_secret' => 'YOUR_WEBHOOK_SECRET', // 样例

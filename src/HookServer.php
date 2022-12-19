@@ -81,7 +81,9 @@ class HookServer implements ServerInterface
      */
     public static function publish(string $event, array $data): ?bool
     {
-        if(self::getStorage()->xLen($queue = self::getConfig('queue_key')) >= self::getConfig('queue_limit')){
+        $queue = self::getConfig('queue_key');
+        $queueLimit = self::getConfig('queue_limit', 0);
+        if($queueLimit !== 0 and self::getStorage()->xLen($queue) >= $queueLimit){
             return null;
         }
         return boolval(self::getStorage()->xAdd($queue,'*', [
