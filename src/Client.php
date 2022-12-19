@@ -14,6 +14,8 @@ declare(strict_types=1);
 namespace Workbunny\WebmanPushServer;
 
 use Closure;
+use RuntimeException;
+use Throwable;
 use Workerman\Connection\AsyncTcpConnection;
 use Workerman\Timer;
 
@@ -30,8 +32,10 @@ class Client
     protected string $_address;
     /**
      * @var array = [
+     *      'app_key         => '',
+     *      'heartbeat'      => 60,
+     *      'query'          => [],
      *      'context_option' => [],
-     *      'heartbeat'      => 60
      * ]
      */
     protected array $_config = [];
@@ -56,7 +60,9 @@ class Client
 
     /**
      * @param string $address
-     * @param array $config
+     * @param array $config = [
+     *    @see Client::$_config
+     * ]
      * @return Client
      */
     public static function connection(string $address, array $config = []): Client
@@ -72,11 +78,18 @@ class Client
      */
     public function connect(): void
     {
+        $queryString = http_build_query(array_merge([
+            'client'  => 'workbunny-client',
+            'version' => Server::$version
+        ], $this->_config['query'] ?? []));
         if(!$this->_connection){
             try {
-                $this->_connection = new AsyncTcpConnection("ws://{$this->_address}", $this->_config['context_option'] ?? []);
-            }catch (\Throwable $throwable){
-                throw new \RuntimeException($throwable->getMessage(), $throwable->getCode(), $throwable);
+                $this->_connection = new AsyncTcpConnection(
+                    "ws://{$this->_address}/app/{$this->_config['app_key']}?$queryString",
+                        $this->_config['context_option'] ?? []
+                );
+            }catch (Throwable $throwable){
+                throw new RuntimeException($throwable->getMessage(), $throwable->getCode(), $throwable);
             }
             $this->_connection->onConnect = function (){
                 if(!$this->_heartbeatTimer){
@@ -120,6 +133,29 @@ class Client
     public function on(string $event, Closure $closure): void
     {
         $this->_events[$event] = $closure;
+    }
+
+    /**
+     * 触发
+     * @param string $channel
+     * @param string $event
+     * @param array $data
+     * @return bool
+     */
+    public function trigger(string $channel, string $event, array $data): bool
+    {
+        if(strpos($event, 'client-') !== 0){
+            throw new RuntimeException("Event $event should start with 'client-'");
+        }
+        if(isset($this->_channels[$channel])){
+            $this->_connection->send(json_encode([
+                'channel' => $channel,
+                'event'   => $event,
+                'data'    => $data
+            ],JSON_UNESCAPED_UNICODE));
+            return true;
+        }
+        return false;
     }
 
     /**
