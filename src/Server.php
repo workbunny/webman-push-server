@@ -463,12 +463,13 @@ class Server implements ServerInterface
         Client::connect('127.0.0.1', self::getConfig('channel_port', 2206));
         Client::on(self::PRIVATE_CHANNEL_PUBLISH_TO_CLIENT, [$this, 'publish']);
         // 心跳检查
-        if($this->_keepaliveTimeout > 0){
+        if($this->_keepaliveTimeout > 0 and $this->_heartbeatTimer !== null) {
             $this->_heartbeatTimer = Timer::add($this->_keepaliveTimeout / 2, function (){
                 foreach ($this->_connections as $appKey => $appKeyConnections) {
                     foreach ($appKeyConnections as $channel => $channelConnections){
                         foreach ($channelConnections as $connection){
-                            if (($count = $this->_getConnectionProperty($connection, 'clientNotSendPingCount')) > 1) {
+                            $count = $this->_getConnectionProperty($connection, 'clientNotSendPingCount', 0);
+                            if ($count > 1) {
                                 $connection->destroy();
                                 $this->_unsetConnection($connection, $appKey, $channel);
                                 continue;
@@ -525,7 +526,7 @@ class Server implements ServerInterface
              */
             $this->send($connection, null, EVENT_CONNECTION_ESTABLISHED, [
                 'socket_id'        => $socketId,
-                'activity_timeout' => 55
+                'activity_timeout' => $this->_keepaliveTimeout - 5
             ]);
         });
     }
