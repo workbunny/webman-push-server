@@ -89,10 +89,24 @@ push-server支持以下三种频道类型：
 
 ### 客户端 (javascript) 使用
 
-#### 1.引入javascript客户端
+#### 1.javascript客户端
+
+- 引入
 
 ```javascript
 <script src="/plugin/workbunny/webman-push-server/push.js"> </script>
+```
+
+- 创建连接
+
+**TIps：每 new 一个 Push 会创建一个连接。**
+
+```javascript
+// 建立连接
+var connection = new Push({
+    url: 'ws://127.0.0.1:8001', // websocket地址
+    app_key: '<app_key>', // 在config/plugin/workbunny/webman-push-server/app.php里配置
+});
 ```
 
 #### 2.客户端订阅公共频道
@@ -133,7 +147,7 @@ connection.unsubscribeAll()
 var connection = new Push({
     url: 'ws://127.0.0.1:8001', // websocket地址
     app_key: '<app_key>',
-    auth: 'http://127.0.0.1:8002/subscribe/private/auth' // 该接口是样例接口，请根据源码自行实现业务
+    auth: 'http://127.0.0.1:8002/subscribe/auth' // 该接口是样例接口，请根据源码自行实现业务
 });
 // 监听 private-test 私有频道
 var user_channel = connection.subscribe('private-test');
@@ -152,6 +166,8 @@ connection.unsubscribeAll()
   
 **Tips：样例鉴权接口详见 config/plugin/workbunny/webman-push-server/route.php**
 
+- 方法一
+
 ```javascript
 // 方法一
 
@@ -159,9 +175,13 @@ connection.unsubscribeAll()
 var connection = new Push({
     url: 'ws://127.0.0.1:8001', // websocket地址
     app_key: '<app_key>',
-    auth: 'http://127.0.0.1:8002/subscribe/presence/auth' // 该接口是样例接口，请根据源码自行实现业务
+    auth: 'http://127.0.0.1:8002/subscribe/auth' // 该接口是样例接口，请根据源码自行实现业务
 });
+```
 
+- 方法二
+
+```javascript
 // 方法二
 
 // 先通过接口查询获得用户信息，组装成如下
@@ -173,7 +193,7 @@ var channel_data = {
 var connection = new Push({
     url: 'ws://127.0.0.1:8001', // websocket地址
     app_key: '<app_key>',
-    auth: 'http://127.0.0.1:8002/subscribe/presence/auth', // 该接口是样例接口，请根据源码自行实现业务
+    auth: 'http://127.0.0.1:8002/subscribe/auth', // 该接口是样例接口，请根据源码自行实现业务
     channel_data: channel_data
 });
 
@@ -218,116 +238,100 @@ user_channel.trigger('client-message', {form_uid:2, content:"hello"});
 
 ### 客户端（PHP）使用
 
-#### 1. 订阅/退订
+**Tips：区别于 HTTP-apis；HTTP-APIs 用于服务端管理等工作；**
 
-- 订阅
+#### 1. 创建连接
+
 ```php
 use Workbunny\WebmanPushServer\Client;
 use Workerman\Connection\AsyncTcpConnection;
 use Workbunny\WebmanPushServer\EVENT_SUBSCRIBE;
 use Workbunny\WebmanPushServer\EVENT_SUBSCRIPTION_SUCCEEDED;
 
+// 创建连接
 $client = Client::connection('127.0.0.1:8001', [
     'apk_key'        => 'workbunny',
     'heartbeat'      => 60,
-    'query'          => [],
+    'auth'           => 'http://127.0.0.1:8002/subscribe/auth',
+    'channel_data'   => []  // channel_data
+    'query'          => [], // query
     'context_option' => []
 ])
-// 注册订阅成功回调
-$client->on(EVENT_SUBSCRIPTION_SUCCEEDED, function (AsyncTcpConnection $connection, string $buffer) {
-    // TODO 
-    dump($buffer);
-})
-
-// private通道
-$client->trigger('private-test', EVENT_SUBSCRIBE);
-
-// presence通道
-$client->trigger('presence-test', EVENT_SUBSCRIBE, [
-    'user_id'   => 100,
-    'user_info' => "{\'name\':\'John\',\'sex\':\'man\'}"
-]);
+// 建立连接
+$client->connect();
 ```
 
-- 退订
+#### 2. 订阅/退订
+
 ```php
-use Workbunny\WebmanPushServer\Client;
 use Workerman\Connection\AsyncTcpConnection;
-use Workbunny\WebmanPushServer\EVENT_UNSUBSCRIBE;
-use Workbunny\WebmanPushServer\EVENT_UNSUBSCRIPTION_SUCCEEDED;
 
-$client = Client::connection('127.0.0.1:8001', [
-    'apk_key'        => 'workbunny',
-    'heartbeat'      => 60,
-    'query'          => [],
-    'context_option' => []
-])
-// 注册退订成功回调
-$client->on(EVENT_UNSUBSCRIPTION_SUCCEEDED, function (AsyncTcpConnection $connection, string $buffer) {
-    // TODO 
-    dump($buffer);
-})
-
-// private通道
-$client->trigger('private-test', EVENT_UNSUBSCRIBE);
-
-// presence通道
-$client->trigger('presence-test', EVENT_UNSUBSCRIBE);
-
-// 退订所有
-foreach ($client->getChannels() as $channel){
-    $client->trigger($channel, EVENT_UNSUBSCRIBE);
-}
-```
-
-#### 2. 发布/监听
-
-- 发布
-```php
-use Workbunny\WebmanPushServer\Client;
-use Workerman\Connection\AsyncTcpConnection;
-use Workbunny\WebmanPushServer\EVENT_SUBSCRIBE;
-
-$client = Client::connection('127.0.0.1:8001', [
-    'apk_key'        => 'workbunny',
-    'heartbeat'      => 60,
-    'query'          => [],
-    'context_option' => []
-])
-
-// 订阅private通道
-$client->trigger('private-test', EVENT_SUBSCRIBE);
-
-// 发送
-if($client->getChannels('private-test')){
-    $client->trigger('private-test', 'client-test', [
-        'message' => 'hello world!'
-    ]);
-}
-```
-
-- 监听
-```php
-use Workbunny\WebmanPushServer\Client;
-use Workerman\Connection\AsyncTcpConnection;
-use Workbunny\WebmanPushServer\EVENT_SUBSCRIBE;
-
-$client = Client::connection('127.0.0.1:8001', [
-    'apk_key'        => 'workbunny',
-    'heartbeat'      => 60,
-    'query'          => [],
-    'context_option' => []
-])
-
-// 订阅 client-test 事件
-$client->on('client-test', function (AsyncTcpConnection $connection, string $buffer){
-    if($data = json_decode($buffer, true)){
-        if($data['channel'] === 'private-test'){
-            dump($data['data']);
-            dump($data['event']);
-        }
-    }
+// private
+$client->subscribe('private-test', function (AsyncTcpConnection $connection, array $data) {
+    // 订阅成功后触发
+    dump($data);
 });
+
+$client->unsubscribe('private-test', function (AsyncTcpConnection $connection, array $data) {
+    // 退订成功后触发
+    dump($data);
+});
+
+// presence
+$client->subscribe('presence-test', function (AsyncTcpConnection $connection, array $data) {
+    // 订阅成功后触发
+    dump($data);
+});
+
+$client->unsubscribe('presence-test', function (AsyncTcpConnection $connection, array $data) {
+    // 退订成功后触发
+    dump($data);
+});
+
+// 退订全部
+$client->unsubscribeAll();
+```
+
+#### 3. 触发消息
+
+```php
+// 向 private-test 通道发送 client-test 事件消息
+$client->trigger('private-test', 'client-test', [
+    'message' => 'hello workbunny!'
+]);
+
+// 向 presence-test 通道发送 client-test 事件消息
+$client->trigger('presence-test', 'client-test', [
+    'message' => 'hello workbunny!'
+]);
+
+// 事件不带 client- 前缀会抛出RuntimeException
+try{
+    $client->trigger('presence-test', 'test', [
+        'message' => 'hello workbunny!'
+    ]);
+}catch (RuntimeException $exception){
+    dump($exception);
+}
+```
+
+#### 4. 其他
+
+```php
+
+// 获取客户端id
+$client->getSocketId();
+
+// 获取已订阅通道
+$client->getChannels();
+
+// base方法，注册事件回调
+$client->on();
+
+// base方法，发布消息，不建议业务使用
+$client->publish();
+
+// 更多详见 Client.php
 ```
 
 ### 服务端使用

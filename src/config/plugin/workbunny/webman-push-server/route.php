@@ -67,14 +67,17 @@ ApiRoute::post('/webhook', function (Server $server, Request $request) {
 
 /**
  * TODO 该接口是样例接口，请自行实现业务
- * 订阅状态频道鉴权接口
- * @url POST /subscribe/presence/auth
+ * 通道鉴权接口
+ * @url POST /subscribe/auth
  */
-ApiRoute::post('/subscribe/presence/auth', function (Server $server, Request $request) {
+ApiRoute::post('/subscribe/auth', function (Server $server, Request $request) {
     if(!$channelName = $request->post('channel_name')){
         return response(400, ['error' => 'Required channel_name']);
     }
-    if($server->_getChannelType($channelName) !== CHANNEL_TYPE_PRESENCE){
+    if(
+        $server->_getChannelType($channelName) !== CHANNEL_TYPE_PRESENCE and
+        $server->_getChannelType($channelName) !== CHANNEL_TYPE_PRIVATE
+    ){
         return response(400, ['error' => 'Invalid channel_name']);
     }
     if(!$socketId = $request->post('socket_id')){
@@ -104,40 +107,12 @@ ApiRoute::post('/subscribe/presence/auth', function (Server $server, Request $re
         'U2FsdGVkX1+vlfFH8Q9XdZ9t9h2bABGYAZltEYAX6UM=', // TODO 动态配置
         $socketId,
         $channelName,
-        $response['channel_data']
+        $server->_getChannelType($channelName) === CHANNEL_TYPE_PRESENCE ? $response['channel_data'] : []
     );
-    // 返回格式 {"auth": "workbunny:xxxxxxxxxxxxxxxx, "channel_data": "{\'name\':\'John\',\'sex\':\'man\'}"};
-    return response(200, $response);
-});
-
-/**
- * TODO 该接口是样例接口，请自行实现业务
- * 订阅私有频道鉴权接口
- * @url POST /subscribe/private/auth
- */
-ApiRoute::post('/subscribe/private/auth', function (Server $server, Request $request) {
-    if(!$channelName = $request->post('channel_name')){
-        return response(400, ['error' => 'Required channel_name']);
-    }
-    if($server->_getChannelType($channelName) !== CHANNEL_TYPE_PRIVATE){
-        return response(400, ['error' => 'Invalid channel_name']);
-    }
-    if(!$socketId = $request->post('socket_id')){
-        return response(400, ['error' => 'Required socket_id']);
-    }
-
     /**
-     * TODO 通道是否可以进行监听取决与业务是否对用户进行授权，常规实现方式是通过用户信息与 channel 进行绑定授权，请根据业务自行实现
+     * @private {"auth": "workbunny:xxxxxxxxxxxxxxxx"}
+     * @presence {"auth": "workbunny:xxxxxxxxxxxxxxxx", "channel_data": "{\'name\':\'John\',\'sex\':\'man\'}"}
      */
-
-    // 获取加密sign
-    $response['auth'] = ApiClient::subscribeAuth(
-        'workbunny', // TODO 动态配置
-        'U2FsdGVkX1+vlfFH8Q9XdZ9t9h2bABGYAZltEYAX6UM=', // TODO 动态配置
-        $socketId,
-        $channelName
-    );
-    // 返回格式 {"auth": "workbunny:xxxxxxxxxxxxxxxx"}"};
     return response(200, $response);
 });
 

@@ -23,19 +23,18 @@ use Workerman\Timer;
 
 class Client
 {
-    /**
-     * @var Client[]
-     */
+    public static array $header = [
+        'client'  => 'workbunny-client',
+        'version' => VERSION
+    ];
+    /** @var Client[] */
     protected static array $_client = [];
-    /**
-     * @var HttpClient|null
-     */
+    /** @var HttpClient|null  */
     protected static ?HttpClient $_httpClient = null;
     /** @var int  */
     protected static int $_connectTimeout = 30;
     /** @var int  */
     protected static int $_requestTimeout = 30;
-
     /** @var AsyncTcpConnection|null ws连接 */
     protected ?AsyncTcpConnection $_connection = null;
     /** @var string 地址 */
@@ -105,10 +104,7 @@ class Client
      */
     public function connect(): void
     {
-        $queryString = http_build_query(array_merge(
-            ['client'  => 'workbunny-client', 'version' => Server::$version],
-            $this->getConfig('query', [])
-        ));
+        $queryString = http_build_query(array_merge(self::$header, $this->getConfig('query', [])));
         if(!$this->_connection){
             try {
                 $this->_connection = new AsyncTcpConnection(
@@ -138,22 +134,6 @@ class Client
     }
 
     /**
-     * 关闭连接
-     * @return void
-     */
-    public function disconnect(): void
-    {
-        if($this->_connection){
-            $this->_connection->close();
-            $this->_connection = null;
-        }
-        if($this->_heartbeatTimer){
-            Timer::del($this->_heartbeatTimer);
-        }
-        unset(self::$_client[$this->getAddress()]);
-    }
-
-    /**
      * 注册事件回调函数
      * @param string|null $channel
      * @param string $event
@@ -167,43 +147,6 @@ class Client
             return;
         }
         $this->_events[$event] = $handler;
-    }
-
-    /**
-     * 弹出事件回调
-     * @param string|null $channel
-     * @param string $event
-     * @return Closure|null
-     */
-    public function emit(?string $channel, string $event): ?Closure
-    {
-        if($channel !== null){
-            return $this->_events[$event][$channel] ?? null;
-        }
-        return $this->_events[$event] ?? null;
-    }
-
-    /**
-     * 消息发布
-     * @param string|null $channel
-     * @param string $event
-     * @param array $data
-     * @return void
-     */
-    public function publish(?string $channel, string $event, array $data = []): void
-    {
-        $data = [
-            'event' => $event,
-            'data'  => $data
-        ];
-        if($channel !== null){
-            $data['channel'] = $channel;
-        }
-        $this->_connection->send(json_encode([
-            'channel' => $channel,
-            'event'   => $event,
-            'data'    => $data
-        ],JSON_UNESCAPED_UNICODE));
     }
 
     /**
@@ -328,6 +271,60 @@ class Client
     }
 
     /**
+     * 弹出事件回调
+     * @param string|null $channel
+     * @param string $event
+     * @return Closure|null
+     */
+    public function emit(?string $channel, string $event): ?Closure
+    {
+        if($channel !== null){
+            return $this->_events[$event][$channel] ?? null;
+        }
+        return $this->_events[$event] ?? null;
+    }
+
+    /**
+     * 消息发布
+     * @param string|null $channel
+     * @param string $event
+     * @param array $data
+     * @return void
+     */
+    public function publish(?string $channel, string $event, array $data = []): void
+    {
+        $data = [
+            'event' => $event,
+            'data'  => $data
+        ];
+        if($channel !== null){
+            $data['channel'] = $channel;
+        }
+        $this->_connection->send(json_encode([
+            'channel' => $channel,
+            'event'   => $event,
+            'data'    => $data
+        ],JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * 关闭连接
+     * @return void
+     */
+    public function disconnect(): void
+    {
+        if($this->_connection){
+            $this->_connection->close();
+            $this->_connection = null;
+        }
+        if($this->_heartbeatTimer){
+            Timer::del($this->_heartbeatTimer);
+        }
+        unset(self::$_client[$this->getAddress()]);
+    }
+
+    /**
+     * 鉴权请求
      * @param string $channel
      * @param Closure $success = function(\Workerman\Http\Response $response){}
      * @param Closure $error = function(\Exception $exception){}
@@ -341,10 +338,7 @@ class Client
             [
                 'method'    => 'POST',
                 'version'   => '1.1',
-                'headers'   => [
-                    'client'  => 'workbunny-client',
-                    'version' => Server::$version
-                ],
+                'headers'   => self::$header,
                 'data'      => json_encode([
                     'channel_name' => $channel,
                     'socket_id'    => $this->getSocketId(),
@@ -357,6 +351,7 @@ class Client
     }
 
     /**
+     * onMessage回调
      * @param AsyncTcpConnection $connection
      * @param string $buffer
      * @return void
