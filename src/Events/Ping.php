@@ -24,6 +24,9 @@ class Ping extends AbstractEvent
      */
     public function response(Server $pushServer, TcpConnection $connection, array $request): void
     {
+        /**
+         * {"event":"pusher:pong","data":"{}"}
+         */
         $pushServer->send($connection, null, EVENT_PONG, new \stdClass());
     }
 }
