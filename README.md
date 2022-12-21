@@ -409,7 +409,10 @@ try {
     $pusher->trigger(
         "private-d", // 频道（channel）
         "client-a", // 事件
-        "23423432"// 消息体
+        [
+            'message' => 'hello workbunny!'
+        ],// 消息体,
+        [], true
     );
     
     # or
@@ -420,7 +423,10 @@ try {
             "private-d",
         ], // 频道（channel）
         "client-a", // 事件
-        "23423432"// 消息体
+        [
+            'message' => 'hello workbunny!'
+        ],// 消息体
+        [], true
     );
 } catch (GuzzleException|ApiErrorException|PusherException $e) {
     dump($e);
