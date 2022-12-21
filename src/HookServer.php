@@ -125,7 +125,7 @@ class HookServer implements ServerInterface
         $headers = array_merge($options['header'] ?? [], [
             'Connection'   => 'keep-alive',
             'Server'       => 'workbunny-push-server',
-            'Version'      => Server::$version,
+            'Version'      => VERSION,
             'Content-type' => 'application/json'
         ]);
         self::getClient()->request(

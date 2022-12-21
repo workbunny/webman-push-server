@@ -24,8 +24,8 @@ use Workerman\Timer;
 class Client
 {
     public static array $header = [
-        'client'  => 'workbunny-client',
-        'version' => VERSION
+        'Client'  => 'workbunny-client',
+        'Version' => VERSION
     ];
     /** @var Client[] */
     protected static array $_client = [];
@@ -179,23 +179,24 @@ class Client
     {
         // 注册事件回调
         $this->on($channel, EVENT_SUBSCRIPTION_SUCCEEDED, $handler);
-        // private / presence
-        if(strpos($channel, 'private-') === 0 or strpos($channel, 'presence-') === 0) {
-            // http 鉴权
-            $this->_authRequest($channel, function(Response $response) use($channel){
-                if($response->getStatusCode() !== 200){
-                    if($res = json_decode((string)$response->getBody(),true)){
-                        $res['channel'] = $channel;
-                        $this->publish(null, EVENT_SUBSCRIBE, $res);
-                    }
-                }
-            }, function (Throwable $throwable) {});
+        // public
+        if(strpos($channel, 'private-') !== 0 and strpos($channel, 'presence-') !== 0) {
+            $this->publish(null, EVENT_SUBSCRIBE, [
+                'channel' => $channel,
+            ]);
             return;
         }
-        // public
-        $this->publish(null, EVENT_SUBSCRIBE, [
-            'channel' => $channel,
-        ]);
+        // private / presence
+        // http 鉴权
+        $this->_authRequest($channel, function(Response $response) use($channel){
+            if($response->getStatusCode() === 200){
+                if($res = json_decode((string)$response->getBody(),true)){
+                    $res['channel'] = $channel;
+                    $this->publish(null, EVENT_SUBSCRIBE, $res);
+                }
+            }
+        }, function (Throwable $throwable) {});
+
     }
 
     /**
@@ -274,9 +275,9 @@ class Client
      * 弹出事件回调
      * @param string|null $channel
      * @param string $event
-     * @return Closure|null
+     * @return Closure|Closure[]|null
      */
-    public function emit(?string $channel, string $event): ?Closure
+    public function emit(?string $channel, string $event)
     {
         if($channel !== null){
             return $this->_events[$event][$channel] ?? null;
@@ -333,21 +334,36 @@ class Client
     public function _authRequest(string $channel, Closure $success, Closure $error): void
     {
         $channelData = $this->getConfig('channel_data');
-        self::getHttpClient()->request(
-            $this->getConfig('auth'),
-            [
-                'method'    => 'POST',
-                'version'   => '1.1',
-                'headers'   => self::$header,
-                'data'      => json_encode([
-                    'channel_name' => $channel,
-                    'socket_id'    => $this->getSocketId(),
-                    'channel_data' => $channelData ? json_encode($channelData, JSON_UNESCAPED_UNICODE) : null
-                ], JSON_UNESCAPED_UNICODE),
-                'success'   => $success,
-                'error'     => $error
-            ]
-        );
+        $count = 0;
+        $timerId = Timer::add(0.01, function () use ($channel, $channelData, $success, $error, &$count, &$timerId){
+            if($count > (30 * 100)){ // 30s 订阅超时时间
+                Timer::del($timerId);
+                return;
+            }
+            if($this->getSocketId() === null){
+                $count ++;
+                return;
+            }
+            self::getHttpClient()->request(
+                $this->getConfig('auth'),
+                [
+                    'method'    => 'POST',
+                    'version'   => '1.1',
+                    'headers'   => array_merge(self::$header,[
+                        'Connection'   => 'keep-alive',
+                        'Content-type' => 'application/json'
+                    ]),
+                    'data'      => json_encode([
+                        'channel_name' => $channel,
+                        'socket_id'    => $this->getSocketId(),
+                        'channel_data' => $channelData ? json_encode($channelData, JSON_UNESCAPED_UNICODE) : null
+                    ], JSON_UNESCAPED_UNICODE),
+                    'success'   => $success,
+                    'error'     => $error
+                ]
+            );
+            Timer::del($timerId);
+        });
     }
 
     /**

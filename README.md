@@ -250,7 +250,7 @@ use Workbunny\WebmanPushServer\EVENT_SUBSCRIPTION_SUCCEEDED;
 
 // 创建连接
 $client = Client::connection('127.0.0.1:8001', [
-    'apk_key'        => 'workbunny',
+    'app_key'        => 'workbunny',
     'heartbeat'      => 60,
     'auth'           => 'http://127.0.0.1:8002/subscribe/auth',
     'channel_data'   => []  // channel_data
