@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 namespace Workbunny\WebmanPushServer;
 
-const VERSION = '0.3.1';
+const VERSION = '0.3.2';
 
 const EVENT_CONNECTION_ESTABLISHED     = 'pusher:connection_established';
 const EVENT_ERROR                      = 'pusher:error';

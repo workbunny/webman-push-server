@@ -370,10 +370,10 @@ class Client
      */
     public function _onMessageHandler(AsyncTcpConnection $connection, string $buffer): void
     {
-        if($data = json_decode($buffer, true)){
-            $channel = $data['channel'] ?? null;
-            $event = $data['event'] ?? null;
-            $data = $data['data'] ?? [];
+        if($buffer = json_decode($buffer, true)){
+            $channel = $buffer['channel'] ?? null;
+            $event = $buffer['event'] ?? null;
+            $data = $buffer['data'] ?? [];
             switch ($event) {
                 // PONG
                 case EVENT_PONG:
@@ -398,7 +398,7 @@ class Client
             if($event) {
                 $handler = $this->emit($channel, $event);
                 if($handler instanceof Closure) {
-                    call_user_func($handler, $connection, $data);
+                    call_user_func($handler, $connection, $buffer);
                 }
             }
         }
