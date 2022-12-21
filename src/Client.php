@@ -301,11 +301,7 @@ class Client
         if($channel !== null){
             $data['channel'] = $channel;
         }
-        $this->_connection->send(json_encode([
-            'channel' => $channel,
-            'event'   => $event,
-            'data'    => $data
-        ],JSON_UNESCAPED_UNICODE));
+        $this->_connection->send(json_encode($data,JSON_UNESCAPED_UNICODE));
     }
 
     /**
