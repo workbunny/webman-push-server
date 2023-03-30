@@ -21,7 +21,7 @@ use Workbunny\WebmanPushServer\ApiService;
 use Workbunny\WebmanPushServer\HookServer;
 use Workbunny\WebmanPushServer\ServerInterface;
 
-class ServerBaseTest extends BaseTest
+class ServerBaseTest extends BaseTestCase
 {
     /**
      * 测试server初始化

@@ -26,8 +26,7 @@ use const Workbunny\WebmanPushServer\EVENT_PONG;
 use const Workbunny\WebmanPushServer\EVENT_SUBSCRIBE;
 use const Workbunny\WebmanPushServer\EVENT_UNSUBSCRIBE;
 
-
-class ServerEventHandlerTest extends BaseTest
+class ServerEventHandlerTest extends BaseTestCase
 {
     /**
      * 测试消息事件处理

@@ -19,7 +19,7 @@ use Workbunny\WebmanPushServer\ApiService;
 use Workbunny\WebmanPushServer\Server;
 
 
-abstract class BaseTest extends TestCase
+abstract class BaseTestCase extends TestCase
 {
     protected string $_websocket_header = "GET /app/workbunny?protocol=7&client=js&version=3.2.4&flash=false HTTP/1.1\r\nConnection: Upgrade\r\nUpgrade: websocket\r\n\r\n";
 

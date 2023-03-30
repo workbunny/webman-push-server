@@ -16,21 +16,11 @@ namespace Tests;
 use Exception;
 use Tests\MockClass\MockTcpConnection;
 use Workbunny\WebmanPushServer\ApiService;
-use Workbunny\WebmanPushServer\Events\ClientEvent;
-use Workbunny\WebmanPushServer\Events\Ping;
-use Workbunny\WebmanPushServer\Events\Subscribe;
-use Workbunny\WebmanPushServer\Events\Unsubscribe;
 use Workbunny\WebmanPushServer\Server;
 use Workerman\Protocols\Http;
 use Workerman\Protocols\Http\Response;
-use const Workbunny\WebmanPushServer\EVENT_MEMBER_REMOVED;
-use const Workbunny\WebmanPushServer\EVENT_PING;
-use const Workbunny\WebmanPushServer\EVENT_PONG;
-use const Workbunny\WebmanPushServer\EVENT_SUBSCRIBE;
-use const Workbunny\WebmanPushServer\EVENT_UNSUBSCRIBE;
 
-
-class ApiServiceBaseTest extends BaseTest
+class ApiServiceBaseTest extends BaseTestCase
 {
     /**
      * 测试消息事件处理
