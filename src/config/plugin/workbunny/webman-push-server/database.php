@@ -4,7 +4,7 @@ return [
     'connections' => [
         'local-storage' => [
             'driver'   => 'sqlite',
-            'database' => '',
+            'database' => runtime_path() . '/workbunny/webman-push-server/temp.db',
             'prefix'   => '',
         ],
     ]

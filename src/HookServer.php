@@ -14,7 +14,12 @@ declare(strict_types=1);
 namespace Workbunny\WebmanPushServer;
 
 use Closure;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 use RedisException;
+use support\Db;
 use support\Log;
 use support\Redis;
 use Tests\MockClass\MockRedisStream;
@@ -113,6 +118,23 @@ class HookServer implements ServerInterface
     }
 
     /**
+     * @param string $secret
+     * @param string $method
+     * @param array $query
+     * @param string $body
+     * @return string
+     */
+    public static function sign(string $secret, string $method, array $query, string $body): string
+    {
+        ksort($query);
+        return hash_hmac('sha256',
+            $method . PHP_EOL . \parse_url(self::getConfig('webhook_url'), \PHP_URL_PATH) . PHP_EOL . http_build_query($query) . PHP_EOL . $body,
+            $secret,
+            false
+        );
+    }
+
+    /**
      * @param string $method
      * @param array $options = = [
      *  'header'  => [],
@@ -164,34 +186,47 @@ class HookServer implements ServerInterface
             Log::channel('plugin.workbunny.webman-push-server.notice')->notice($exception->getMessage(), [
                 'code' => $exception->getCode(),
             ]);
-            // todo 将数据储存至文件
+            // 数据储存至文件
+            Db::connection('plugin.workbunny.webman-push-server.local-storage')
+                ->table('temp')->insert([
+                    'queue'      => $queue,
+                    'data'       => json_encode($value, JSON_UNESCAPED_UNICODE),
+                    'created_at' => time()
+                ]);
         }
     }
 
     /**
-     * @param string $secret
-     * @param string $method
-     * @param array $query
-     * @param string $body
-     * @return string
+     * @return void
      */
-    public static function sign(string $secret, string $method, array $query, string $body): string
+    protected function _tempDbInit()
     {
-        ksort($query);
-        return hash_hmac('sha256',
-            $method . PHP_EOL . \parse_url(self::getConfig('webhook_url'), \PHP_URL_PATH) . PHP_EOL . http_build_query($query) . PHP_EOL . $body,
-            $secret,
-            false
-        );
+        $builder = Schema::connection('plugin.workbunny.webman-push-server.local-storage');
+        if (!$builder->hasTable('temp')) {
+            $builder->create('temp', function (Blueprint $table) {
+                $table->id();
+                $table->string('queue');
+                $table->json('data');
+                $table->integer('create_at');
+            });
+            echo 'local-storage db created. ' . PHP_EOL;
+        }
     }
 
     /** @inheritDoc */
     public function onWorkerStart(Worker $worker): void
     {
+        $this->_tempDbInit();
         // 设置消息重载定时器
         $this->_requeueTimer = Timer::add(self::getConfig('requeue_interval'), function () {
-            // todo 读取文件数据
-            // todo 将文件数据发布至队列
+            $connection = Db::connection('plugin.workbunny.webman-push-server.local-storage');
+            $connection->table('temp')->select()->chunkById(500, function (Collection $collection) use ($connection) {
+                foreach ($collection as $item) {
+                    if (self::getStorage()->xAdd($item->queue,'*', json_decode($item->data, true))) {
+                        $connection->table('temp')->delete($item->id);
+                    }
+                }
+            });
         });
         // 设置消费定时器
         $this->_consumerTimer = Timer::add($interval = self::getConfig('consumer_interval') / 1000, function () use ($worker, $interval) {
@@ -223,14 +258,14 @@ class HookServer implements ServerInterface
                             'query'  => $query,
                             'data'   => $body,
                         ], function (Response $response) use ($queue, $group, $idArray, $data) {
-                            // 先对数据进行ack
+                            // 数据ack
                             self::ack($queue, $group, $idArray);
-                            // 后将失败数据重入队尾
+                            // 失败数据重入队尾
                             if($response->getStatusCode() !== 200) {
                                 $this->_tryToRepublish($queue, $data, 'failed_count');
                             }
                         }, function (\Throwable $throwable) use ($queue, $group, $idArray, $data) {
-                            // 先对数据进行ack
+                            // 数据ack
                             self::ack($queue, $group, $idArray);
                             // 重入队尾
                             $this->_tryToRepublish($queue, $data, 'error_count');
