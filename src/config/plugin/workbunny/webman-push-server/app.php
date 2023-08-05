@@ -50,17 +50,21 @@ return [
     // hook消费者配置
     'hook-server' => [
         // redis通道
-        'redis_channel'  => 'default',
+        'redis_channel'     => 'default',
         // 队列名
-        'queue_key'      => 'workbunny:webman-push-server:webhook-stream',
+        'queue_key'         => 'workbunny:webman-push-server:webhook-stream',
+        // 消息重入队列定时间隔
+        'requeue_interval'  => 5 * 60, // 5min
+        // 消息消费定时间隔
+        'consumer_interval' => 1, // 1ms
         // 消费数
-        'prefetch_count' => 5,
+        'prefetch_count'    => 5,
         // 队列长度
-        'queue_limit'    => 4096, // 0 为不限制
+        'queue_limit'       => 4096, // 0 为不限制
         // webhook相关配置
-        'webhook_url'    => 'http://127.0.0.1:8002/webhook', // 样例接口
-        'webhook_secret' => 'YOUR_WEBHOOK_SECRET', // 样例
-        'events'         => [
+        'webhook_url'       => 'http://127.0.0.1:8002/webhook', // 样例接口
+        'webhook_secret'    => 'YOUR_WEBHOOK_SECRET', // 样例
+        'events'            => [
             PUSH_SERVER_EVENT_MEMBER_ADDED, PUSH_SERVER_EVENT_MEMBER_REMOVED,
             PUSH_SERVER_EVENT_CLIENT_EVENT, PUSH_SERVER_EVENT_SERVER_EVENT,
             PUSH_SERVER_EVENT_CHANNEL_OCCUPIED, PUSH_SERVER_EVENT_CHANNEL_VACATED,

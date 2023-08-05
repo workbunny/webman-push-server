@@ -40,6 +40,9 @@ class HookServer implements ServerInterface
     /** @var int|null 消费定时器 */
     protected ?int $_consumerTimer = null;
 
+    /** @var int|null 消息重入队列定时器 */
+    protected ?int $_requeueTimer = null;
+
     /** @inheritDoc */
     public static function getConfig(string $key, $default = null)
     {
@@ -142,6 +145,27 @@ class HookServer implements ServerInterface
     }
 
     /**
+     * 尝试将数据发布到队尾
+     *
+     * @param string $queue
+     * @param array $data
+     * @param string $countName
+     * @return void
+     */
+    protected function _tryToRepublish(string $queue, array $data, string $countName): void
+    {
+        try {
+            foreach ($data as $value){
+                $value[$countName] = ($value[$countName] ?? 0) + 1;
+                self::getStorage()->xAdd($queue,'*', $value);
+            }
+        } catch (RedisException $redisException) {
+            // todo 记录log
+            // todo 将数据储存至文件
+        }
+    }
+
+    /**
      * @param string $secret
      * @param string $method
      * @param array $query
@@ -161,43 +185,58 @@ class HookServer implements ServerInterface
     /** @inheritDoc */
     public function onWorkerStart(Worker $worker): void
     {
-        $this->_consumerTimer = Timer::add($interval = 0.001, function () use ($worker, $interval){
-            // 创建组
-            self::getStorage()->xGroup('CREATE', $queue = self::getConfig('queue_key'), $group = "$queue:webhook-group", '0', true);
-            // 读取未确认的消息组
-            if($res = self::getStorage()->xReadGroup($group, "webhook-consumer-$worker->id", [$queue => '>'], self::getConfig('prefetch_count'), (int)($interval * 1000))){
-                // 队列组
-                foreach ($res as $queue => $data){
-                    $idArray = array_keys($data);
-                    $messageArray = array_values($data);
-                    // TODO 对error_count/failed_count的判断，选择是否执行，还是放弃
-                    $this->_request($method = 'POST', [
-                        'header' => [
-                            'sign' => self::sign(self::getConfig('webhook_secret'), $method, $query = ['id' => uuid()], $body = json_encode([
-                                'time_ms' => microtime(true),
-                                'events'  => $messageArray,
-                            ]))
-                        ],
-                        'query'  => $query,
-                        'data'   => $body,
-                    ], function (Response $response) use ($queue, $group, $idArray, $data){
-                        if($response->getStatusCode() !== 200){
-                            // 重入队尾
-                            foreach ($data as $value){
-                                $value['failed_count'] = ($value['failed_count'] ?? 0) + 1;
-                                self::getStorage()->xAdd($queue,'*', $value);
+        // 设置消息重载定时器
+        $this->_requeueTimer = Timer::add(self::getConfig('requeue_interval'), function () {
+            // todo 读取文件数据
+            // todo 将文件数据发布至队列
+        });
+        // 设置消费定时器
+        $this->_consumerTimer = Timer::add($interval = self::getConfig('consumer_interval') / 1000, function () use ($worker, $interval) {
+            try {
+                // 创建组
+                self::getStorage()->xGroup(
+                    'CREATE', $queue = self::getConfig('queue_key'),
+                    $group = "$queue:webhook-group", '0', true
+                );
+                // 读取未确认的消息组
+                if(
+                    $res = self::getStorage()->xReadGroup(
+                        $group, "webhook-consumer-$worker->id", [$queue => '>'],
+                        self::getConfig('prefetch_count'), (int)($interval * 1000)
+                    )
+                ) {
+                    // 队列组
+                    foreach ($res as $queue => $data) {
+                        $idArray = array_keys($data);
+                        $messageArray = array_values($data);
+                        // http发送
+                        $this->_request($method = 'POST', [
+                            'header' => [
+                                'sign' => self::sign(self::getConfig('webhook_secret'), $method, $query = ['id' => uuid()], $body = json_encode([
+                                    'time_ms' => microtime(true),
+                                    'events'  => $messageArray,
+                                ]))
+                            ],
+                            'query'  => $query,
+                            'data'   => $body,
+                        ], function (Response $response) use ($queue, $group, $idArray, $data) {
+                            // 先对数据进行ack
+                            self::ack($queue, $group, $idArray);
+                            // 后将失败数据重入队尾
+                            if($response->getStatusCode() !== 200) {
+                                $this->_tryToRepublish($queue, $data, 'failed_count');
                             }
-                        }
-                        self::ack($queue, $group, $idArray);
-                    }, function (\Throwable $throwable) use ($queue, $group, $idArray, $data){
-                        // 重入队尾
-                        foreach ($data as $value){
-                            $value['error_count'] = ($value['error_count'] ?? 0) + 1;
-                            self::getStorage()->xAdd($queue,'*', $value);
-                        }
-                        self::ack($queue, $group, $idArray);
-                    });
+                        }, function (\Throwable $throwable) use ($queue, $group, $idArray, $data) {
+                            // 先对数据进行ack
+                            self::ack($queue, $group, $idArray);
+                            // 重入队尾
+                            $this->_tryToRepublish($queue, $data, 'error_count');
+                            // TODO log
+                        });
+                    }
                 }
+            } catch (RedisException $exception) {
+                // todo Log
             }
         });
     }
@@ -212,7 +251,7 @@ class HookServer implements ServerInterface
         try {
             self::getStorage()->close();
             self::$_storage = null;
-        }catch (RedisException $exception){}
+        } catch (RedisException $exception) {}
     }
 
     /** @inheritDoc */
