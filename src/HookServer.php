@@ -15,6 +15,7 @@ namespace Workbunny\WebmanPushServer;
 
 use Closure;
 use RedisException;
+use support\Log;
 use support\Redis;
 use Tests\MockClass\MockRedisStream;
 use Workerman\Connection\TcpConnection;
@@ -159,8 +160,12 @@ class HookServer implements ServerInterface
                 $value[$countName] = ($value[$countName] ?? 0) + 1;
                 self::getStorage()->xAdd($queue,'*', $value);
             }
-        } catch (RedisException $redisException) {
-            // todo 记录log
+        } catch (RedisException $exception) {
+            if ($channel = self::getConfig('log_channel')) {
+                Log::channel($channel)->notice($exception->getMessage(), [
+                    'code' => $exception->getCode(),
+                ]);
+            }
             // todo 将数据储存至文件
         }
     }
@@ -231,12 +236,21 @@ class HookServer implements ServerInterface
                             self::ack($queue, $group, $idArray);
                             // 重入队尾
                             $this->_tryToRepublish($queue, $data, 'error_count');
-                            // TODO log
+                            // 错误日志
+                            if ($channel = self::getConfig('log_channel')) {
+                                Log::channel($channel)->error($throwable->getMessage(), [
+                                    'code' => $throwable->getCode(),
+                                ]);
+                            }
                         });
                     }
                 }
             } catch (RedisException $exception) {
-                // todo Log
+                if ($channel = self::getConfig('log_channel')) {
+                    Log::channel($channel)->warning($exception->getMessage(), [
+                        'code' => $exception->getCode(),
+                    ]);
+                }
             }
         });
     }
