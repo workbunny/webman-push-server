@@ -161,11 +161,9 @@ class HookServer implements ServerInterface
                 self::getStorage()->xAdd($queue,'*', $value);
             }
         } catch (RedisException $exception) {
-            if ($channel = self::getConfig('log_channel')) {
-                Log::channel($channel)->notice($exception->getMessage(), [
-                    'code' => $exception->getCode(),
-                ]);
-            }
+            Log::channel('plugin.workbunny.webman-push-server.notice')->notice($exception->getMessage(), [
+                'code' => $exception->getCode(),
+            ]);
             // todo 将数据储存至文件
         }
     }
@@ -237,20 +235,19 @@ class HookServer implements ServerInterface
                             // 重入队尾
                             $this->_tryToRepublish($queue, $data, 'error_count');
                             // 错误日志
-                            if ($channel = self::getConfig('log_channel')) {
-                                Log::channel($channel)->error($throwable->getMessage(), [
-                                    'code' => $throwable->getCode(),
-                                ]);
-                            }
+                            Log::channel('plugin.workbunny.webman-push-server.error')->error($throwable->getMessage(), [
+                                'code'  => $throwable->getCode(),
+                                'file'  => $throwable->getFile() . ':' . $throwable->getLine(),
+                                'trace' => $throwable->getTrace()
+                            ]);
                         });
                     }
                 }
             } catch (RedisException $exception) {
-                if ($channel = self::getConfig('log_channel')) {
-                    Log::channel($channel)->warning($exception->getMessage(), [
-                        'code' => $exception->getCode(),
-                    ]);
-                }
+                // 错误日志
+                Log::channel('plugin.workbunny.webman-push-server.warning')->warning($exception->getMessage(), [
+                    'code'  => $exception->getCode()
+                ]);
             }
         });
     }

@@ -51,8 +51,6 @@ return [
     'hook-server' => [
         // redis通道
         'redis_channel'     => 'default',
-        // log通道
-        'log_channel'       => 'default', // null为不使用日志
         // 队列名
         'queue_key'         => 'workbunny:webman-push-server:webhook-stream',
         // 消息重入队列定时间隔
@@ -70,15 +68,6 @@ return [
             PUSH_SERVER_EVENT_MEMBER_ADDED, PUSH_SERVER_EVENT_MEMBER_REMOVED,
             PUSH_SERVER_EVENT_CLIENT_EVENT, PUSH_SERVER_EVENT_SERVER_EVENT,
             PUSH_SERVER_EVENT_CHANNEL_OCCUPIED, PUSH_SERVER_EVENT_CHANNEL_VACATED,
-        ],
-    ],
-    // 本地储存
-    'local-storage' => [
-        'sqlite' => [
-            'driver'   => 'sqlite',
-            // 文件路径
-            'database' => '',
-            'prefix'   => '',
         ],
     ]
 ];

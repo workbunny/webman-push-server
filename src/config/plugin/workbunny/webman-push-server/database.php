@@ -2,7 +2,7 @@
 
 return [
     'connections' => [
-        'push-server' => [
+        'local-storage' => [
             'driver'   => 'sqlite',
             'database' => '',
             'prefix'   => '',
