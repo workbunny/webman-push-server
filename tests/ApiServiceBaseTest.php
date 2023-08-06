@@ -37,7 +37,7 @@ class ApiServiceBaseTest extends BaseTestCase
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
 
-        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
         $this->assertEquals('Hello Workbunny!', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(200, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
@@ -57,7 +57,7 @@ class ApiServiceBaseTest extends BaseTestCase
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, '');
 
-        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
         $this->assertEquals('Bad Request.', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(400, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
@@ -67,7 +67,7 @@ class ApiServiceBaseTest extends BaseTestCase
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, 'test');
 
-        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
         $this->assertEquals('Bad Request.', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(400, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
@@ -87,7 +87,7 @@ class ApiServiceBaseTest extends BaseTestCase
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, true);
 
-        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
         $this->assertEquals('Bad Request.', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(400, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
@@ -97,7 +97,7 @@ class ApiServiceBaseTest extends BaseTestCase
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, false);
 
-        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
         $this->assertEquals('Bad Request.', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(400, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
@@ -117,7 +117,7 @@ class ApiServiceBaseTest extends BaseTestCase
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, 1.1);
 
-        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
         $this->assertEquals('Bad Request.', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(400, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
@@ -145,7 +145,7 @@ class ApiServiceBaseTest extends BaseTestCase
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, []);
 
-        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
         $this->assertEquals('Bad Request.', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(400, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
@@ -155,7 +155,7 @@ class ApiServiceBaseTest extends BaseTestCase
             'test'
         ]);
 
-        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
         $this->assertEquals('Bad Request.', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(400, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));

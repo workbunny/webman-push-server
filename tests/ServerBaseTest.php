@@ -34,7 +34,7 @@ class ServerBaseTest extends BaseTestCase
         // 判断是否生成了api-service
         $this->assertArrayHasKey(ApiService::class, $this->getServer()::getServices());
         // 判断api-service是否是ServerInterface
-        $this->assertEquals(true, $this->getServer()::getServices(ApiService::class) instanceof ServerInterface);
+        $this->assertTrue($this->getServer()::getServices(ApiService::class) instanceof ServerInterface);
     }
 
     /**
@@ -51,28 +51,28 @@ class ServerBaseTest extends BaseTestCase
         $mockConnection = new MockTcpConnection();
         $this->getServer()->onMessage($mockConnection, '');
 
-        $this->assertEquals(true, isset($mockConnection->clientNotSendPingCount));
+        $this->assertTrue(isset($mockConnection->clientNotSendPingCount));
         $this->assertEquals(0, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
 
         // bool
         $mockConnection = new MockTcpConnection();
         $this->getServer()->onMessage($mockConnection, true);
 
-        $this->assertEquals(false, isset($mockConnection->clientNotSendPingCount));
+        $this->assertFalse(isset($mockConnection->clientNotSendPingCount));
         $this->assertEquals(null, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
 
         // array
         $mockConnection = new MockTcpConnection();
         $this->getServer()->onMessage($mockConnection, []);
 
-        $this->assertEquals(false, isset($mockConnection->clientNotSendPingCount));
+        $this->assertFalse(isset($mockConnection->clientNotSendPingCount));
         $this->assertEquals(null, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
 
         // object
         $mockConnection = new MockTcpConnection();
         $this->getServer()->onMessage($mockConnection, $mockConnection);
 
-        $this->assertEquals(false, isset($mockConnection->clientNotSendPingCount));
+        $this->assertFalse(isset($mockConnection->clientNotSendPingCount));
         $this->assertEquals(null, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
     }
 
@@ -94,8 +94,7 @@ class ServerBaseTest extends BaseTestCase
 
         // 手动触发 onConnect 回调
         $this->getServer()->onConnect($mockConnection);
-        $this->assertEquals(
-            true,
+        $this->assertTrue(
             ($onWebSocketConnect = $this->getServer()->_getConnectionProperty($mockConnection, 'onWebSocketConnect')) instanceof Closure
         );
 
@@ -133,14 +132,13 @@ class ServerBaseTest extends BaseTestCase
         // 无效的header
         $mockConnection = new MockTcpConnection();
         $this->getServer()->onConnect($mockConnection);
-        $this->assertEquals(
-            true,
+        $this->assertTrue(
             ($onWebSocketConnect = $this->getServer()->_getConnectionProperty($mockConnection, 'onWebSocketConnect')) instanceof Closure
         );
 
         $onWebSocketConnect($mockConnection, '');
         $this->assertEquals(0, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
-        $this->assertEquals(true, $mockConnection->isPaused());
+        $this->assertTrue($mockConnection->isPaused());
         $this->assertEquals('{"event":"pusher:error","data":{"code":null,"message":"Invalid app"}}', $mockConnection->getSendBuffer());
     }
 
@@ -161,14 +159,13 @@ class ServerBaseTest extends BaseTestCase
         // 无效的akk_key
         $mockConnection = new MockTcpConnection();
         $this->getServer()->onConnect($mockConnection);
-        $this->assertEquals(
-            true,
+        $this->assertTrue(
             ($onWebSocketConnect = $this->getServer()->_getConnectionProperty($mockConnection, 'onWebSocketConnect')) instanceof Closure
         );
 
         $onWebSocketConnect($mockConnection, "GET /app/none?protocol=7&client=js&version=3.2.4&flash=false HTTP/1.1\r\nConnection: Upgrade\r\nUpgrade: websocket\r\n\r\n");
         $this->assertEquals(0, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
-        $this->assertEquals(true, $mockConnection->isPaused());
+        $this->assertTrue($mockConnection->isPaused());
         $this->assertEquals('{"event":"pusher:error","data":{"code":null,"message":"Invalid app_key"}}', $mockConnection->getSendBuffer());
     }
 
@@ -186,7 +183,7 @@ class ServerBaseTest extends BaseTestCase
         $mockConnection = new MockTcpConnection();
         $this->getServer()->onMessage($mockConnection, true);
 
-        $this->assertEquals(false, isset($mockConnection->clientNotSendPingCount));
+        $this->assertFalse(isset($mockConnection->clientNotSendPingCount));
         $this->assertEquals(null, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
     }
 
@@ -204,7 +201,7 @@ class ServerBaseTest extends BaseTestCase
         $mockConnection = new MockTcpConnection();
         $this->getServer()->onMessage($mockConnection, []);
 
-        $this->assertEquals(false, isset($mockConnection->clientNotSendPingCount));
+        $this->assertFalse(isset($mockConnection->clientNotSendPingCount));
         $this->assertEquals(null, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
     }
 
@@ -222,7 +219,7 @@ class ServerBaseTest extends BaseTestCase
         $mockConnection = new MockTcpConnection();
         $this->getServer()->onMessage($mockConnection, $mockConnection);
 
-        $this->assertEquals(false, isset($mockConnection->clientNotSendPingCount));
+        $this->assertFalse(isset($mockConnection->clientNotSendPingCount));
         $this->assertEquals(null, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
     }
 }

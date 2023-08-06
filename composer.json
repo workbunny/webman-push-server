@@ -30,7 +30,7 @@
 	"require-dev": {
 		"workerman/webman-framework": "^1.3.0",
 
-		"phpunit/phpunit": "^9.0 | ^10",
+		"phpunit/phpunit": "^9.0",
 		"symfony/var-dumper": "^5.4 | ^6.0"
 	},
 	"suggest": {

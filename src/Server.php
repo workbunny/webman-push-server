@@ -13,7 +13,6 @@ declare(strict_types=1);
 
 namespace Workbunny\WebmanPushServer;
 
-use Channel\Client;
 use Exception;
 use RedisException;
 use support\Container;
@@ -233,9 +232,17 @@ class Server implements ServerInterface
      */
     public function publishToClients(string $appKey, string $channel, string $event, $data, ?string $socketId = null)
     {
-        Client::publish(self::PRIVATE_CHANNEL_PUBLISH_TO_CLIENT, [
-            $appKey, $channel, $event, $data, $socketId
-        ]);
+        $timerId = Timer::add(0.1, function () use (
+            &$timerId, $appKey, $channel, $event, $data, $socketId
+        ) {
+            $res = ChannelClient::publish(self::PRIVATE_CHANNEL_PUBLISH_TO_CLIENT, [
+                $appKey, $channel, $event, $data, $socketId
+            ]);
+            if ($res !== false) {
+                Timer::del($timerId);
+            }
+        });
+
     }
 
     /**
@@ -277,7 +284,7 @@ class Server implements ServerInterface
         if($event){
             if(AbstractEvent::pre($event) === AbstractEvent::SERVER_EVENT) {
                 try {
-                    HookServer::publish( PUSH_SERVER_EVENT_SERVER_EVENT, array_merge($response, [
+                    HookServer::instance()->publish( PUSH_SERVER_EVENT_SERVER_EVENT, array_merge($response, [
                         'id'      => uuid(),
                         'time_ms' => microtime(true)
                     ]));
@@ -466,8 +473,8 @@ class Server implements ServerInterface
     {
         self::setServer($this);
         // 订阅channel
-        Client::connect('127.0.0.1', self::getConfig('channel_port', 2206));
-        Client::on(self::PRIVATE_CHANNEL_PUBLISH_TO_CLIENT, [$this, 'publish']);
+        ChannelClient::connect('127.0.0.1', self::getConfig('channel_port', 2206));
+        ChannelClient::on(self::PRIVATE_CHANNEL_PUBLISH_TO_CLIENT, [$this, 'publish']);
         // 心跳检查
         if($this->_keepaliveTimeout > 0 and $this->_heartbeatTimer !== null) {
             $this->_heartbeatTimer = Timer::add($this->_keepaliveTimeout / 2, function (){

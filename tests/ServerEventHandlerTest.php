@@ -50,9 +50,9 @@ class ServerEventHandlerTest extends BaseTestCase
             'event' => EVENT_PING
         ], JSON_UNESCAPED_UNICODE));
 
-        $this->assertEquals(true, isset($mockConnection->clientNotSendPingCount));
+        $this->assertTrue(isset($mockConnection->clientNotSendPingCount));
         $this->assertEquals(0, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
-        $this->assertEquals(true, Server::$eventFactory instanceof Ping);
+        $this->assertTrue(Server::$eventFactory instanceof Ping);
         $this->assertEquals('{"event":"pusher:pong","data":{}}', $mockConnection->getSendBuffer());
     }
 
@@ -80,9 +80,9 @@ class ServerEventHandlerTest extends BaseTestCase
             ]
         ], JSON_UNESCAPED_UNICODE));
 
-        $this->assertEquals(true, isset($mockConnection->clientNotSendPingCount));
+        $this->assertTrue(isset($mockConnection->clientNotSendPingCount));
         $this->assertEquals(0, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
-        $this->assertEquals(true, Server::$eventFactory instanceof Subscribe);
+        $this->assertTrue(Server::$eventFactory instanceof Subscribe);
     }
 
     /**
@@ -109,9 +109,9 @@ class ServerEventHandlerTest extends BaseTestCase
             ]
         ], JSON_UNESCAPED_UNICODE));
 
-        $this->assertEquals(true, isset($mockConnection->clientNotSendPingCount));
+        $this->assertTrue(isset($mockConnection->clientNotSendPingCount));
         $this->assertEquals(0, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
-        $this->assertEquals(true, Server::$eventFactory instanceof Unsubscribe);
+        $this->assertTrue(Server::$eventFactory instanceof Unsubscribe);
     }
 
     /**
@@ -139,9 +139,9 @@ class ServerEventHandlerTest extends BaseTestCase
             ]
         ], JSON_UNESCAPED_UNICODE));
 
-        $this->assertEquals(true, isset($mockConnection->clientNotSendPingCount));
+        $this->assertTrue(isset($mockConnection->clientNotSendPingCount));
         $this->assertEquals(0, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
-        $this->assertEquals(true, Server::$eventFactory instanceof ClientEvent);
+        $this->assertTrue(Server::$eventFactory instanceof ClientEvent);
         $this->assertEquals(
             '{"event":"pusher:error","data":{"code":null,"message":"Client event rejected - only supported on private and presence channels"}}',
             $mockConnection->getSendBuffer()
@@ -170,7 +170,7 @@ class ServerEventHandlerTest extends BaseTestCase
             'event' => EVENT_PONG,
         ], JSON_UNESCAPED_UNICODE));
 
-        $this->assertEquals(true, isset($mockConnection->clientNotSendPingCount));
+        $this->assertTrue(isset($mockConnection->clientNotSendPingCount));
         $this->assertEquals(0, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
         $this->assertEquals(null, Server::$eventFactory);
         $this->assertEquals('{"event":"pusher:error","data":{"code":null,"message":"Client event rejected - Unknown event"}}', $mockConnection->getSendBuffer());
@@ -187,7 +187,7 @@ class ServerEventHandlerTest extends BaseTestCase
             'event' => EVENT_MEMBER_REMOVED
         ], JSON_UNESCAPED_UNICODE));
 
-        $this->assertEquals(true, isset($mockConnection->clientNotSendPingCount));
+        $this->assertTrue(isset($mockConnection->clientNotSendPingCount));
         $this->assertEquals(0, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
         $this->assertEquals(null, Server::$eventFactory);
         $this->assertEquals('{"event":"pusher:error","data":{"code":null,"message":"Client event rejected - Unknown event"}}', $mockConnection->getSendBuffer());

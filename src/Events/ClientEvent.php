@@ -68,7 +68,7 @@ class ClientEvent extends AbstractEvent
             $pushServer->_getConnectionProperty($connection,'socketId')
         );
         try {
-            HookServer::publish(PUSH_SERVER_EVENT_CLIENT_EVENT, array_merge($request, [
+            HookServer::instance()->publish(PUSH_SERVER_EVENT_CLIENT_EVENT, array_merge($request, [
                 'id'      => uuid(),
                 'app_key' => $appKey
             ]));

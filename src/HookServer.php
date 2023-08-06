@@ -19,6 +19,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use RedisException;
+use RuntimeException;
 use support\Db;
 use support\Log;
 use support\Redis;
@@ -36,6 +37,9 @@ class HookServer implements ServerInterface
 
     /** @var Client|null HTTP-client */
     protected static ?Client $_client = null;
+
+    /** @var HookServer|null  */
+    protected static ?HookServer $_instance = null;
 
     /** @var int  */
     protected static int $_connectTimeout = 30;
@@ -83,38 +87,14 @@ class HookServer implements ServerInterface
     }
 
     /**
-     * @param string $event
-     * @param array $data
-     * @return bool|null
-     * @throws RedisException
+     * @return HookServer
      */
-    public static function publish(string $event, array $data): ?bool
+    public static function instance(): HookServer
     {
-        $queue = self::getConfig('queue_key');
-        $queueLimit = self::getConfig('queue_limit', 0);
-        if($queueLimit !== 0 and self::getStorage()->xLen($queue) >= $queueLimit){
-            return null;
+        if (!self::$_instance instanceof HookServer) {
+            self::$_instance = new HookServer();
         }
-        return boolval(self::getStorage()->xAdd($queue,'*', [
-            'name'   => $event,
-            'data'   => json_encode($data,JSON_UNESCAPED_UNICODE),
-            'time'   => microtime(true),
-        ]));
-    }
-
-    /**
-     * 队列ack
-     * @param string $queue
-     * @param string $group
-     * @param array $idArray
-     * @return void
-     * @throws RedisException
-     */
-    public static function ack(string $queue, string $group, array $idArray): void
-    {
-        if(self::getStorage()->xAck($queue, $group, $idArray)){
-            self::getStorage()->xDel($queue, $idArray);
-        }
+        return self::$_instance;
     }
 
     /**
@@ -132,6 +112,98 @@ class HookServer implements ServerInterface
             $secret,
             false
         );
+    }
+
+    /**
+     * 发布消息
+     *
+     * @param string $event 事件
+     * @param array $data 数据
+     * @param string|null $republishCountKey 重入队列计数器
+     * @return bool|null
+     */
+    public function publish(string $event, array $data, ?string $republishCountKey = null): ?bool
+    {
+        $queue = self::getConfig('queue_key');
+        $queueLimit = self::getConfig('queue_limit', 0);
+        $value = [
+            'name'   => $event,
+            'data'   => json_encode($data,JSON_UNESCAPED_UNICODE),
+            'time'   => microtime(true),
+        ];
+        if ($republishCountKey) {
+            $value[$republishCountKey] = ($value[$republishCountKey] ?? 0) + 1;
+        }
+        try {
+            // 重入队列不受queue size限制
+            if ($republishCountKey !== null and $queueLimit !== 0 and self::getStorage()->xLen($queue) >= $queueLimit) {
+                throw new RuntimeException("Queue $queue size limited. ", -1);
+            }
+            return boolval(self::getStorage()->xAdd($queue,'*', $value));
+        } catch (RedisException $exception) {
+            Log::channel('plugin.workbunny.webman-push-server.notice')->warning('Redis server error. ', [
+                'message' => $exception->getMessage(), 'code' => $exception->getCode(),
+                'queue'   => $queue, 'value'   => $value
+            ]);
+            $this->_tempInsert($queue, $value);
+            return false;
+        } catch (RuntimeException $exception) {
+            Log::channel('plugin.workbunny.webman-push-server.notice')->notice('Publish failed. ', [
+                'message' => $exception->getMessage(), 'code' => $exception->getCode(),
+                'queue'   => $queue, 'value'   => $value
+            ]);
+            $this->_tempInsert($queue, $value);
+            return null;
+        }
+    }
+
+    /**
+     * 队列ack
+     *
+     * @param string $queue
+     * @param string $group
+     * @param array $idArray
+     * @return void
+     * @throws RedisException
+     */
+    public function ack(string $queue, string $group, array $idArray): void
+    {
+        if(self::getStorage()->xAck($queue, $group, $idArray)){
+            self::getStorage()->xDel($queue, $idArray);
+        }
+    }
+
+    /**
+     * @return void
+     */
+    protected function _tempInit()
+    {
+        $builder = Schema::connection('plugin.workbunny.webman-push-server.local-storage');
+        if (!$builder->hasTable('temp')) {
+            $builder->create('temp', function (Blueprint $table) {
+                $table->id();
+                $table->string('queue');
+                $table->json('data');
+                $table->integer('create_at');
+            });
+            echo 'local-storage db created. ' . PHP_EOL;
+        }
+    }
+
+    /**
+     * @param string $queue
+     * @param array $value
+     * @return void
+     */
+    protected function _tempInsert(string $queue, array $value)
+    {
+        // 数据储存至文件
+        Db::connection('plugin.workbunny.webman-push-server.local-storage')
+            ->table('temp')->insert([
+                'queue'      => $queue,
+                'data'       => json_encode($value, JSON_UNESCAPED_UNICODE),
+                'created_at' => time()
+            ]);
     }
 
     /**
@@ -167,56 +239,11 @@ class HookServer implements ServerInterface
         );
     }
 
-    /**
-     * 尝试将数据发布到队尾
-     *
-     * @param string $queue
-     * @param array $data
-     * @param string $countName
-     * @return void
-     */
-    protected function _tryToRepublish(string $queue, array $data, string $countName): void
-    {
-        try {
-            foreach ($data as $value){
-                $value[$countName] = ($value[$countName] ?? 0) + 1;
-                self::getStorage()->xAdd($queue,'*', $value);
-            }
-        } catch (RedisException $exception) {
-            Log::channel('plugin.workbunny.webman-push-server.notice')->notice($exception->getMessage(), [
-                'code' => $exception->getCode(),
-            ]);
-            // 数据储存至文件
-            Db::connection('plugin.workbunny.webman-push-server.local-storage')
-                ->table('temp')->insert([
-                    'queue'      => $queue,
-                    'data'       => json_encode($value, JSON_UNESCAPED_UNICODE),
-                    'created_at' => time()
-                ]);
-        }
-    }
-
-    /**
-     * @return void
-     */
-    protected function _tempDbInit()
-    {
-        $builder = Schema::connection('plugin.workbunny.webman-push-server.local-storage');
-        if (!$builder->hasTable('temp')) {
-            $builder->create('temp', function (Blueprint $table) {
-                $table->id();
-                $table->string('queue');
-                $table->json('data');
-                $table->integer('create_at');
-            });
-            echo 'local-storage db created. ' . PHP_EOL;
-        }
-    }
-
     /** @inheritDoc */
     public function onWorkerStart(Worker $worker): void
     {
-        $this->_tempDbInit();
+        // 初始化temp库
+        $this->_tempInit();
         // 设置消息重载定时器
         $this->_requeueTimer = Timer::add(self::getConfig('requeue_interval'), function () {
             $connection = Db::connection('plugin.workbunny.webman-push-server.local-storage');
@@ -259,16 +286,20 @@ class HookServer implements ServerInterface
                             'data'   => $body,
                         ], function (Response $response) use ($queue, $group, $idArray, $data) {
                             // 数据ack
-                            self::ack($queue, $group, $idArray);
+                            $this->ack($queue, $group, $idArray);
                             // 失败数据重入队尾
                             if($response->getStatusCode() !== 200) {
-                                $this->_tryToRepublish($queue, $data, 'failed_count');
+                                foreach ($data as $value) {
+                                    $this->publish($queue, $value, 'failed_count');
+                                }
                             }
                         }, function (\Throwable $throwable) use ($queue, $group, $idArray, $data) {
                             // 数据ack
-                            self::ack($queue, $group, $idArray);
+                            $this->ack($queue, $group, $idArray);
                             // 重入队尾
-                            $this->_tryToRepublish($queue, $data, 'error_count');
+                            foreach ($data as $value) {
+                                $this->publish($queue, $value, 'error_count');
+                            }
                             // 错误日志
                             Log::channel('plugin.workbunny.webman-push-server.error')->error($throwable->getMessage(), [
                                 'code'  => $throwable->getCode(),

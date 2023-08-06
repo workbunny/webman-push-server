@@ -38,7 +38,7 @@ class ApiServiceRouteHandlerTest extends BaseTestCase
         $request = new Http\Request("GET /apps/1/channels HTTP/1.1\r\nConnection: keep-alive\r\n");
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
-        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
         $this->assertEquals('{"error":"Required auth_key"}', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(400, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
@@ -48,7 +48,7 @@ class ApiServiceRouteHandlerTest extends BaseTestCase
         $request = new Http\Request("GET /apps/1/channels?auth_key=test HTTP/1.1\r\nConnection: keep-alive\r\n");
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
-        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
         $this->assertEquals('{"error":"Invalid auth_key"}', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(401, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
@@ -58,7 +58,7 @@ class ApiServiceRouteHandlerTest extends BaseTestCase
         $request = new Http\Request("GET /apps/1/channels?auth_key=workbunny&auth_signature=abc HTTP/1.1\r\nConnection: keep-alive\r\n");
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
-        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
         $this->assertEquals('{"error":"Invalid signature"}', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(401, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
@@ -68,7 +68,7 @@ class ApiServiceRouteHandlerTest extends BaseTestCase
         $request = new Http\Request("GET /apps/1/channels?auth_key=workbunny&auth_signature=test HTTP/1.1\r\nConnection: keep-alive\r\n");
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
-        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
         $this->assertEquals('{"channels":[]}', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(200, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
@@ -87,7 +87,7 @@ class ApiServiceRouteHandlerTest extends BaseTestCase
         $request = new Http\Request("GET /apps/1/channels/private-test?auth_key=workbunny&auth_signature=test HTTP/1.1\r\nConnection: keep-alive\r\n");
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
-        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
         $this->assertEquals('{"occupied":true,"type":null}', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(200, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
@@ -96,7 +96,7 @@ class ApiServiceRouteHandlerTest extends BaseTestCase
         $request = new Http\Request("GET /apps/1/channels/private-test?auth_key=workbunny&auth_signature=test&info=subscription_count HTTP/1.1\r\nConnection: keep-alive\r\n");
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
-        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
         $this->assertEquals('{"occupied":true,"type":null,"subscription_count":null}', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(200, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
@@ -105,7 +105,7 @@ class ApiServiceRouteHandlerTest extends BaseTestCase
         $request = new Http\Request("GET /apps/1/channels/private-test?auth_key=workbunny&auth_signature=test&info=subscription_count,user_count HTTP/1.1\r\nConnection: keep-alive\r\n");
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
-        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
         $this->assertEquals('{"occupied":true,"type":null,"subscription_count":null,"user_count":null}', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(200, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
@@ -126,7 +126,7 @@ class ApiServiceRouteHandlerTest extends BaseTestCase
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
 
-        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
         $this->assertEquals('{"error":"Required name"}', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(400, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
@@ -147,7 +147,7 @@ class ApiServiceRouteHandlerTest extends BaseTestCase
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
 
-        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
         $this->assertEquals('{"error":"Required batch"}', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(400, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
@@ -166,7 +166,7 @@ class ApiServiceRouteHandlerTest extends BaseTestCase
         $request = new Http\Request("GET /apps/1/channels/private-test/users?auth_key=workbunny&auth_signature=test HTTP/1.1\r\nConnection: keep-alive\r\n");
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
-        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
         $this->assertEquals('{"error":"Not Found [private-test]"}', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(404, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
@@ -187,7 +187,7 @@ class ApiServiceRouteHandlerTest extends BaseTestCase
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
 
-        $this->assertEquals(true, $mockConnection->getSendBuffer() instanceof Response);
+        $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
         $this->assertEquals('{}', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(200, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));

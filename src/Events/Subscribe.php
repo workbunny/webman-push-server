@@ -160,7 +160,7 @@ class Subscribe extends AbstractEvent
                     'user_info' => $userInfoArray = json_decode($userInfo, true)
                 ], $socketId);
                 // PUSH_SERVER_EVENT_MEMBER_ADDED 成员添加事件
-                HookServer::publish(PUSH_SERVER_EVENT_MEMBER_ADDED, [
+                HookServer::instance()->publish(PUSH_SERVER_EVENT_MEMBER_ADDED, [
                     'id'        => uuid(),
                     'app_key'   => $appKey,
                     'channel'   => $channel,
@@ -183,7 +183,7 @@ class Subscribe extends AbstractEvent
 
             if(!$channelOccupied){
                 // PUSH_SERVER_EVENT_CHANNEL_OCCUPIED 通道被创建事件
-                HookServer::publish(PUSH_SERVER_EVENT_CHANNEL_OCCUPIED, [
+                HookServer::instance()->publish(PUSH_SERVER_EVENT_CHANNEL_OCCUPIED, [
                     'id'      => uuid(),
                     'app_key' => $appKey,
                     'channel' => $channel,
