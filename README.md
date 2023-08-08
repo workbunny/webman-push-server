@@ -21,17 +21,12 @@
 
 ## 简介
 
-- **生产可用，已稳定运行半年**，如遇问题，欢迎 **[issue](https://github.com/workbunny/webman-push-server/issues) & PR**；
-- **本项目 fork from [webman/push](https://www.workerman.net/plugin/2)**，利用redis实现了多进程持久化存储；
-- **1：1复刻 pusher-channel 服务，是完整的推送服务器实现；**
-- 本插件可用于实现消息推送、单聊、群聊、直播间、站内推送等多种即时通讯场景；
-- 本插件兼容 pusher-channel 的客户端，包含JS、安卓(java)、IOS(swift)、IOS(Obj-C)、uniapp等；后端推送SDK支持PHP、Node、Ruby、Asp、Java、Python、Go等；客户端自带心跳和断线自动重连，使用起来非常简单稳定；
-- 本插件包含
-	- **Server.php：** 基于websocket的消息推送服务 
-    - **ApiService.php：** 基于http的推送APIs
-	- **ApiClient.php：** 基于http-api的后端推送SDK
-    - **Client.php：** 基于websocket的后端客户端
-	- **HookServer.php：** 基于redis-stream的持久化服务端事件订阅服务
+- 本项目是对[Pusher-Channel](https://support.pusher.com/hc/en-us/categories/4411973917585-Channels)进行了一比一复刻，是一个完整的即时通讯服务，利用该插件可以轻松实现聊天、在线推送等业务服务，也可以利用该插件作为微服务的消息订阅服务；
+该服务是**生产可用**的服务，在商业化项目作为**在线推送服务**和**数字大屏服务**中已稳定运行半年以上。
+- 本项目是[webman/push](https://www.workerman.net/plugin/2)的**多进程**实现版本，并且完善了消息事件、权限验证、多租户支持等功能。
+- 如遇问题，欢迎 **[issue](https://github.com/workbunny/webman-push-server/issues) & PR**；
+- 兼容[Pusher-Channel](https://support.pusher.com/hc/en-us/categories/4411973917585-Channels)的客户端，包含JS、安卓(java)、IOS(swift)、IOS(Obj-C)、uniapp等；
+后端推送SDK支持PHP、Node、Ruby、Asp、Java、Python、Go等；客户端自带心跳和断线自动重连，使用起来非常简单稳定；
 
 ## 依赖
 
@@ -45,6 +40,14 @@ composer require workbunny/webman-push-server
 ```
 
 ## 说明
+
+- **Server.php：** 基于websocket的消息推送服务
+- **ApiService.php：** 基于http的推送APIs
+- **ApiClient.php：** 基于http-api的后端推送SDK
+- **Client.php：** 基于websocket的后端客户端
+- **HookServer.php：** 基于redis-stream的持久化服务端事件订阅服务
+- **ChannelClient.php：** 服务内部通讯客户端组件
+- **ChannelServer.php：** 服务内部通讯服务
 
 ### 配置说明
 
