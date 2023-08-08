@@ -163,14 +163,22 @@ class HookServer implements ServerInterface
      * @param string $queue
      * @param string $group
      * @param array $idArray
-     * @return void
-     * @throws RedisException
+     * @return bool
      */
-    public function ack(string $queue, string $group, array $idArray): void
+    public function ack(string $queue, string $group, array $idArray): bool
     {
-        if(self::getStorage()->xAck($queue, $group, $idArray)){
-            self::getStorage()->xDel($queue, $idArray);
+        try {
+            if (self::getStorage()->xAck($queue, $group, $idArray)) {
+                self::getStorage()->xDel($queue, $idArray);
+            }
+            return true;
+        } catch (RedisException $exception) {
+            Log::channel('plugin.workbunny.webman-push-server.warning')->warning('Ack failed. ', [
+                'message' => $exception->getMessage(), 'code' => $exception->getCode(),
+                'queue' => $queue, 'group' => $group, 'ids' => $idArray
+            ]);
         }
+        return false;
     }
 
     /**
@@ -193,13 +201,13 @@ class HookServer implements ServerInterface
     /**
      * @param string $queue
      * @param array $value
-     * @return void
+     * @return int
      */
-    protected function _tempInsert(string $queue, array $value)
+    protected function _tempInsert(string $queue, array $value): int
     {
         // 数据储存至文件
-        Db::connection('plugin.workbunny.webman-push-server.local-storage')
-            ->table('temp')->insert([
+        return Db::connection('plugin.workbunny.webman-push-server.local-storage')
+            ->table('temp')->insertGetId([
                 'queue'      => $queue,
                 'data'       => json_encode($value, JSON_UNESCAPED_UNICODE),
                 'created_at' => time()
@@ -263,6 +271,7 @@ class HookServer implements ServerInterface
                     'CREATE', $queue = self::getConfig('queue_key'),
                     $group = "$queue:webhook-group", '0', true
                 );
+                // todo 处理pending消息
                 // 读取未确认的消息组
                 if(
                     $res = self::getStorage()->xReadGroup(
@@ -286,26 +295,28 @@ class HookServer implements ServerInterface
                             'data'   => $body,
                         ], function (Response $response) use ($queue, $group, $idArray, $data) {
                             // 数据ack
-                            $this->ack($queue, $group, $idArray);
-                            // 失败数据重入队尾
-                            if($response->getStatusCode() !== 200) {
-                                foreach ($data as $value) {
-                                    $this->publish($queue, $value, 'failed_count');
+                            if ($this->ack($queue, $group, $idArray)) {
+                                // 失败数据重入队尾
+                                if($response->getStatusCode() !== 200) {
+                                    foreach ($data as $value) {
+                                        $this->publish($queue, $value, 'failed_count');
+                                    }
                                 }
                             }
                         }, function (\Throwable $throwable) use ($queue, $group, $idArray, $data) {
                             // 数据ack
-                            $this->ack($queue, $group, $idArray);
-                            // 重入队尾
-                            foreach ($data as $value) {
-                                $this->publish($queue, $value, 'error_count');
+                            if ($this->ack($queue, $group, $idArray)) {
+                                // 重入队尾
+                                foreach ($data as $value) {
+                                    $this->publish($queue, $value, 'error_count');
+                                }
+                                // 错误日志
+                                Log::channel('plugin.workbunny.webman-push-server.error')->error($throwable->getMessage(), [
+                                    'code'  => $throwable->getCode(),
+                                    'file'  => $throwable->getFile() . ':' . $throwable->getLine(),
+                                    'trace' => $throwable->getTrace()
+                                ]);
                             }
-                            // 错误日志
-                            Log::channel('plugin.workbunny.webman-push-server.error')->error($throwable->getMessage(), [
-                                'code'  => $throwable->getCode(),
-                                'file'  => $throwable->getFile() . ':' . $throwable->getLine(),
-                                'trace' => $throwable->getTrace()
-                            ]);
                         });
                     }
                 }

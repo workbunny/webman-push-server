@@ -51,6 +51,8 @@ return [
     'hook-server' => [
         // redis通道
         'redis_channel'     => 'default',
+        // pending超时时间 秒
+        'pending_timeout'   => 60 * 60, // 1hour 0为不对pending消息进行处理
         // 队列名
         'queue_key'         => 'workbunny:webman-push-server:webhook-stream',
         // 消息重入队列定时间隔
