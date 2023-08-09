@@ -366,8 +366,12 @@ $client->publish();
 
 ##### 事件处理器：
 
-Hook服务是多进程消费队列，消费方式是通过http的请求进行webhook通知；
-对应配置详见**config/plugin/workbunny/webman-push-server/app.php**；
+1. Hook服务是多进程消费队列，进程数详见**config/plugin/workbunny/webman-push-server/process.php**；
+2. 默认使用webhook方式进行消费通知，详见**WebhookHandler**;
+3. 支持自定义消费方式，方法如下：
+   1. 创建自定义handler类，实现接口HookHandlerInterface
+   2. 将类名添加至配置文件**config/plugin/workbunny/webman-push-server/app.php**的**hook_handler**中
+   3. 重启服务
 
 #### 2.API子服务
 
