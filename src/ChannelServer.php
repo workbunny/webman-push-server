@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /**
  * This file is part of workbunny.
  *
@@ -9,7 +9,6 @@
  * @link      https://github.com/workbunny/webman-push-server
  * @license   https://github.com/workbunny/webman-push-server/blob/main/LICENSE
  */
-declare(strict_types=1);
 
 namespace Workbunny\WebmanPushServer;
 
@@ -17,12 +16,15 @@ use Workerman\Worker;
 
 class ChannelServer extends \Channel\Server
 {
-    public function __construct(){}
+    public function __construct() {
+        // 由于使用了webman自定义进程启动，所以无须Server原有的构造方式
+    }
 
-    public function onWorkerStart(Worker $worker)
-    {
-        $worker->count = 1;
-        $this->_worker = $worker;
-        $worker->channels = [];
+    public function onWorkerStart(Worker $worker) {
+        $worker->count     = 1;
+        $worker->onMessage = [$this, 'onMessage'];
+        $worker->onClose   = [$this, 'onClose'];
+        $this->_worker     = $worker;
+        $worker->channels  = [];
     }
 }

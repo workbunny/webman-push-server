@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Workbunny\WebmanPushServer;
 
 use Closure;
+use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Collection;
@@ -24,6 +25,7 @@ use support\Db;
 use support\Log;
 use support\Redis;
 use Tests\MockClass\MockRedisStream;
+use Throwable;
 use Workerman\Connection\TcpConnection;
 use Workerman\Http\Client;
 use Workerman\Http\Response;
@@ -34,24 +36,14 @@ class HookServer implements ServerInterface
 {
     /** @var \Redis|null  */
     protected static ?\Redis $_storage = null;
-
-    /** @var Client|null HTTP-client */
-    protected static ?Client $_client = null;
-
     /** @var HookServer|null  */
     protected static ?HookServer $_instance = null;
-
-    /** @var int  */
-    protected static int $_connectTimeout = 30;
-
-    /** @var int  */
-    protected static int $_requestTimeout = 30;
-
     /** @var int|null 消费定时器 */
     protected ?int $_consumerTimer = null;
-
-    /** @var int|null 消息重入队列定时器 */
+    /** @var int|null 重入队列定时器 */
     protected ?int $_requeueTimer = null;
+    /** @var int|null pending处理定时器 */
+    protected ?int $_claimTimer = null;
 
     /** @inheritDoc */
     public static function getConfig(string $key, $default = null)
@@ -70,20 +62,6 @@ class HookServer implements ServerInterface
                 Redis::connection(self::getConfig('redis_channel', 'default'))->client();
         }
         return self::$_storage;
-    }
-
-    /**
-     * @return Client
-     */
-    public static function getClient(): Client
-    {
-        if(!self::$_client instanceof Client){
-            self::$_client = new Client([
-                'connect_timeout' => self::$_connectTimeout,
-                'timeout'         => self::$_requestTimeout,
-            ]);
-        }
-        return self::$_client;
     }
 
     /**
@@ -182,6 +160,79 @@ class HookServer implements ServerInterface
     }
 
     /**
+     * @param string $queue
+     * @param string $group
+     * @param string $consumer
+     * @return void
+     */
+    public function claim(string $queue, string $group, string $consumer)
+    {
+        try {
+            if ($idArray = self::getStorage()->xAutoClaim(
+                $queue, $group, $consumer,
+                self::getConfig('pending_timeout', 60 * 60) * 1000,
+                '0-0', -1, true
+            )) {
+                if (self::getStorage()->xAck($queue, $group, $idArray)) {
+                    self::getStorage()->xDel($queue, $idArray);
+                }
+            }
+        } catch (RedisException $exception) {
+            Log::channel('plugin.workbunny.webman-push-server.warning')->warning('Claim failed. ', [
+                'message' => $exception->getMessage(), 'code' => $exception->getCode(),
+                'queue' => $queue, 'group' => $group,
+                'consumer' => $consumer, 'ids' => $idArray ?? []
+            ]);
+        }
+    }
+
+    /**
+     * 消费
+     *
+     * @param string $queue
+     * @param string $group
+     * @param string $consumer
+     * @param int $blockTime
+     * @return void
+     * @throws Exception
+     */
+    public function consumer(string $queue, string $group, string $consumer, int $blockTime)
+    {
+        try {
+            // 创建组
+            self::getStorage()->xGroup('CREATE', $queue, $group, '0', true);
+            // 读取未确认的消息组
+            if ($res = self::getStorage()->xReadGroup(
+                $group, $consumer, [$queue => '>'], self::getConfig('prefetch_count'), $blockTime
+            )) {
+                try {
+                    $class = self::getConfig('hook_handler', WebhookHandler::class);
+                    if (!is_subclass_of($class, HookHandlerInterface::class)) {
+                        throw new Exception("Hook handler $class error. ");
+                    }
+                    // 队列组
+                    foreach ($res as $queue => $data) {
+                        $class::instance()->run($queue, $group, $data);
+                    }
+                } catch (Throwable $throwable) {
+                    // 错误日志
+                    Log::channel('plugin.workbunny.webman-push-server.error')->error('Hook handler error. ', [
+                        'message' => $throwable->getMessage(), 'code' => $throwable->getCode(),
+                        'file'  => $throwable->getFile() . ':' . $throwable->getLine(),
+                        'trace' => $throwable->getTrace()
+                    ]);
+                    throw new Exception($throwable->getMessage(), $throwable->getCode(), $throwable);
+                }
+
+            }
+        } catch (RedisException $exception) {
+            Log::channel('plugin.workbunny.webman-push-server.warning')->warning('Storage consumer error. ', [
+                'message' => $exception->getMessage(), 'code' => $exception->getCode()
+            ]);
+        }
+    }
+
+    /**
      * @return void
      */
     protected function _tempInit()
@@ -214,132 +265,66 @@ class HookServer implements ServerInterface
             ]);
     }
 
-    /**
-     * @param string $method
-     * @param array $options = = [
-     *  'header'  => [],
-     *  'query'   => [],
-     *  'data'    => '',
-     * ]
-     * @param Closure|null $success = function(\Workerman\Http\Response $response){}
-     * @param Closure|null $error = function(\Exception $exception){}
-     * @return void
-     */
-    protected function _request(string $method, array $options = [], ?Closure $success = null, ?Closure $error = null) : void
-    {
-        $queryString = http_build_query($options['query'] ?? []);
-        $headers = array_merge($options['header'] ?? [], [
-            'Connection'   => 'keep-alive',
-            'Server'       => 'workbunny-push-server',
-            'Version'      => VERSION,
-            'Content-type' => 'application/json'
-        ]);
-        self::getClient()->request(
-            sprintf('%s?%s', self::getConfig('webhook_url'), $queryString),
-            [
-                'method'    => $method,
-                'version'   => '1.1',
-                'headers'   => $headers,
-                'data'      => $options['data'] ?? '{}',
-                'success'   => $success ?? function (Response $response) {},
-                'error'     => $error ?? function (\Exception $exception) {}
-            ]
-        );
-    }
-
     /** @inheritDoc */
     public function onWorkerStart(Worker $worker): void
     {
+        $queue = self::getConfig('queue_key');
+        $group = "$queue:event-hook-group";
+        $consumer = "$group:$worker->id";
         // 初始化temp库
         $this->_tempInit();
         // 设置消息重载定时器
-        $this->_requeueTimer = Timer::add(self::getConfig('requeue_interval'), function () {
-            $connection = Db::connection('plugin.workbunny.webman-push-server.local-storage');
-            $connection->table('temp')->select()->chunkById(500, function (Collection $collection) use ($connection) {
-                foreach ($collection as $item) {
-                    if (self::getStorage()->xAdd($item->queue,'*', json_decode($item->data, true))) {
-                        $connection->table('temp')->delete($item->id);
+        $this->_requeueTimer = Timer::add(
+            self::getConfig('requeue_interval'),
+            function () {
+                $connection = Db::connection('plugin.workbunny.webman-push-server.local-storage');
+                $connection->table('temp')->select()->chunkById(500, function (Collection $collection) use ($connection) {
+                    foreach ($collection as $item) {
+                        if (self::getStorage()->xAdd($item->queue,'*', json_decode($item->data, true))) {
+                            $connection->table('temp')->delete($item->id);
+                        }
                     }
-                }
+                });
             });
-        });
-        // 设置消费定时器
-        $this->_consumerTimer = Timer::add($interval = self::getConfig('consumer_interval') / 1000, function () use ($worker, $interval) {
-            try {
-                // 创建组
-                self::getStorage()->xGroup(
-                    'CREATE', $queue = self::getConfig('queue_key'),
-                    $group = "$queue:webhook-group", '0', true
-                );
-                // todo 处理pending消息
-                // 读取未确认的消息组
-                if(
-                    $res = self::getStorage()->xReadGroup(
-                        $group, "webhook-consumer-$worker->id", [$queue => '>'],
-                        self::getConfig('prefetch_count'), (int)($interval * 1000)
-                    )
-                ) {
-                    // 队列组
-                    foreach ($res as $queue => $data) {
-                        $idArray = array_keys($data);
-                        $messageArray = array_values($data);
-                        // http发送
-                        $this->_request($method = 'POST', [
-                            'header' => [
-                                'sign' => self::sign(self::getConfig('webhook_secret'), $method, $query = ['id' => uuid()], $body = json_encode([
-                                    'time_ms' => microtime(true),
-                                    'events'  => $messageArray,
-                                ]))
-                            ],
-                            'query'  => $query,
-                            'data'   => $body,
-                        ], function (Response $response) use ($queue, $group, $idArray, $data) {
-                            // 数据ack
-                            if ($this->ack($queue, $group, $idArray)) {
-                                // 失败数据重入队尾
-                                if($response->getStatusCode() !== 200) {
-                                    foreach ($data as $value) {
-                                        $this->publish($queue, $value, 'failed_count');
-                                    }
-                                }
-                            }
-                        }, function (\Throwable $throwable) use ($queue, $group, $idArray, $data) {
-                            // 数据ack
-                            if ($this->ack($queue, $group, $idArray)) {
-                                // 重入队尾
-                                foreach ($data as $value) {
-                                    $this->publish($queue, $value, 'error_count');
-                                }
-                                // 错误日志
-                                Log::channel('plugin.workbunny.webman-push-server.error')->error($throwable->getMessage(), [
-                                    'code'  => $throwable->getCode(),
-                                    'file'  => $throwable->getFile() . ':' . $throwable->getLine(),
-                                    'trace' => $throwable->getTrace()
-                                ]);
-                            }
-                        });
-                    }
-                }
-            } catch (RedisException $exception) {
-                // 错误日志
-                Log::channel('plugin.workbunny.webman-push-server.warning')->warning($exception->getMessage(), [
-                    'code'  => $exception->getCode()
-                ]);
+        // 设置pending处理定时器
+        $this->_claimTimer = Timer::add(
+            self::getConfig('claim_interval'),
+            function () use ($queue, $group, $consumer) {
+                $this->claim($queue, $group, $consumer);
             }
-        });
+        );
+        // 设置消费定时器
+        $this->_consumerTimer = Timer::add(
+            $interval = self::getConfig('consumer_interval') / 1000,
+            function () use ($worker, $interval, $queue, $group, $consumer) {
+                // 处理pending消息
+                $this->claim($queue, $group, $consumer);
+                // 执行消费
+                $this->consumer($queue, $group, $consumer, (int)($interval * 1000));
+            });
     }
 
     /** @inheritDoc */
     public function onWorkerStop(Worker $worker): void
     {
-        if($this->_consumerTimer){
+        if ($this->_requeueTimer) {
+            Timer::del($this->_requeueTimer);
+            $this->_requeueTimer = null;
+        }
+        if ($this->_consumerTimer) {
             Timer::del($this->_consumerTimer);
-            $this->_consumerTimer = null;
         }
         try {
             self::getStorage()->close();
+        } catch (RedisException $exception) {
+            Log::channel('plugin.workbunny.webman-push-server.warning')->warning('Storage close error. ', [
+                'message' => $exception->getMessage(), 'code' => $exception->getCode()
+            ]);
+        } finally {
+            $this->_requeueTimer =
+            $this->_consumerTimer =
             self::$_storage = null;
-        } catch (RedisException $exception) {}
+        }
     }
 
     /** @inheritDoc */

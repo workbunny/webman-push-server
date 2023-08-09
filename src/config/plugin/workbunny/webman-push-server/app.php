@@ -11,6 +11,7 @@
  */
 declare(strict_types=1);
 
+use Workbunny\WebmanPushServer\WebhookHandler;
 use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_CHANNEL_OCCUPIED;
 use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_CHANNEL_VACATED;
 use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_CLIENT_EVENT;
@@ -51,21 +52,25 @@ return [
     'hook-server' => [
         // redis通道
         'redis_channel'     => 'default',
-        // pending超时时间 秒
-        'pending_timeout'   => 60 * 60, // 1hour 0为不对pending消息进行处理
         // 队列名
         'queue_key'         => 'workbunny:webman-push-server:webhook-stream',
+        // pending消息相关
+        'pending_timeout'   => 60 * 60, // pending消息过期时间 s
+        'claim_interval'    => 5 * 60,  // pending消息处理器定时间隔 s
         // 消息重入队列定时间隔
-        'requeue_interval'  => 5 * 60, // 5min
-        // 消息消费定时间隔
-        'consumer_interval' => 1, // 1ms
-        // 消费数
-        'prefetch_count'    => 5,
-        // 队列长度
-        'queue_limit'       => 4096, // 0 为不限制
+        'requeue_interval'  => 5 * 60, // s
+        // 事件消费相关
+        'consumer_interval' => 1, // 消费间隔 ms
+        'prefetch_count'    => 5, // 每次消费者消费的最大数量
+        'queue_limit'       => 0, // 队列长度限制，0为不限制
+        // 事件处理器
+        'hook_handler'      => WebhookHandler::class,
         // webhook相关配置
-        'webhook_url'       => 'http://127.0.0.1:8002/webhook', // 样例接口
-        'webhook_secret'    => 'YOUR_WEBHOOK_SECRET', // 样例
+        'webhook_url'             => 'http://127.0.0.1:8002/webhook', // 样例接口
+        'webhook_secret'          => 'YOUR_WEBHOOK_SECRET',           // 样例
+        'webhook_request_timeout' => 30,                              // 请求超时时间
+        'webhook_connect_timeout' => 30,                              // 连接超时时间
+        // 事件列表
         'events'            => [
             PUSH_SERVER_EVENT_MEMBER_ADDED, PUSH_SERVER_EVENT_MEMBER_REMOVED,
             PUSH_SERVER_EVENT_CLIENT_EVENT, PUSH_SERVER_EVENT_SERVER_EVENT,
