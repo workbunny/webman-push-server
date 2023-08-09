@@ -274,28 +274,34 @@ class HookServer implements ServerInterface
         // 初始化temp库
         $this->_tempInit();
         // 设置消息重载定时器
-        $this->_requeueTimer = Timer::add(
-            self::getConfig('requeue_interval'),
-            function () {
-                $connection = Db::connection('plugin.workbunny.webman-push-server.local-storage');
-                $connection->table('temp')->select()->chunkById(500, function (Collection $collection) use ($connection) {
-                    foreach ($collection as $item) {
-                        if (self::getStorage()->xAdd($item->queue,'*', json_decode($item->data, true))) {
-                            $connection->table('temp')->delete($item->id);
+        $interval = self::getConfig('requeue_interval', 0);
+        if ($interval > 0) {
+            $this->_requeueTimer = Timer::add(
+                $interval,
+                function () {
+                    $connection = Db::connection('plugin.workbunny.webman-push-server.local-storage');
+                    $connection->table('temp')->select()->chunkById(500, function (Collection $collection) use ($connection) {
+                        foreach ($collection as $item) {
+                            if (self::getStorage()->xAdd($item->queue,'*', json_decode($item->data, true))) {
+                                $connection->table('temp')->delete($item->id);
+                            }
                         }
-                    }
+                    });
                 });
-            });
+        }
         // 设置pending处理定时器
-        $this->_claimTimer = Timer::add(
-            self::getConfig('claim_interval'),
-            function () use ($queue, $group, $consumer) {
-                $this->claim($queue, $group, $consumer);
-            }
-        );
+        $interval = self::getConfig('claim_interval', 0);
+        if ($interval > 0) {
+            $this->_claimTimer = Timer::add(
+                self::getConfig('claim_interval'),
+                function () use ($queue, $group, $consumer) {
+                    $this->claim($queue, $group, $consumer);
+                }
+            );
+        }
         // 设置消费定时器
         $this->_consumerTimer = Timer::add(
-            $interval = self::getConfig('consumer_interval') / 1000,
+            $interval = self::getConfig('consumer_interval', 1) / 1000,
             function () use ($worker, $interval, $queue, $group, $consumer) {
                 // 处理pending消息
                 $this->claim($queue, $group, $consumer);

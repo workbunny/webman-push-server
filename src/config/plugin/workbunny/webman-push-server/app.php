@@ -56,9 +56,9 @@ return [
         'queue_key'         => 'workbunny:webman-push-server:webhook-stream',
         // pending消息相关
         'pending_timeout'   => 60 * 60, // pending消息过期时间 s
-        'claim_interval'    => 5 * 60,  // pending消息处理器定时间隔 s
+        'claim_interval'    => 5 * 60,  // pending消息处理器定时间隔，0为不进行pending数据的处理 s
         // 消息重入队列定时间隔
-        'requeue_interval'  => 5 * 60, // s
+        'requeue_interval'  => 5 * 60, // 0为不进行消息重入队列的处理 s
         // 事件消费相关
         'consumer_interval' => 1, // 消费间隔 ms
         'prefetch_count'    => 5, // 每次消费者消费的最大数量
