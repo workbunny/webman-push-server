@@ -30,8 +30,8 @@
 
 ## 依赖
 
-- **php >= 7.4**
-- **redis >= 5.0**
+- **php >= 7.4 【建议 >=8.0】**
+- **redis >= 5.0 【建议使用最新】**
 
 ## 安装
 
@@ -369,9 +369,18 @@ $client->publish();
 1. Hook服务是多进程消费队列，进程数详见**config/plugin/workbunny/webman-push-server/process.php**；
 2. 默认使用webhook方式进行消费通知，详见**WebhookHandler**;
 3. 支持自定义消费方式，方法如下：
-   1. 创建自定义handler类，实现接口HookHandlerInterface
-   2. 将类名添加至配置文件**config/plugin/workbunny/webman-push-server/app.php**的**hook_handler**中
-   3. 重启服务
+   - 创建自定义handler类，实现接口**HookHandlerInterface**
+   - 将类名添加至配置文件**config/plugin/workbunny/webman-push-server/app.php**的**hook_handler**中
+   - 重启服务
+
+##### 注意事项：
+
+1. 在队列无法发布消息等意外情况下，队列消息会暂时持久化至本地数据库，直到队列恢复后队列消息将自动恢复至队列；
+    - 本地数据库默认采用SQLite3，配置详见**config/plugin/workbunny/webman-push-server/database.php**
+    - 本地暂存的队列消息会以定时器的方式重载至队列，配置详见**config/plugin/workbunny/webman-push-server/app.php -> hook_server.requeue_interval**
+2. 队列消息存在一定的pending时间，配置支持设置**pending_timeout**和**claim_interval**用于缓解可能存在的消息数据冗余；
+    - **config/plugin/workbunny/webman-push-server/app.php -> hook_server.claim_interval**用于创建消息回收定时器来进行冗余消息回收
+    - **config/plugin/workbunny/webman-push-server/app.php -> hook_server.pending_timeout**用于确定需要被回收的冗余消息，pending时间达到该配置的消息将会被消息回收定时器回收
 
 #### 2.API子服务
 
