@@ -19,6 +19,7 @@ use Tests\MockClass\MockRedisStream;
 use Tests\MockClass\MockTcpConnection;
 use Workbunny\WebmanPushServer\ApiService;
 use Workbunny\WebmanPushServer\HookServer;
+use Workbunny\WebmanPushServer\Server;
 use Workbunny\WebmanPushServer\ServerInterface;
 
 class ServerBaseTest extends BaseTestCase
@@ -46,6 +47,7 @@ class ServerBaseTest extends BaseTestCase
      */
     public function testServerOnMessageWithNormalStringData(){
         $this->setServer(true);
+        Server::setServer($this->getServer());
 
         // normal string
         $mockConnection = new MockTcpConnection();
@@ -89,6 +91,7 @@ class ServerBaseTest extends BaseTestCase
     public function testServerOnConnectSuccessful()
     {
         $this->setServer(true);
+        Server::setServer($this->getServer());
 
         $mockConnection = new MockTcpConnection();
 
@@ -107,12 +110,15 @@ class ServerBaseTest extends BaseTestCase
         $this->assertEquals(['' => ''], $this->getServer()->_getConnectionProperty($mockConnection, 'channels'));
         $this->assertEquals($mockConnection, $this->getServer()->_getConnection($mockConnection, $appKey, ''));
 
-        /** @var MockRedisStream $storage */
         $storage = HookServer::getStorage();
         // 队列新增一条数据
-        $this->assertCount(1, $queue = $storage->getStreams()['workbunny:webman-push-server:webhook-stream'] ?? []);
+        $this->assertEquals(1, $storage->exists('workbunny:webman-push-server:webhook-stream'));
         // 队列包含一条server_event事件
-        $this->assertContains('server_event', array_column($queue, 'name'));
+        $this->assertContains('server_event', array_column($storage->xRead([
+            'workbunny:webman-push-server:webhook-stream' => '0-0'
+        ], -1, 1)['workbunny:webman-push-server:webhook-stream'] ?? [], 'name'));
+        // 移除队列
+        $storage->del('workbunny:webman-push-server:webhook-stream');
     }
 
     /**
@@ -128,6 +134,7 @@ class ServerBaseTest extends BaseTestCase
     public function testServerOnConnectInvalidAppError()
     {
         $this->setServer(true);
+        Server::setServer($this->getServer());
 
         // 无效的header
         $mockConnection = new MockTcpConnection();
@@ -140,6 +147,15 @@ class ServerBaseTest extends BaseTestCase
         $this->assertEquals(0, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
         $this->assertTrue($mockConnection->isPaused());
         $this->assertEquals('{"event":"pusher:error","data":{"code":null,"message":"Invalid app"}}', $mockConnection->getSendBuffer());
+        $storage = HookServer::getStorage();
+        // 队列新增一条数据
+        $this->assertEquals(1, $storage->exists('workbunny:webman-push-server:webhook-stream'));
+        // 队列包含一条server_event事件
+        $this->assertContains('server_event', array_column($storage->xRead([
+            'workbunny:webman-push-server:webhook-stream' => '0-0'
+        ], -1, 1)['workbunny:webman-push-server:webhook-stream'] ?? [], 'name'));
+        // 移除队列
+        $storage->del('workbunny:webman-push-server:webhook-stream');
     }
 
     /**
@@ -155,6 +171,7 @@ class ServerBaseTest extends BaseTestCase
     public function testServerOnConnectInvalidAppKeyError()
     {
         $this->setServer(true);
+        Server::setServer($this->getServer());
 
         // 无效的akk_key
         $mockConnection = new MockTcpConnection();
@@ -178,6 +195,7 @@ class ServerBaseTest extends BaseTestCase
      */
     public function testServerOnMessageWithBoolData(){
         $this->setServer(true);
+        Server::setServer($this->getServer());
 
         // bool
         $mockConnection = new MockTcpConnection();
@@ -196,6 +214,7 @@ class ServerBaseTest extends BaseTestCase
      */
     public function testServerOnMessageWithArrayData(){
         $this->setServer(true);
+        Server::setServer($this->getServer());
 
         // array
         $mockConnection = new MockTcpConnection();
@@ -214,6 +233,7 @@ class ServerBaseTest extends BaseTestCase
      */
     public function testServerOnMessageWithObjectData(){
         $this->setServer(true);
+        Server::setServer($this->getServer());
 
         // object
         $mockConnection = new MockTcpConnection();

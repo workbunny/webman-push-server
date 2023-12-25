@@ -48,18 +48,14 @@ class HookServer implements ServerInterface
     /** @inheritDoc */
     public static function getConfig(string $key, $default = null)
     {
-        return Server::isDebug() ?
-            config('plugin.workbunny.webman-push-server.app.hook-server.' . $key, $default) :
-            \config('plugin.workbunny.webman-push-server.app.hook-server.' . $key, $default);
+        return config('plugin.workbunny.webman-push-server.app.hook-server.' . $key, $default);
     }
 
     /** @inheritDoc */
     public static function getStorage(): \Redis
     {
         if(!self::$_storage instanceof \Redis){
-            self::$_storage = Server::isDebug() ?
-                new MockRedisStream() :
-                Redis::connection(self::getConfig('redis_channel', 'default'))->client();
+            self::$_storage = Redis::connection(self::getConfig('redis_channel', 'default'))->client();
         }
         return self::$_storage;
     }

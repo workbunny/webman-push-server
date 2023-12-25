@@ -15,6 +15,8 @@ namespace Tests;
 
 use Exception;
 use PHPUnit\Framework\TestCase;
+use support\Redis;
+use Webman\Config;
 use Workbunny\WebmanPushServer\ApiService;
 use Workbunny\WebmanPushServer\Server;
 
@@ -64,7 +66,8 @@ abstract class BaseTestCase extends TestCase
     protected function setUp(): void
     {
         Server::$debug = true;
-        require_once dirname(__DIR__) . '/vendor/workerman/webman-framework/src/support/helpers.php';
+        require_once __DIR__ . '/debug.php';
+        Config::load(\config_path(), ['route']);
         parent::setUp();
     }
 }

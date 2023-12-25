@@ -22,6 +22,7 @@ use Workerman\Protocols\Http\Response;
 
 class ApiServiceRouteHandlerTest extends BaseTestCase
 {
+
     /**
      * 测试消息事件处理
      * @covers \Workbunny\WebmanPushServer\ApiService::onMessage
@@ -30,7 +31,6 @@ class ApiServiceRouteHandlerTest extends BaseTestCase
      */
     public function testApiServiceChannels(){
         $this->setServer(true);
-
         Server::setServer($this->getServer());
 
         // required auth_key
@@ -82,13 +82,14 @@ class ApiServiceRouteHandlerTest extends BaseTestCase
      */
     public function testApiServiceChannel(){
         $this->setServer(true);
+        Server::setServer($this->getServer());
 
         $mockConnection = new MockTcpConnection();
         $request = new Http\Request("GET /apps/1/channels/private-test?auth_key=workbunny&auth_signature=test HTTP/1.1\r\nConnection: keep-alive\r\n");
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
         $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
-        $this->assertEquals('{"occupied":true,"type":null}', $mockConnection->getSendBuffer()->rawBody());
+        $this->assertEquals('{"occupied":true,"type":false}', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(200, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
 
@@ -97,7 +98,7 @@ class ApiServiceRouteHandlerTest extends BaseTestCase
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
         $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
-        $this->assertEquals('{"occupied":true,"type":null,"subscription_count":null}', $mockConnection->getSendBuffer()->rawBody());
+        $this->assertEquals('{"occupied":true,"type":false,"subscription_count":false}', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(200, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
 
@@ -106,7 +107,7 @@ class ApiServiceRouteHandlerTest extends BaseTestCase
         // 手动触发 onMessage 回调
         Server::getServices(ApiService::class)->onMessage($mockConnection, $request);
         $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
-        $this->assertEquals('{"occupied":true,"type":null,"subscription_count":null,"user_count":null}', $mockConnection->getSendBuffer()->rawBody());
+        $this->assertEquals('{"occupied":true,"type":false,"subscription_count":false,"user_count":false}', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(200, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
     }
@@ -119,6 +120,7 @@ class ApiServiceRouteHandlerTest extends BaseTestCase
      */
     public function testApiServiceEvents(){
         $this->setServer(true);
+        Server::setServer($this->getServer());
 
         $mockConnection = new MockTcpConnection();
         $request = new Http\Request("POST /apps/1/events?auth_key=workbunny&auth_signature=test HTTP/1.1\r\nConnection: keep-alive\r\n");
@@ -140,6 +142,7 @@ class ApiServiceRouteHandlerTest extends BaseTestCase
      */
     public function testApiServiceBatchEvents(){
         $this->setServer(true);
+        Server::setServer($this->getServer());
 
         $mockConnection = new MockTcpConnection();
         $request = new Http\Request("POST /apps/1/batch_events?auth_key=workbunny&auth_signature=test HTTP/1.1\r\nConnection: keep-alive\r\n");
@@ -161,6 +164,7 @@ class ApiServiceRouteHandlerTest extends BaseTestCase
      */
     public function testApiServiceUsers(){
         $this->setServer(true);
+        Server::setServer($this->getServer());
 
         $mockConnection = new MockTcpConnection();
         $request = new Http\Request("GET /apps/1/channels/private-test/users?auth_key=workbunny&auth_signature=test HTTP/1.1\r\nConnection: keep-alive\r\n");
@@ -180,6 +184,7 @@ class ApiServiceRouteHandlerTest extends BaseTestCase
      */
     public function testApiServiceTerminateConnections(){
         $this->setServer(true);
+        Server::setServer($this->getServer());
 
         $mockConnection = new MockTcpConnection();
         $request = new Http\Request("POST /apps/1/users/abc/terminate_connections?auth_key=workbunny&auth_signature=test HTTP/1.1\r\nConnection: keep-alive\r\n");

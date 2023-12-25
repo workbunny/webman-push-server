@@ -150,7 +150,7 @@ ApiRoute::addGroup('/apps/{appId}', function () {
                 $channels[$channel] = Server::getStorage()->hMGet($key, $fields) ?? [];
             }
             return response(200, ['channels' => $channels]);
-        }catch (\Throwable $throwable){
+        } catch (\Throwable $throwable) {
             //TODO log
             return response(500, 'Server Error [Channels]');
         }

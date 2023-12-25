@@ -74,14 +74,14 @@ class MockRedis extends \Redis
         return $this->_storage[$key][$hashKey] ?? null;
     }
 
-    public function del($key1, ...$otherKeys)
+    public function del($key, ...$otherKeys): \Redis|int|bool
     {
-        if($this->exists($key1)){
-            unset($this->_storage[$key1]);
+        if($this->exists($key)){
+            unset($this->_storage[$key]);
         }
-        foreach ($otherKeys as $key){
-            if($this->exists($key)){
-                unset($this->_storage[$key]);
+        foreach ($otherKeys as $k){
+            if($this->exists($k)){
+                unset($this->_storage[$k]);
             }
         }
     }

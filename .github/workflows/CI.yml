@@ -17,8 +17,15 @@ jobs:
           - 8.1
           - 8.0
           - 7.4
+        redis:
+          - "7"
+          - "6"
+          - "5"
     steps:
       - uses: actions/checkout@v3
+      - uses: supercharge/redis-github-action@1.5.0
+        with:
+          redis-version: ${{ matrix.redis }}
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}

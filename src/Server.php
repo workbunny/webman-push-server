@@ -17,7 +17,6 @@ use Exception;
 use RedisException;
 use support\Container;
 use support\Redis;
-use Tests\MockClass\MockRedis;
 use Workbunny\WebmanPushServer\Events\AbstractEvent;
 use Workbunny\WebmanPushServer\Events\Unsubscribe;
 use Workerman\Connection\TcpConnection;
@@ -184,17 +183,16 @@ class Server implements ServerInterface
     /** @inheritDoc */
     public static function getConfig(string $key, $default = null)
     {
-        return self::isDebug() ?
-            config('plugin.workbunny.webman-push-server.app.push-server.' . $key, $default) :
-            \config('plugin.workbunny.webman-push-server.app.push-server.' . $key, $default);
+        return \config(
+            'plugin.workbunny.webman-push-server.app.push-server.' . $key, $default
+        );
     }
 
     /** @inheritDoc */
     public static function getStorage(): \Redis
     {
         if(!self::$_storage instanceof \Redis){
-            self::$_storage = self::isDebug() ?
-                new MockRedis() :
+            self::$_storage =
                 Redis::connection(self::getConfig('redis_channel', 'default'))->client();
         }
         return self::$_storage;

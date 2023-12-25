@@ -32,19 +32,6 @@ if (!function_exists('response')) {
     }
 }
 
-if (!function_exists('config')){
-    /**
-     * @param string|null $key
-     * @param $default
-     * @return array|mixed|null
-     */
-    function config(string $key = null, $default = null)
-    {
-        Config::load(__DIR__ . '/config', ['route']);
-        return Config::get($key, $default);
-    }
-}
-
 /**
  * 生成UUID
  */

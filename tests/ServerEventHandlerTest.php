@@ -19,6 +19,7 @@ use Workbunny\WebmanPushServer\Events\ClientEvent;
 use Workbunny\WebmanPushServer\Events\Ping;
 use Workbunny\WebmanPushServer\Events\Subscribe;
 use Workbunny\WebmanPushServer\Events\Unsubscribe;
+use Workbunny\WebmanPushServer\HookServer;
 use Workbunny\WebmanPushServer\Server;
 use const Workbunny\WebmanPushServer\EVENT_MEMBER_REMOVED;
 use const Workbunny\WebmanPushServer\EVENT_PING;
@@ -37,6 +38,7 @@ class ServerEventHandlerTest extends BaseTestCase
      */
     public function testServerEventHandlerByPing(){
         $this->setServer(true);
+        Server::setServer($this->getServer());
 
         $mockConnection = new MockTcpConnection();
 
@@ -54,6 +56,15 @@ class ServerEventHandlerTest extends BaseTestCase
         $this->assertEquals(0, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
         $this->assertTrue(Server::$eventFactory instanceof Ping);
         $this->assertEquals('{"event":"pusher:pong","data":{}}', $mockConnection->getSendBuffer());
+        $storage = HookServer::getStorage();
+        // 队列新增一条数据
+        $this->assertEquals(1, $storage->exists('workbunny:webman-push-server:webhook-stream'));
+        // 队列包含一条server_event事件
+        $this->assertContains('server_event', array_column($storage->xRead([
+            'workbunny:webman-push-server:webhook-stream' => '0-0'
+        ], -1, 1)['workbunny:webman-push-server:webhook-stream'] ?? [], 'name'));
+        // 移除队列
+        $storage->del('workbunny:webman-push-server:webhook-stream');
     }
 
     /**
@@ -65,6 +76,7 @@ class ServerEventHandlerTest extends BaseTestCase
      */
     public function testServerEventHandlerBySubscribe(){
         $this->setServer(true);
+        Server::setServer($this->getServer());
 
         $mockConnection = new MockTcpConnection();
         // 手动触发 onConnect 回调
@@ -94,6 +106,7 @@ class ServerEventHandlerTest extends BaseTestCase
      */
     public function testServerEventHandlerByUnsubscribe(){
         $this->setServer(true);
+        Server::setServer($this->getServer());
 
         $mockConnection = new MockTcpConnection();
         // 手动触发 onConnect 回调
@@ -123,6 +136,7 @@ class ServerEventHandlerTest extends BaseTestCase
      */
     public function testServerEventHandlerByCustomClientEvent(){
         $this->setServer(true);
+        Server::setServer($this->getServer());
 
         $mockConnection = new MockTcpConnection();
         // 手动触发 onConnect 回调
@@ -146,6 +160,15 @@ class ServerEventHandlerTest extends BaseTestCase
             '{"event":"pusher:error","data":{"code":null,"message":"Client event rejected - only supported on private and presence channels"}}',
             $mockConnection->getSendBuffer()
         );
+        $storage = HookServer::getStorage();
+        // 队列新增一条数据
+        $this->assertEquals(1, $storage->exists('workbunny:webman-push-server:webhook-stream'));
+        // 队列包含一条server_event事件
+        $this->assertContains('server_event', array_column($storage->xRead([
+            'workbunny:webman-push-server:webhook-stream' => '0-0'
+        ], -1, 1)['workbunny:webman-push-server:webhook-stream'] ?? [], 'name'));
+        // 移除队列
+        $storage->del('workbunny:webman-push-server:webhook-stream');
     }
 
     /**
@@ -157,6 +180,7 @@ class ServerEventHandlerTest extends BaseTestCase
      */
     public function testServerEventHandlerByServerReturnClientEvent(){
         $this->setServer(true);
+        Server::setServer($this->getServer());
 
         // server return client-event
         $mockConnection = new MockTcpConnection();
@@ -191,5 +215,14 @@ class ServerEventHandlerTest extends BaseTestCase
         $this->assertEquals(0, $this->getServer()->_getConnectionProperty($mockConnection, 'clientNotSendPingCount'));
         $this->assertEquals(null, Server::$eventFactory);
         $this->assertEquals('{"event":"pusher:error","data":{"code":null,"message":"Client event rejected - Unknown event"}}', $mockConnection->getSendBuffer());
+        $storage = HookServer::getStorage();
+        // 队列新增一条数据
+        $this->assertEquals(1, $storage->exists('workbunny:webman-push-server:webhook-stream'));
+        // 队列包含一条server_event事件
+        $this->assertContains('server_event', array_column($storage->xRead([
+            'workbunny:webman-push-server:webhook-stream' => '0-0'
+        ], -1, 1)['workbunny:webman-push-server:webhook-stream'] ?? [], 'name'));
+        // 移除队列
+        $storage->del('workbunny:webman-push-server:webhook-stream');
     }
 }
