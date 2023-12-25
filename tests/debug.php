@@ -5,10 +5,10 @@ use Webman\Config;
 /**
  * 测试用config
  * @param string|null $key
- * @param mixed|null $default
+ * @param mixed $default
  * @return mixed
  */
-function config(string $key = null, mixed $default = null)
+function config(?string $key = null, $default = null)
 {
     if ($key === 'redis') {
         return [
