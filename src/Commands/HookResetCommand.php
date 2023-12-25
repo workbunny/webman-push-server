@@ -17,6 +17,12 @@ class HookResetCommand extends Command
     protected static $defaultName = 'workbunny:push-server-hreset';
     protected static $defaultDescription = 'Reset Hook Server Redis Stream';
 
+    protected function configure()
+    {
+        $this->setName('workbunny:push-server-hreset')
+            ->setDescription('Reset Hook Server Redis Stream. ');
+    }
+
     /**
      * @param InputInterface $input
      * @param OutputInterface $output

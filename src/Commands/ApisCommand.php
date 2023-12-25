@@ -21,6 +21,8 @@ class ApisCommand extends Command
      */
     protected function configure()
     {
+        $this->setName('workbunny:push-server-apis')
+            ->setDescription('Push Server APIs. ');
         $this->addOption('all', 'a', InputOption::VALUE_NONE, 'Show all');
     }
 
