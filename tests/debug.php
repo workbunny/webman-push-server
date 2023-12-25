@@ -8,7 +8,7 @@ use Webman\Config;
  * @param mixed|null $default
  * @return mixed
  */
-function config(string $key = null, mixed $default = null): mixed
+function config(string $key = null, mixed $default = null)
 {
     if ($key === 'redis') {
         return [

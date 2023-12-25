@@ -15,7 +15,6 @@ namespace Tests;
 
 use Closure;
 use Exception;
-use Tests\MockClass\MockRedisStream;
 use Tests\MockClass\MockTcpConnection;
 use Workbunny\WebmanPushServer\ApiService;
 use Workbunny\WebmanPushServer\HookServer;
