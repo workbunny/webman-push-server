@@ -1,4 +1,3 @@
-
 function Push(options) {
     this.doNotConnect = 0;
     options = options || {};
@@ -15,7 +14,9 @@ function Push(options) {
 
 Push.prototype.checkoutPing = function() {
     var _this = this;
-    setTimeout(function () {
+    _this.checkoutPingTimer && clearTimeout(_this.checkoutPingTimer);
+    _this.checkoutPingTimer = setTimeout(function () {
+        _this.checkoutPingTimer = 0;
         if (_this.connection.state === 'connected') {
             _this.connection.send('{"event":"pusher:ping","data":{}}');
             if (_this.pingTimeoutTimer) {
@@ -62,7 +63,7 @@ Push.prototype.createConnection = function () {
                 _this.pingTimeoutTimer = 0;
             }
 
-            params = paramsDataParse(params.data);
+            params = JSON.parse(params.data);
             var event = params.event;
             var channel_name = params.channel;
 
@@ -73,7 +74,7 @@ Push.prototype.createConnection = function () {
             if (event === 'pusher:error') {
                 throw Error(params.data.message);
             }
-            var data = paramsDataParse(params.data), channel;
+            var data = JSON.parse(params.data), channel;
             if (event === 'pusher_internal:subscription_succeeded') {
                 channel = _this.channels[channel_name];
                 channel.subscribed = true;
@@ -83,7 +84,7 @@ Push.prototype.createConnection = function () {
             }
             if (event === 'pusher:connection_established') {
                 _this.connection.socket_id = data.socket_id;
-                _this.connection.state = 'connected';
+                _this.connection.updateNetworkState('connected');
                 _this.subscribeAll();
             }
             if (event.indexOf('pusher_internal') !== -1) {
@@ -158,6 +159,7 @@ function createChannel(channel_name, push)
     channel.subscribeCb = function () {
         push.connection.send(JSON.stringify({event:"pusher:subscribe", data:{channel:channel_name}}));
     }
+    channel.processSubscribe();
     return channel;
 }
 
@@ -186,43 +188,20 @@ function createPrivateChannel(channel_name, push)
 
 function createPresenceChannel(channel_name, push)
 {
-    var channel = new Channel(push.connection, channel_name);
-    push.channels[channel_name] = channel;
-    channel.subscribeCb = function () {
-        __ajax({
-            url: push.config.auth,
-            type: 'POST',
-            data: {
-                channel_name: channel_name,
-                socket_id: push.connection.socket_id,
-                channel_data: push.config.channel_data ? JSON.stringify(push.config.channel_data) : null
-            },
-            success: function (data) {
-                data = JSON.parse(data);
-                data.channel = channel_name;
-                push.connection.send(JSON.stringify({event:"pusher:subscribe", data:data}));
-            },
-            error: function (e) {
-                throw Error(e);
-            }
-        });
-    };
-    channel.processSubscribe();
-    return channel;
-    // return createPrivateChannel(channel_name, push);
+    return createPrivateChannel(channel_name, push);
 }
 
-/*window.addEventListener('online',  function(){
-    var con;
-    for (var i in Push.instances) {
-        con = Push.instances[i].connection;
-        con.reconnectInterval = 1;
-        if (con.state === 'connecting') {
-            con.connect();
+uni.onNetworkStatusChange(function (res) {
+    if(res.isConnected) {
+        for (var i in Push.instances) {
+            con = Push.instances[i].connection;
+            con.reconnectInterval = 1;
+            if (con.state === 'connecting') {
+                con.connect();
+            }
         }
     }
-});*/
-
+});
 
 function Connection(options) {
     this.dispatcher = new Dispatcher();
@@ -842,13 +821,6 @@ function formatParams(data){
         arr.push(encodeURIComponent(name)+'='+encodeURIComponent(data[name]));
     }
     return arr.join('&');
-}
-
-function paramsDataParse(data){
-    if(typeof (data) === 'string'){
-        return JSON.parse(data);
-    }
-    return data
 }
 
 export default Push

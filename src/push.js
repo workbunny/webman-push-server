@@ -1,4 +1,3 @@
-
 function Push(options) {
     this.doNotConnect = 0;
     options = options || {};
@@ -15,7 +14,9 @@ function Push(options) {
 
 Push.prototype.checkoutPing = function() {
     var _this = this;
-    setTimeout(function () {
+    _this.checkoutPingTimer && clearTimeout(_this.checkoutPingTimer);
+    _this.checkoutPingTimer = setTimeout(function () {
+        _this.checkoutPingTimer = 0;
         if (_this.connection.state === 'connected') {
             _this.connection.send('{"event":"pusher:ping","data":{}}');
             if (_this.pingTimeoutTimer) {
@@ -61,11 +62,11 @@ Push.prototype.createConnection = function () {
                 clearTimeout(_this.pingTimeoutTimer);
                 _this.pingTimeoutTimer = 0;
             }
-           
-            params = paramsDataParse(params.data);
+
+            params = JSON.parse(params.data);
             var event = params.event;
             var channel_name = params.channel;
-            
+
             if (event === 'pusher:pong') {
                 _this.checkoutPing();
                 return;
@@ -73,7 +74,7 @@ Push.prototype.createConnection = function () {
             if (event === 'pusher:error') {
                 throw Error(params.data.message);
             }
-            var data = paramsDataParse(params.data), channel;
+            var data = JSON.parse(params.data), channel;
             if (event === 'pusher_internal:subscription_succeeded') {
                 channel = _this.channels[channel_name];
                 channel.subscribed = true;
@@ -83,7 +84,7 @@ Push.prototype.createConnection = function () {
             }
             if (event === 'pusher:connection_established') {
                 _this.connection.socket_id = data.socket_id;
-                _this.connection.state = 'connected';
+                _this.connection.updateNetworkState('connected');
                 _this.subscribeAll();
             }
             if (event.indexOf('pusher_internal') !== -1) {
@@ -158,6 +159,7 @@ function createChannel(channel_name, push)
     channel.subscribeCb = function () {
         push.connection.send(JSON.stringify({event:"pusher:subscribe", data:{channel:channel_name}}));
     }
+    channel.processSubscribe();
     return channel;
 }
 
@@ -186,30 +188,7 @@ function createPrivateChannel(channel_name, push)
 
 function createPresenceChannel(channel_name, push)
 {
-    var channel = new Channel(push.connection, channel_name);
-    push.channels[channel_name] = channel;
-    channel.subscribeCb = function () {
-        __ajax({
-            url: push.config.auth,
-            type: 'POST',
-            data: {
-                channel_name: channel_name,
-                socket_id: push.connection.socket_id,
-                channel_data: push.config.channel_data ? JSON.stringify(push.config.channel_data) : null
-            },
-            success: function (data) {
-                data = JSON.parse(data);
-                data.channel = channel_name;
-                push.connection.send(JSON.stringify({event:"pusher:subscribe", data:data}));
-            },
-            error: function (e) {
-                throw Error(e);
-            }
-        });
-    };
-    channel.processSubscribe();
-    return channel;
-    // return createPrivateChannel(channel_name, push);
+    return createPrivateChannel(channel_name, push);
 }
 
 /*window.addEventListener('online',  function(){
@@ -364,16 +343,16 @@ var __extends = (this && this.__extends) || function (d, b) {
 
 function Channel(connection, channel_name) {
     this.subscribed = false;
-	this.dispatcher = new Dispatcher();
+    this.dispatcher = new Dispatcher();
     this.connection = connection;
     this.channelName = channel_name;
     this.subscribeCb = null;
     this.queue = [];
-	__extends(this, this.dispatcher);
-	var properies = ['on', 'off', 'emit'];
-	for (var i in properies) {
+    __extends(this, this.dispatcher);
+    var properies = ['on', 'off', 'emit'];
+    for (var i in properies) {
         this[properies[i]] = this.dispatcher[properies[i]];
-	}
+    }
 }
 
 Channel.prototype.processSubscribe = function () {
@@ -406,7 +385,7 @@ Channel.prototype.trigger = function (event, data) {
 
 ////////////////
 var Collections = (function () {
-	var exports = {};
+    var exports = {};
     function extend(target) {
         var sources = [];
         for (var _i = 1; _i < arguments.length; _i++) {
@@ -513,8 +492,8 @@ var Collections = (function () {
     exports.mapObject = mapObject;
     function filter(array, test) {
         test = test || function (value) {
-                return !!value;
-            };
+            return !!value;
+        };
         var result = [];
         for (var i = 0; i < array.length; i++) {
             if (test(array[i], i, array, result)) {
@@ -758,16 +737,9 @@ function __ajax(options){
 }
 
 function formatParams(data){
-    var arr = [];
-    for(let name in data){
+    var arr=[];
+    for(var name in data){
         arr.push(encodeURIComponent(name)+'='+encodeURIComponent(data[name]));
     }
     return arr.join('&');
-}
-
-function paramsDataParse(data){
-    if(typeof (data) === 'string'){
-        return JSON.parse(data);
-    }
-    return data
 }
