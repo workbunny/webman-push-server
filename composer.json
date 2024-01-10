@@ -22,7 +22,7 @@
 		"illuminate/redis": "^8.0|^9.0|^10.0",
 		"illuminate/database": "^8.0|^9.0|^10.0",
 		"illuminate/events": "^8.0|^9.0|^10.0",
-		"workerman/http-client": "^1.0",
+		"workerman/http-client": "^1.0 | ^2.0",
 		"workerman/channel": "^1.0",
 		"pusher/pusher-php-server": "^7.2",
 		"monolog/monolog": "^2.0",
