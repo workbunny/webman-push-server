@@ -233,7 +233,17 @@ class HookServer implements ServerInterface
      */
     protected function _tempInit()
     {
-        $builder = Schema::connection('plugin.workbunny.webman-push-server.local-storage');
+        // 创建temp数据库文件
+        $file = config('database.connections')['plugin.workbunny.webman-push-server.local-storage']['database'];
+        if (!file_exists($file)) {
+            // 创建目录
+            if (!is_dir($dir = dirname($file))) {
+                \mkdir($dir, 0777, true);
+            }
+            \touch($file);
+        }
+        // 创建数据库结构
+        $builder = Db::schema('plugin.workbunny.webman-push-server.local-storage');
         if (!$builder->hasTable('temp')) {
             $builder->create('temp', function (Blueprint $table) {
                 $table->id();
@@ -267,24 +277,7 @@ class HookServer implements ServerInterface
         $queue = self::getConfig('queue_key');
         $group = "$queue:event-hook-group";
         $consumer = "$group:$worker->id";
-        // 初始化temp库
-        $this->_tempInit();
-        // 设置消息重载定时器
-        $interval = self::getConfig('requeue_interval', 0);
-        if ($interval > 0) {
-            $this->_requeueTimer = Timer::add(
-                $interval,
-                function () {
-                    $connection = Db::connection('plugin.workbunny.webman-push-server.local-storage');
-                    $connection->table('temp')->select()->chunkById(500, function (Collection $collection) use ($connection) {
-                        foreach ($collection as $item) {
-                            if (self::getStorage()->xAdd($item->queue,'*', json_decode($item->data, true))) {
-                                $connection->table('temp')->delete($item->id);
-                            }
-                        }
-                    });
-                });
-        }
+
         // 设置pending处理定时器
         $interval = self::getConfig('claim_interval', 0);
         if ($interval > 0) {
@@ -299,6 +292,24 @@ class HookServer implements ServerInterface
         $this->_consumerTimer = Timer::add(
             $interval = self::getConfig('consumer_interval', 1) / 1000,
             function () use ($worker, $interval, $queue, $group, $consumer) {
+                // 初始化temp库
+                $this->_tempInit();
+                // 设置消息重载定时器
+                $interval = self::getConfig('requeue_interval', 0);
+                if ($interval > 0) {
+                    $this->_requeueTimer = Timer::add(
+                        $interval,
+                        function () {
+                            $connection = Db::connection('plugin.workbunny.webman-push-server.local-storage');
+                            $connection->table('temp')->select()->chunkById(500, function (Collection $collection) use ($connection) {
+                                foreach ($collection as $item) {
+                                    if (self::getStorage()->xAdd($item->queue,'*', json_decode($item->data, true))) {
+                                        $connection->table('temp')->delete($item->id);
+                                    }
+                                }
+                            });
+                        });
+                }
                 // 处理pending消息
                 $this->claim($queue, $group, $consumer);
                 // 执行消费
