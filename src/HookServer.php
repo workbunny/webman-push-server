@@ -164,11 +164,17 @@ class HookServer implements ServerInterface
     public function claim(string $queue, string $group, string $consumer)
     {
         try {
-            if ($idArray = self::getStorage()->xAutoClaim(
+            $idArray = self::getStorage()->xAutoClaim(
                 $queue, $group, $consumer,
                 self::getConfig('pending_timeout', 60 * 60) * 1000,
                 '0-0', -1, true
-            )) {
+            );
+            foreach ($idArray as $k => $v) {
+                if (!$v or $v === '0-0') {
+                    unset($idArray[$k]);
+                }
+            }
+            if ($idArray) {
                 if (self::getStorage()->xAck($queue, $group, $idArray)) {
                     self::getStorage()->xDel($queue, $idArray);
                 }
