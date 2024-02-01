@@ -164,19 +164,20 @@ class HookServer implements ServerInterface
     public function claim(string $queue, string $group, string $consumer)
     {
         try {
-            $idArray = self::getStorage()->xAutoClaim(
+            if ($idArray = self::getStorage()->xAutoClaim(
                 $queue, $group, $consumer,
                 self::getConfig('pending_timeout', 60 * 60) * 1000,
                 '0-0', -1, true
-            );
-            foreach ($idArray as $k => $v) {
-                if (!$v or $v === '0-0') {
-                    unset($idArray[$k]);
+            )) {
+                foreach ($idArray as $k => $v) {
+                    if (!$v or $v === '0-0') {
+                        unset($idArray[$k]);
+                    }
                 }
-            }
-            if ($idArray) {
-                if (self::getStorage()->xAck($queue, $group, $idArray)) {
-                    self::getStorage()->xDel($queue, $idArray);
+                if ($idArray) {
+                    if (self::getStorage()->xAck($queue, $group, $idArray)) {
+                        self::getStorage()->xDel($queue, $idArray);
+                    }
                 }
             }
         } catch (RedisException $exception) {
@@ -225,7 +226,6 @@ class HookServer implements ServerInterface
                     ]);
                     throw new Exception($throwable->getMessage(), $throwable->getCode(), $throwable);
                 }
-
             }
         } catch (RedisException $exception) {
             Log::channel('plugin.workbunny.webman-push-server.warning')->warning('Storage consumer error. ', [
