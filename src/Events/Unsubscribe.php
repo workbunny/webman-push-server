@@ -40,7 +40,7 @@ class Unsubscribe extends AbstractEvent
                 self::unsubscribeChannel($pushServer, $connection, $channel, $channelType);
                 return;
             case CHANNEL_TYPE_PRESENCE:
-                $userData = json_decode($request['data']['channel_data'], true);
+                $userData = json_decode($request['data']['channel_data'] ?? '{}', true);
                 if (!$userData or !isset($userData['user_id'])) {
                     $pushServer->error($connection,null, 'Bad channel_data');
                     return;
