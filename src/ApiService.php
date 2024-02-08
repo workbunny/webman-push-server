@@ -32,7 +32,7 @@ class ApiService implements ServerInterface
     }
 
     /** @inheritDoc */
-    public static function getConfig(string $key, $default = null)
+    public static function getConfig(string $key, mixed $default = null): mixed
     {
         return Server::getConfig($key, $default);
     }

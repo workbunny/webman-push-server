@@ -159,7 +159,7 @@ class Server implements ServerInterface
     /**
      * @return ServerInterface[]|ServerInterface|null
      */
-    public static function getServices(?string $class = null)
+    public static function getServices(?string $class = null): array|ServerInterface|null
     {
         return $class === null ? self::$_services : (self::$_services[$class] ?? null);
     }
@@ -181,7 +181,7 @@ class Server implements ServerInterface
     }
 
     /** @inheritDoc */
-    public static function getConfig(string $key, $default = null)
+    public static function getConfig(string $key, mixed $default = null): mixed
     {
         return \config(
             'plugin.workbunny.webman-push-server.app.push-server.' . $key, $default
@@ -204,7 +204,7 @@ class Server implements ServerInterface
      * @param array $data = [ string $appKey, string $channel, string $event, $data, ?string $socketId = null ]
      * @return void
      */
-    public function publish(array $data)
+    public function publish(array $data): void
     {
         list($appKey, $channel, $event, $data, $socketId) = $data;
         if (!isset($this->_connections[$appKey][$channel])) {
@@ -228,7 +228,7 @@ class Server implements ServerInterface
      * @param string|null $socketId
      * @return void
      */
-    public function publishToClients(string $appKey, string $channel, string $event, $data, ?string $socketId = null)
+    public function publishToClients(string $appKey, string $channel, string $event, $data, ?string $socketId = null): void
     {
         $timerId = Timer::add(0.1, function () use (
             &$timerId, $appKey, $channel, $event, $data, $socketId
