@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Workbunny\WebmanPushServer;
 
+use Redis;
 use Workerman\Connection\TcpConnection;
 use Workerman\Worker;
 
@@ -24,14 +25,13 @@ interface ServerInterface
      * @param mixed $default
      * @return array|mixed|null
      */
-    public static function getConfig(string $key, $default = null);
+    public static function getConfig(string $key, mixed $default = null): mixed;
 
     /**
      * 获取储存器
-     * @return \Redis
+     * @return Redis
      */
-    public static function getStorage(): \Redis;
-
+    public static function getStorage(): Redis;
 
     /**
      * 服务启动
