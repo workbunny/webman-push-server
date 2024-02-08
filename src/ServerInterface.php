@@ -29,9 +29,9 @@ interface ServerInterface
 
     /**
      * 获取储存器
-     * @return Redis
+     * @return Redis|null
      */
-    public static function getStorage(): Redis;
+    public static function getStorage(): ?Redis;
 
     /**
      * 服务启动

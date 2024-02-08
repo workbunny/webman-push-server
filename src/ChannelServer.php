@@ -20,7 +20,8 @@ class ChannelServer extends \Channel\Server
         // 由于使用了webman自定义进程启动，所以无须Server原有的构造方式
     }
 
-    public function onWorkerStart(Worker $worker) {
+    public function onWorkerStart(Worker $worker): void
+    {
         $worker->count     = 1;
         $worker->onMessage = [$this, 'onMessage'];
         $worker->onClose   = [$this, 'onClose'];

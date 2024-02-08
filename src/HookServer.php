@@ -49,7 +49,7 @@ class HookServer implements ServerInterface
     protected array $claimStartTags = [];
 
     /** @inheritDoc */
-    public static function getConfig(string $key, $default = null)
+    public static function getConfig(string $key, mixed $default = null): mixed
     {
         return config('plugin.workbunny.webman-push-server.app.hook-server.' . $key, $default);
     }
@@ -164,7 +164,7 @@ class HookServer implements ServerInterface
      * @param string $consumer
      * @return void
      */
-    public function claim(string $queue, string $group, string $consumer)
+    public function claim(string $queue, string $group, string $consumer): void
     {
         try {
             if ($idArray = self::getStorage()->xAutoClaim(
@@ -199,7 +199,7 @@ class HookServer implements ServerInterface
      * @return void
      * @throws Exception
      */
-    public function consumer(string $queue, string $group, string $consumer, int $blockTime)
+    public function consumer(string $queue, string $group, string $consumer, int $blockTime): void
     {
         try {
             // 创建组
@@ -237,7 +237,7 @@ class HookServer implements ServerInterface
     /**
      * @return void
      */
-    protected function _tempInit()
+    protected function _tempInit(): void
     {
         $config = config('database.connections')['plugin.workbunny.webman-push-server.local-storage'] ?? [];
         if ($config) {
@@ -321,8 +321,11 @@ class HookServer implements ServerInterface
         $this->_consumerTimer = Timer::add(
             $interval = self::getConfig('consumer_interval', 1) / 1000,
             function () use ($worker, $interval, $queue, $group, $consumer) {
-                // 处理pending消息
-                $this->claim($queue, $group, $consumer);
+                // 如果没有claim定时器，则每次消费时进行claim
+                if (!$this->_claimTimer) {
+                    // 处理pending消息
+                    $this->claim($queue, $group, $consumer);
+                }
                 // 执行消费
                 $this->consumer($queue, $group, $consumer, (int)($interval * 1000));
             });
