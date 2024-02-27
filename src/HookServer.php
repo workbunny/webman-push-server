@@ -252,13 +252,15 @@ class HookServer implements ServerInterface
             // 创建数据库结构
             $builder = Db::schema('plugin.workbunny.webman-push-server.local-storage');
             if (!$builder->hasTable('temp')) {
-                $builder->create('temp', function (Blueprint $table) {
-                    $table->id();
-                    $table->string('queue');
-                    $table->json('data');
-                    $table->integer('create_at');
-                });
-                echo 'local-storage db created. ' . PHP_EOL;
+                try {
+                    $builder->create('temp', function (Blueprint $table) {
+                        $table->id();
+                        $table->string('queue');
+                        $table->json('data');
+                        $table->integer('create_at');
+                    });
+                    echo 'local-storage db created. ' . PHP_EOL;
+                } catch (Throwable $throwable) {}
             }
         }
     }
