@@ -166,6 +166,12 @@ class HookServer implements ServerInterface
      */
     public function claim(string $queue, string $group, string $consumer)
     {
+        if (!method_exists(self::getStorage(), 'xAutoClaim')) {
+            Log::channel('plugin.workbunny.webman-push-server.warning')->warning(
+                'Method xAutoClaim requires redis-server >= 6.2.0. '
+            );
+            return;
+        }
         try {
             if ($idArray = self::getStorage()->xAutoClaim(
                 $queue, $group, $consumer,
@@ -313,7 +319,7 @@ class HookServer implements ServerInterface
         $interval = self::getConfig('claim_interval', 0);
         if ($interval > 0) {
             $this->_claimTimer = Timer::add(
-                self::getConfig('claim_interval'),
+                $interval,
                 function () use ($queue, $group, $consumer) {
                     $this->claim($queue, $group, $consumer);
                 }
