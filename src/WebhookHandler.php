@@ -31,6 +31,10 @@ class WebhookHandler implements HookHandlerInterface
     {
         $idArray = array_keys($dataArray);
         $messageArray = array_values($dataArray);
+        // 如果没有配置webhook地址，直接ack
+        if (!HookServer::getConfig('webhook_url')) {
+            HookServer::instance()->ack($queue, $group, $idArray);
+        }
         // http发送
         $this->_request($method = 'POST', [
             'header' => [
