@@ -5,9 +5,9 @@
 	"description": "Webman plugin workbunny/webman-push-server",
 	"authors": [
 		{
-			"name": "chaz6chez",
-			"email": "chaz6chez1993@outlook.com",
-			"homepage": "http://chaz6chez.cn"
+            "name": "chaz6chez",
+            "email": "chaz6chez1993@outlook.com",
+            "homepage": "http://chaz6chez.cn"
 		}
 	],
 	"support": {
@@ -15,18 +15,18 @@
 		"source": "https://github.com/workbunny/webman-push-server"
 	},
 	"require": {
-		"php": ">=8.0",
-		"ext-json": "*",
-		"ext-redis": "*",
-		"workerman/http-client": "^1.0 | ^2.0",
-		"workerman/channel": "^1.0",
-		"webman/console": "^1.0",
-		"psr/container": "^1.0 | ^2.0",
-		"illuminate/redis": "^9.0|^10.0",
-		"illuminate/database": "^9.0|^10.0",
-		"illuminate/events": "^9.0|^10.0",
-		"monolog/monolog": "^2.0 | ^3.0",
-		"pusher/pusher-php-server": "^7.2"
+      "php": ">=8.0",
+      "ext-json": "*",
+      "ext-redis": "*",
+      "workerman/http-client": "^1.0 | ^2.0",
+      "workerman/channel": "^1.0",
+      "webman/console": "^1.0",
+      "psr/container": "^1.0 | ^2.0",
+      "illuminate/redis": "^9.0|^10.0",
+      "illuminate/database": "^9.0|^10.0",
+      "illuminate/events": "^9.0|^10.0",
+      "monolog/monolog": "^2.0 | ^3.0",
+      "pusher/pusher-php-server": "^7.2"
 	},
 	"require-dev": {
 		"workerman/webman-framework": "^1.5",
