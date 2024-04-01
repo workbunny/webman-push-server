@@ -329,9 +329,9 @@ class Server implements ServerInterface
      */
     public function _getChannelType(string $channel): string
     {
-        return (strpos($channel, 'private-') === 0)
+        return (str_starts_with($channel, 'private-'))
             ? CHANNEL_TYPE_PRIVATE
-            : ((strpos($channel, 'presence-') === 0) ? CHANNEL_TYPE_PRESENCE : CHANNEL_TYPE_PUBLIC);
+            : ((str_starts_with($channel, 'presence-')) ? CHANNEL_TYPE_PRESENCE : CHANNEL_TYPE_PUBLIC);
     }
 
     /**
