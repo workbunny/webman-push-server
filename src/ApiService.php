@@ -46,14 +46,26 @@ class ApiService implements ServerInterface
     /**
      * @param Response $response
      * @param TcpConnection $connection debug模式下传入null
+     * @param Request|null $request
      * @return void
      */
-    public function send(Response $response, TcpConnection $connection): void
+    public function send(Response $response, TcpConnection $connection, ?Request $request = null): void
     {
         $response->withHeader('Content-Type', 'application/json');
         $response->withHeader('Server', 'workbunny/webman-push-server');
         $response->withHeader('Version', Server::$version);
-        $connection->send($response);
+        if ($request) {
+            $keepAlive = $request->header('connection');
+            if (
+                ($keepAlive === null and $request->protocolVersion() === '1.1')
+                or $keepAlive === 'keep-alive'
+                or $keepAlive === 'Keep-Alive'
+            ) {
+                $connection->send($response);
+                return;
+            }
+        }
+        $connection->close($response);
     }
 
     /** @inheritDoc */
@@ -76,7 +88,7 @@ class ApiService implements ServerInterface
         $handler = $res[1] ?? null;
         $params = $res[2] ?? [];
         if(!$handler instanceof Closure) {
-            $this->send(\Workbunny\WebmanPushServer\response(404, 'Not Found.'), $connection);
+            $this->send(\Workbunny\WebmanPushServer\response(404, 'Not Found.'), $connection, $data);
             return;
         }
         $response = call_user_func(array_reduce(
@@ -91,10 +103,10 @@ class ApiService implements ServerInterface
             }
         ), Server::getServer(), $data, $params);
         if(!$response instanceof Response){
-            $this->send(\Workbunny\WebmanPushServer\response(500, 'Server Error.'), $connection);
+            $this->send(\Workbunny\WebmanPushServer\response(500, 'Server Error.'), $connection, $data);
             return;
         }
-        $this->send($response, $connection);
+        $this->send($response, $connection, $data);
     }
 
     /** @inheritDoc */
