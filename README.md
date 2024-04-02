@@ -19,6 +19,16 @@
     </a>
 </div>
 
+## 当前为2.x版本，[点击跳转1.x文档](https://github.com/workbunny/webman-push-server/blob/1.x/README.md)
+
+### 2.x与1.x的区别
+- PHP版本要求升级^8.0
+- 【废弃】Client类
+- 【替代】使用WsClient替代Client
+- 【废弃】pusher/pusher-php-server包
+- 【重写】ApiClient类
+- 【优化】ApiService 支持 keep-alive
+
 ## 简介
 
 - 本项目是对[Pusher-Channel](https://support.pusher.com/hc/en-us/categories/4411973917585-Channels)进行了一比一复刻，是一个完整的即时通讯服务，利用该插件可以轻松实现聊天、在线推送等业务服务，也可以利用该插件作为微服务的消息订阅服务；
@@ -30,7 +40,7 @@
 
 ## 依赖
 
-- **php >= 7.4 【建议 >=8.0】**
+- **php >=8.0**
 - **redis >= 6.2 【建议使用最新】**
 
 ## 安装
@@ -44,7 +54,7 @@ composer require workbunny/webman-push-server
 - **Server.php：** 基于websocket的消息推送服务
 - **ApiService.php：** 基于http的推送APIs
 - **ApiClient.php：** 基于http-api的后端推送SDK
-- **Client.php：** 基于websocket的后端客户端
+- **WsClient.php：** 基于websocket的后端客户端
 - **HookServer.php：** 基于redis-stream的持久化服务端事件订阅服务
 - **ChannelClient.php：** 服务内部通讯客户端组件
 - **ChannelServer.php：** 服务内部通讯服务
@@ -67,6 +77,7 @@ composer require workbunny/webman-push-server
 push-server会启动以下三种类型进程：
 
 - push-server：主服务；负责启动推送服务及其service
+  - ApiService 与主服务共用一个进程、事件循环
 - hook-server：事件消费服务；负责消费服务内部的钩子事件
 - channel-server：进程通道服务；负责多进程通讯
 
@@ -252,7 +263,7 @@ use Workbunny\WebmanPushServer\EVENT_SUBSCRIBE;
 use Workbunny\WebmanPushServer\EVENT_SUBSCRIPTION_SUCCEEDED;
 
 // 创建连接
-$client = WsClient::connection('127.0.0.1:8001', [
+$client = WsClient::instance('127.0.0.1:8001', [
     'app_key'        => 'workbunny',
     'heartbeat'      => 60,
     'auth'           => 'http://127.0.0.1:8002/subscribe/auth',
@@ -262,36 +273,34 @@ $client = WsClient::connection('127.0.0.1:8001', [
 ])
 // 建立连接
 $client->connect();
+// 关闭连接
+$client->disconnect();
 ```
 
 #### 2. 订阅/退订
 
 ```php
+use Workbunny\WebmanPushServer\WsClient;
 use Workerman\Connection\AsyncTcpConnection;
 
-// private
+// 创建连接
+$client = WsClient::instance('127.0.0.1:8001', [
+    'app_key'        => 'workbunny',
+    'heartbeat'      => 60,
+    'auth'           => 'http://127.0.0.1:8002/subscribe/auth',
+    'channel_data'   => []  // channel_data
+    'query'          => [], // query
+    'context_option' => []
+])
+
+// 订阅一个私有通道
 $client->subscribe('private-test', function (AsyncTcpConnection $connection, array $data) {
-    // 订阅成功后触发
     dump($data);
 });
+// 取消订阅一个私有通道
+$client->unsubscribe('private-test');
 
-$client->unsubscribe('private-test', function (AsyncTcpConnection $connection, array $data) {
-    // 退订成功后触发
-    dump($data);
-});
-
-// presence
-$client->subscribe('presence-test', function (AsyncTcpConnection $connection, array $data) {
-    // 订阅成功后触发
-    dump($data);
-});
-
-$client->unsubscribe('presence-test', function (AsyncTcpConnection $connection, array $data) {
-    // 退订成功后触发
-    dump($data);
-});
-
-// 退订全部
+// 取消全部订阅
 $client->unsubscribeAll();
 ```
 
@@ -309,11 +318,11 @@ $client->trigger('presence-test', 'client-test', [
 ]);
 
 // 事件不带 client- 前缀会抛出RuntimeException
-try{
+try {
     $client->trigger('presence-test', 'test', [
         'message' => 'hello workbunny!'
     ]);
-}catch (RuntimeException $exception){
+} catch (RuntimeException $exception){
     dump($exception);
 }
 ```
@@ -322,19 +331,19 @@ try{
 
 ```php
 
-// 获取客户端id
+// 获取客户端id，当连接创建前该方法返回null
 $client->getSocketId();
 
-// 获取已订阅通道
+// 获取已订阅通道，订阅触发前该方法返回空数组
 $client->getChannels();
 
-// base方法，注册事件回调
-$client->on();
+// 获取所有注册事件
+$client->getEvents();
 
-// base方法，发布消息，不建议业务使用
+// 发布消息
 $client->publish();
 
-// 更多详见 Client.php
+// 更多详见 WsClient.php
 ```
 
 ### 服务端使用
@@ -400,14 +409,14 @@ API子服务提供REST风格的http-APIs，接口内容与 [pusher-channel-api](
 ##### API客户端
 
 1. 使用pusher提供的api客户端
+    - 不建议使用，客户端请求没有使用keep-alive
 
 ```
 composer require pusher/pusher-php-server
 ```
 
 2. 或者使用\Workbunny\WebmanPushServer\ApiClient
-
-**Tpis: ApiClient 既是 pusher/pusher-php-server**
+   - 建议使用
 
 **服务端推送（PHP示例）：**
 
@@ -419,30 +428,23 @@ try {
         'APP_KEY', 
         'APP_SECRET',
         'APP_ID',
-        //["host":webhook API 地址]
-        ['host'=>"HOOK_ADDS",'scheme'=>'HTTP/HTTPS']
+        [
+            'host'       =>"http://127.0.0.1:8001",
+            'timeout'    => 60,
+            'keep-alive' => true
+        ]
     );
     $pusher->trigger(
-        "private-d", // 频道（channel）
-        "client-a", // 事件
+        // 频道（channel）支持多个通道
+        ["private-d"], 
+        // 事件
+        "client-a", 
+        // 消息体
         [
             'message' => 'hello workbunny!'
-        ],// 消息体,
-        [], true
-    );
-    
-    # or
-    
-    $pusher->trigger(
-        [
-            "private-a",
-            "private-d",
-        ], // 频道（channel）
-        "client-a", // 事件
-        [
-            'message' => 'hello workbunny!'
-        ],// 消息体
-        [], true
+        ],
+        // query
+        []
     );
 } catch (GuzzleException|ApiErrorException|PusherException $e) {
     dump($e);
