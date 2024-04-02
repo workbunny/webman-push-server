@@ -14,7 +14,7 @@ class WebhookHandler implements HookHandlerInterface
     /** @var WebhookHandler|null  */
     protected static ?WebhookHandler $_instance = null;
 
-    /** @var Client|null HTTP-client */
+    /** @var WsClient|null HTTP-client */
     protected ?Client $_client = null;
 
     /** @inheritdoc  */

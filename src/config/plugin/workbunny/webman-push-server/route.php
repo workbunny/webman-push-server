@@ -192,6 +192,7 @@ ApiRoute::addGroup('/apps/{appId}', function () {
         $appKey = $request->get('auth_key');
         $channel = $request->post('channel');
         $channels = $request->post('channels', []);
+        $socketId = $request->post('socket_id');
 //        if($channels = $request->post('channels') or !is_array($channels)){
 //            return response(400, ['error' => 'Required channels']);
 //        }
@@ -203,10 +204,11 @@ ApiRoute::addGroup('/apps/{appId}', function () {
         }
         $channels = ($channel !== null) ? [(string)$channel] : $channels;
         foreach ($channels as $channel) {
-            $socket_id = $package['socket_id'] ?? null;
-            $server->publishToClients($appKey, $channel, $event, $data, $socket_id);
+            $server->publishToClients($appKey, $channel, $event, $data, $socketId);
         }
-        return response(200, '{}');
+        return response(200, json_encode([
+            'channels' => $channels
+        ], JSON_UNESCAPED_UNICODE));
     });
 
     /**
@@ -220,14 +222,17 @@ ApiRoute::addGroup('/apps/{appId}', function () {
         if (!$packages) {
             return response(400,['error' => 'Required batch']);
         }
+        $channels = [];
         foreach ($packages as $package) {
-            $channel = $package['channel'];
+            $channels[] = $channel = $package['channel'];
             $event = $package['name'];
             $data = $package['data'];
             $socket_id = $package['socket_id'] ?? null;
             $server->publishToClients($appKey, $channel, $event, $data, $socket_id);
         }
-        return response(200,'{}');
+        return response(200,json_encode([
+            'channels' => $channels
+        ], JSON_UNESCAPED_UNICODE));
     });
 
     /**

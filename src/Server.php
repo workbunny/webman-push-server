@@ -139,7 +139,7 @@ class Server implements ServerInterface
                 $service->name = 'workbunny/webman-push-server/api-service';
                 self::$_services[get_class($handler)] = $handler;
                 if($listen) {
-                    echo "{$service->name} listen: $listen" . PHP_EOL;
+                    echo "$service->name listen: $listen" . PHP_EOL;
                     if(!self::isDebug()){
                         $service->listen();
                     }
@@ -228,7 +228,7 @@ class Server implements ServerInterface
      * @param string|null $socketId
      * @return void
      */
-    public function publishToClients(string $appKey, string $channel, string $event, $data, ?string $socketId = null): void
+    public function publishToClients(string $appKey, string $channel, string $event, mixed $data, ?string $socketId = null): void
     {
         $timerId = Timer::add(0.1, function () use (
             &$timerId, $appKey, $channel, $event, $data, $socketId
@@ -244,6 +244,8 @@ class Server implements ServerInterface
     }
 
     /**
+     * 向连接发送错误消息
+     *
      * @param TcpConnection $connection
      * @param string|null $code
      * @param string|null $message
@@ -259,13 +261,15 @@ class Server implements ServerInterface
     }
 
     /**
+     * 向连接发送消息
+     *
      * @param TcpConnection $connection
      * @param string|null $channel
      * @param string|null $event
      * @param mixed|null $data
      * @return void
      */
-    public function send(TcpConnection $connection, ?string $channel, ?string $event, $data): void
+    public function send(TcpConnection $connection, ?string $channel, ?string $event, mixed $data): void
     {
         $response = [];
         if($channel){
@@ -295,6 +299,7 @@ class Server implements ServerInterface
 
     /**
      * 终止连接
+     *
      * @param string $appKey
      * @param string $socketId
      * @param array $data
@@ -315,15 +320,17 @@ class Server implements ServerInterface
 
     /**
      * 创建一个全局的客户端id
+     *
      * @return string
      */
-    protected function _createSocketId(): string
+    public function _createSocketId(): string
     {
         return uuid();
     }
 
     /**
      * 获得channel类型
+     *
      * @param string $channel
      * @return string
      */
@@ -335,6 +342,8 @@ class Server implements ServerInterface
     }
 
     /**
+     * 设置连接
+     *
      * @param TcpConnection $connection
      * @param string $appKey
      * @param string $channel
@@ -346,6 +355,8 @@ class Server implements ServerInterface
     }
 
     /**
+     * 获取连接
+     *
      * @param TcpConnection $connection
      * @param string $appKey
      * @param string $channel
@@ -357,6 +368,8 @@ class Server implements ServerInterface
     }
 
     /**
+     * 移除连接
+     *
      * @param TcpConnection $connection
      * @param string $appKey
      * @param string $channel
@@ -368,23 +381,27 @@ class Server implements ServerInterface
     }
 
     /**
+     * 设置连接信息
+     *
      * @param TcpConnection $connection
      * @param string $property = clientNotSendPingCount (int) | appKey (string) | queryString (string) | socketId (string) | channels = [ channel => ''|uid]
      * @param mixed|null $value
      * @return void
      */
-    public function _setConnectionProperty(TcpConnection $connection, string $property, $value): void
+    public function _setConnectionProperty(TcpConnection $connection, string $property, mixed $value): void
     {
         $connection->$property = $value;
     }
 
     /**
+     * 获取连接信息
+     *
      * @param TcpConnection $connection
      * @param string $property = clientNotSendPingCount (int) | appKey (string) | queryString (string) | socketId (string) | channels = [ channel => ''|uid]
      * @param mixed|null $default
      * @return mixed|null
      */
-    public function _getConnectionProperty(TcpConnection $connection, string $property, $default = null)
+    public function _getConnectionProperty(TcpConnection $connection, string $property, mixed $default = null): mixed
     {
         return $connection->$property ?? $default;
     }
@@ -417,6 +434,7 @@ class Server implements ServerInterface
 
     /**
      * 获取通道储存key
+     *
      * @param string $appKey
      * @param string|null $channel
      * @return string
@@ -429,6 +447,7 @@ class Server implements ServerInterface
 
     /**
      * 获取通道名称
+     *
      * @param string $channelStorageKey
      * @return string
      */
@@ -440,6 +459,7 @@ class Server implements ServerInterface
 
     /**
      * 获取用户储存key
+     *
      * @param string $appKey
      * @param string|null $channel
      * @param string|null $uid
@@ -454,6 +474,7 @@ class Server implements ServerInterface
 
     /**
      * 获取用户id
+     *
      * @param string $userStorageKey
      * @return string
      */

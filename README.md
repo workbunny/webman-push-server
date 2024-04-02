@@ -246,13 +246,13 @@ user_channel.trigger('client-message', {form_uid:2, content:"hello"});
 #### 1. 创建连接
 
 ```php
-use Workbunny\WebmanPushServer\Client;
+use Workbunny\WebmanPushServer\WsClient;
 use Workerman\Connection\AsyncTcpConnection;
 use Workbunny\WebmanPushServer\EVENT_SUBSCRIBE;
 use Workbunny\WebmanPushServer\EVENT_SUBSCRIPTION_SUCCEEDED;
 
 // 创建连接
-$client = Client::connection('127.0.0.1:8001', [
+$client = WsClient::connection('127.0.0.1:8001', [
     'app_key'        => 'workbunny',
     'heartbeat'      => 60,
     'auth'           => 'http://127.0.0.1:8002/subscribe/auth',
