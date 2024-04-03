@@ -21,7 +21,7 @@ use GuzzleHttp\Client;
 class ApiClient
 {
 
-    /** @var WsClient|null  */
+    /** @var Client|null  */
     protected Client|null $client = null;
 
     /** @var array  */
@@ -61,7 +61,7 @@ class ApiClient
      * 获取Client
      *
      * @param bool $init
-     * @return WsClient
+     * @return Client
      */
     public function getClient(bool $init = false): Client
     {
@@ -152,7 +152,7 @@ class ApiClient
      * @param array $params
      * @return array
      */
-    public function trigger(array $channels, string $event, $data, array $params = []): array
+    public function trigger(array $channels, string $event, mixed $data, array $params = []): array
     {
         $socketId = $params['socket_id'] ?? null;
         unset($params['socket_id']);
@@ -171,7 +171,7 @@ class ApiClient
      */
     public function triggerBatch(array $batch, array $params = []): array
     {
-        return $this->request('POST', '/events', json_encode([
+        return $this->request('POST', '/batch_events', json_encode([
             'batch'  => $batch,
         ],JSON_UNESCAPED_UNICODE), $params);
     }
