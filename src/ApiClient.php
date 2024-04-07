@@ -101,7 +101,7 @@ class ApiClient
                     ] + $headers,
                 RequestOptions::HTTP_ERRORS => true,
             ]);
-            return json_decode($response->getBody()->getContents(), true) ?: [];
+            return json_decode($response->getBody()->getContents(), true);
         } catch (RequestException $e) {
             throw new ClientException(
                 $e->getResponse()?->getBody()->getContents() ?: $e->getMessage(),
