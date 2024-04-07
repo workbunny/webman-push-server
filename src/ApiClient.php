@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Workbunny\WebmanPushServer;
 
 use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\RequestOptions;
 use Workbunny\WebmanPushServer\Events\Subscribe;
 use GuzzleHttp\Client;
@@ -98,21 +99,19 @@ class ApiClient
                         'Connection'    => $this->settings['keep-alive'] ? 'keep-alive' : 'close',
                         'X-Push-Client' => 'push-server ' . VERSION
                     ] + $headers,
-                RequestOptions::HTTP_ERRORS => false,
+                RequestOptions::HTTP_ERRORS => true,
             ]);
-            $status = $response->getStatusCode();
-            $body = $response->getBody()->getContents();
-            if (
-                $status === 200 or
-                ($status >= 400 and $status < 500)
-            ) {
-                return @json_decode($body, true) ?: [];
-            }
-        } catch (GuzzleException $e) {
-            $body = $e->getMessage();
-            $status = $e->getCode();
+            return json_decode($response->getBody()->getContents(), true) ?: [];
+        } catch (RequestException $e) {
+            throw new ClientException(
+                $e->getResponse()?->getBody()->getContents() ?: $e->getMessage(),
+                $e->getResponse()?->getStatusCode() ?: 0
+            );
+        } catch (\Throwable $throwable) {
+            throw new ClientException(
+                "Push client request failed. [{$throwable->getMessage()}]", $throwable->getCode(), $throwable
+            );
         }
-        throw new ClientException($body, $status);
     }
 
     /**
