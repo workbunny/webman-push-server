@@ -35,6 +35,8 @@ return [
         'redis_channel' => 'default',
         // 心跳检查，0为不检查
         'heartbeat'     => 60,
+        // channel默认地址
+        'channel_host'  => '127.0.0.1',
         // channel默认端口
         'channel_port'  => 2206,
         // 验证app_key

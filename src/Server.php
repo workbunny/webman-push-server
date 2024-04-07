@@ -492,7 +492,7 @@ class Server implements ServerInterface
     {
         self::setServer($this);
         // 订阅channel
-        ChannelClient::connect('127.0.0.1', self::getConfig('channel_port', 2206));
+        ChannelClient::connect(self::getConfig('channel_host', '127.0.0.1'), self::getConfig('channel_port', 2206));
         ChannelClient::on(self::PRIVATE_CHANNEL_PUBLISH_TO_CLIENT, [$this, 'publish']);
         // 心跳检查
         if($this->_keepaliveTimeout > 0 and $this->_heartbeatTimer !== null) {

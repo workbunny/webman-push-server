@@ -92,7 +92,7 @@ class ApiClient
         try {
             $response = $this->getClient()->request($method, $path, [
                 RequestOptions::QUERY       => $this->sign($path, $method, $queryParams),
-                RequestOptions::JSON        => $body,
+                RequestOptions::BODY        => $body,
                 RequestOptions::HEADERS     => [
                         'Content-Type'  => 'application/json',
                         'Connection'    => $this->settings['keep-alive'] ? 'keep-alive' : 'close',
@@ -148,7 +148,7 @@ class ApiClient
     /**
      * @param array $channels
      * @param string $event
-     * @param $data
+     * @param mixed $data
      * @param array $params
      * @return array
      */
