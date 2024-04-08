@@ -293,11 +293,20 @@ $client = WsClient::instance('127.0.0.1:8001', [
     'context_option' => []
 ])
 
-// 订阅一个私有通道
+// 订阅一个私有通道，订阅成功后会执行回调函数
 $client->subscribe('private-test', function (AsyncTcpConnection $connection, array $data) {
+    // 订阅成功后打印
     dump($data);
 });
+// 订阅一个私有通道，不注册订阅成功后的回调
+$client->subscribe('private-test');
+
 // 取消订阅一个私有通道
+$client->unsubscribe('private-test', function (AsyncTcpConnection $connection, array $data) {
+    // 取消订阅成功后打印
+    dump($data);
+});
+// 取消订阅一个私有通道，不注册订阅成功后的回调
 $client->unsubscribe('private-test');
 
 // 取消全部订阅
@@ -327,7 +336,24 @@ try {
 }
 ```
 
-#### 4. 其他
+#### 4. 事件注册回调
+
+```php
+use Workerman\Connection\AsyncTcpConnection;
+
+// 注册关注private-test通道的client-test事件
+$client->eventOn('private-test', 'client-test', function(AsyncTcpConnection $connection, array $data) {
+    // 打印事件数据
+    dump($data);
+});
+// 取消关注private-test通道的client-test事件
+$client->eventOff('private-test', 'client-test');
+
+// 获取所有注册事件回调
+$client->getEvents();
+```
+
+#### 5. 其他
 
 ```php
 
@@ -336,9 +362,6 @@ $client->getSocketId();
 
 // 获取已订阅通道，订阅触发前该方法返回空数组
 $client->getChannels();
-
-// 获取所有注册事件
-$client->getEvents();
 
 // 发布消息
 $client->publish();

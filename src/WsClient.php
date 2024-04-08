@@ -62,6 +62,8 @@ class WsClient
     protected array $_channels = [];
     /** @var int|null 心跳定时 */
     protected ?int $_heartbeatTimer = null;
+    /** @var float 上次心跳响应的时间 */
+    protected float $_lastHeartbeatTime = 0.0;
 
     /**
      * @param string $address
@@ -251,11 +253,21 @@ class WsClient
     }
 
     /**
-     * 事件注册
+     * 获取上一次心跳回复时间
+     *
+     * @return float
+     */
+    public function getLastHeartbeatTime(): float
+    {
+        return $this->_lastHeartbeatTime;
+    }
+
+    /**
+     * 事件回调注册
      *
      * @param string|null $channel
      * @param string $event
-     * @param Closure $handler = function(AsyncTcpConnection $connection, array $data){}
+     * @param Closure $handler = function(AsyncTcpConnection $connection, mixed $data){}
      * @return void
      */
     public function eventOn(?string $channel, string $event, Closure $handler): void
@@ -268,7 +280,7 @@ class WsClient
     }
 
     /**
-     * 事件取消
+     * 事件回调取消
      *
      * @param string|null $channel
      * @param string $event
@@ -284,7 +296,7 @@ class WsClient
     }
 
     /**
-     * 事件回调
+     * 获取事件回调
      *
      * @param string|null $channel
      * @param string $event
@@ -359,11 +371,12 @@ class WsClient
      * @param string $event
      * @param array $data
      * @return void
+     * @throws ClientException
      */
     public function trigger(array $channels, string $event, array $data = []): void
     {
         if(!str_starts_with($event, 'client-')){
-            throw new RuntimeException("Event $event should start with 'client-'");
+            throw new ClientException("Event $event should start with 'client-'");
         }
         foreach ($channels as $channel) {
             $this->publish($event, $data, $channel);
@@ -377,6 +390,7 @@ class WsClient
      * @param string $event
      * @param array $data
      * @return void
+     * @throws ClientException
      */
     public function publish(string $event, array $data = [], ?string $channel = null): void
     {
@@ -406,12 +420,14 @@ class WsClient
      * 订阅通道
      *
      * @param string $channel
-     * @param Closure $handler = function(AsyncTcpConnection $connection, array $data){}
+     * @param null|Closure $handler = function(AsyncTcpConnection $connection, array $data){}
      * @return void
      */
-    public function subscribe(string $channel, Closure $handler): void
+    public function subscribe(string $channel, ?Closure $handler = null): void
     {
-        $this->eventOn($channel, EVENT_SUBSCRIPTION_SUCCEEDED, $handler);
+        if ($handler) {
+            $this->eventOn($channel, EVENT_SUBSCRIPTION_SUCCEEDED, $handler);
+        }
         // public
         if(!str_starts_with($channel, 'private-') and !str_starts_with($channel, 'presence-')) {
             $this->publish(EVENT_SUBSCRIBE, [
@@ -452,16 +468,22 @@ class WsClient
      * 取订通道
      *
      * @param string $channel
+     * @param Closure|null $handler = function(AsyncTcpConnection $connection, array $data){}
      * @return void
      */
     public function unsubscribe(string $channel, ?Closure $handler = null): void
     {
         if ($handler) {
+            // 增加 取消订阅成功事件通知
             $this->eventOn($channel, EVENT_UNSUBSCRIPTION_SUCCEEDED, $handler);
         }
+        // 移除 订阅成功事件
+        $this->eventOff($channel, EVENT_SUBSCRIPTION_SUCCEEDED);
+        // 发送消息
         $this->publish(EVENT_UNSUBSCRIBE, [
             'channel' => $channel
         ]);
+
     }
 
     /**
@@ -482,6 +504,7 @@ class WsClient
      *
      * @param string $channel
      * @return ResponseInterface|null
+     * @throws ClientException
      */
     public function _authRequest(string $channel): ?ResponseInterface
     {
@@ -522,6 +545,7 @@ class WsClient
             switch ($event) {
                 // PONG
                 case EVENT_PONG:
+                    $this->_lastHeartbeatTime = microtime(true);
                     return;
                 // 创建连接
                 case EVENT_CONNECTION_ESTABLISHED:
@@ -542,7 +566,7 @@ class WsClient
                 default:
                     break;
             }
-            if($event) {
+            if ($event) {
                 $handler = $this->eventEmit($channel, $event);
                 if ($handler instanceof Closure) {
                     call_user_func($handler, $connection, $buffer);
