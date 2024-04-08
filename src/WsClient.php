@@ -384,10 +384,22 @@ class WsClient
             'event' => $event,
             'data'  => $data
         ];
-        if($channel !== null){
+        if ($channel !== null) {
             $data['channel'] = $channel;
         }
-        $this->getConnection()->send(json_encode($data,JSON_UNESCAPED_UNICODE));
+        if (!$connection = $this->getConnection()) {
+            throw new ClientException("Ws Client has not connected. ");
+        }
+        if ($this->getSocketId()) {
+            $connection->send(json_encode($data,JSON_UNESCAPED_UNICODE));
+            return;
+        }
+        $timerId = Timer::add(1, function () use ($connection, $data, &$timerId) {
+            if ($this->getSocketId()) {
+                $connection->send(json_encode($data,JSON_UNESCAPED_UNICODE));
+                Timer::del($timerId);
+            }
+        });
     }
 
     /**
@@ -399,24 +411,39 @@ class WsClient
      */
     public function subscribe(string $channel, Closure $handler): void
     {
-        // 注册事件回调
-        $this->eventOn($channel, EVENT_SUBSCRIPTION_SUCCEEDED, function () use ($handler, $channel) {
-            // public
-            if(!str_starts_with($channel, 'private-') and !str_starts_with($channel, 'presence-')) {
+        $this->eventOn($channel, EVENT_SUBSCRIPTION_SUCCEEDED, $handler);
+        // public
+        if(!str_starts_with($channel, 'private-') and !str_starts_with($channel, 'presence-')) {
+            $this->publish(EVENT_SUBSCRIBE, [
+                'channel' => $channel,
+            ]);
+            return;
+        }
+        // private / presence
+        // http 鉴权
+        if ($this->getSocketId()) {
+            if ($res = $this->_authRequest($channel)) {
+                $res = json_decode($res->getBody()->getContents(), true);
                 $this->publish(EVENT_SUBSCRIBE, [
-                    'channel' => $channel,
+                    'channel'       => $channel,
+                    'channel_data'  => $res['channel_data'] ?? [],
+                    'auth'          => $res['auth'] ?? '',
                 ]);
-                // 执行回调
-                call_user_func($handler);
+                return;
             }
-            // private / presence
-            // http 鉴权
-            if ($this->_authRequest($channel)?->getStatusCode() === 200) {
-                $this->publish(EVENT_SUBSCRIBE, [
-                    'channel' => $channel,
-                ]);
-                // 执行回调
-                call_user_func($handler);
+        }
+
+        $timerId = Timer::add(1, function () use (&$timerId, $channel) {
+            if ($this->getSocketId()) {
+                if ($res = $this->_authRequest($channel)) {
+                    $res = json_decode($res->getBody()->getContents(), true);
+                    $this->publish(EVENT_SUBSCRIBE, [
+                        'channel'       => $channel,
+                        'channel_data'  => $res['channel_data'] ?? [],
+                        'auth'          => $res['auth'] ?? '',
+                    ]);
+                    Timer::del($timerId);
+                }
             }
         });
     }
@@ -427,12 +454,14 @@ class WsClient
      * @param string $channel
      * @return void
      */
-    public function unsubscribe(string $channel): void
+    public function unsubscribe(string $channel, ?Closure $handler = null): void
     {
+        if ($handler) {
+            $this->eventOn($channel, EVENT_UNSUBSCRIPTION_SUCCEEDED, $handler);
+        }
         $this->publish(EVENT_UNSUBSCRIBE, [
             'channel' => $channel
         ]);
-        $this->eventOff($channel, EVENT_UNSUBSCRIPTION_SUCCEEDED);
     }
 
     /**
@@ -472,8 +501,8 @@ class WsClient
                     'channel_data' => $channelData ? json_encode($channelData, JSON_UNESCAPED_UNICODE) : null
                 ]
             ]);
-        } catch (GuzzleException) {
-            return null;
+        } catch (GuzzleException $exception) {
+            throw new ClientException($exception->getMessage(), $exception->getCode(), $exception);
         }
     }
 

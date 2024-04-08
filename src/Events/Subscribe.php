@@ -65,7 +65,7 @@ class Subscribe extends AbstractEvent
                     return;
                 }
                 if ($clientAuth !== $auth) {
-                    $pushServer->error($connection, null, 'Received invalid Auth '.$auth);
+                    $pushServer->error($connection, null, 'Received invalid Auth ' . $clientAuth);
                     return;
                 }
                 if (!isset($channelData['user_id']) or !is_string($channelData['user_id'])) {
@@ -80,7 +80,7 @@ class Subscribe extends AbstractEvent
                 break;
             case CHANNEL_TYPE_PRIVATE:
                 if ($clientAuth !== $auth) {
-                    $pushServer->error($connection,null, 'Received invalid Auth '.$auth);
+                    $pushServer->error($connection,null, 'Received invalid Auth ' . $clientAuth);
                     return;
                 }
                 self::subscribeChannel($pushServer, $connection, $channel, $channelType);
