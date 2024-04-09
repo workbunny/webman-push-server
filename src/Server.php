@@ -230,17 +230,23 @@ class Server implements ServerInterface
      */
     public function publishToClients(string $appKey, string $channel, string $event, mixed $data, ?string $socketId = null): void
     {
-        $timerId = Timer::add(0.1, function () use (
-            &$timerId, $appKey, $channel, $event, $data, $socketId
-        ) {
+        try {
             $res = ChannelClient::publish(self::PRIVATE_CHANNEL_PUBLISH_TO_CLIENT, [
                 $appKey, $channel, $event, $data, $socketId
             ]);
-            if ($res !== false) {
-                Timer::del($timerId);
+            if ($res === false) {
+                $timerId = Timer::add(0.1, function () use (
+                    &$timerId, $appKey, $channel, $event, $data, $socketId
+                ) {
+                    $res = ChannelClient::publish(self::PRIVATE_CHANNEL_PUBLISH_TO_CLIENT, [
+                        $appKey, $channel, $event, $data, $socketId
+                    ]);
+                    if ($res !== false) {
+                        Timer::del($timerId);
+                    }
+                });
             }
-        });
-
+        } catch (\Throwable $throwable) {}
     }
 
     /**
