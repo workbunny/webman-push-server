@@ -56,12 +56,6 @@ class WebhookHandler implements HookHandlerInterface
                 }
             }
         }, function (Throwable $throwable) use ($queue, $group, $idArray, $dataArray) {
-            // 错误日志
-            Log::channel('plugin.workbunny.webman-push-server.error')->error('Webhook request error. ', [
-                'message' => $throwable->getMessage(), 'code' => $throwable->getCode(),
-                'file'  => $throwable->getFile() . ':' . $throwable->getLine(),
-                'trace' => $throwable->getTrace()
-            ]);
             // 数据ack
             if (HookServer::instance()->ack($queue, $group, $idArray)) {
                 // 重入队尾
