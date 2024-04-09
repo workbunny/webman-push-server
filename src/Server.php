@@ -246,7 +246,7 @@ class Server implements ServerInterface
                     }
                 });
             }
-        } catch (\Throwable $throwable) {}
+        } catch (\Throwable) {}
     }
 
     /**
