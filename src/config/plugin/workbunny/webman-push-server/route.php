@@ -12,7 +12,7 @@
 declare(strict_types=1);
 
 use Workbunny\WebmanPushServer\ApiClient;
-use Workbunny\WebmanPushServer\HookServer;
+use Workbunny\WebmanPushServer\WebhookHandler;
 use Workerman\Protocols\Http\Request;
 use support\Response;
 use Workbunny\WebmanPushServer\ApiRoute;
@@ -42,7 +42,7 @@ ApiRoute::get('/plugin/workbunny/webman-push-server/push.js', function () {
  */
 ApiRoute::post('/webhook', function (Server $server, Request $request) {
     parse_str($request->queryString(), $query);
-    $sign = HookServer::sign(
+    $sign = WebhookHandler::sign(
         'YOUR_WEBHOOK_SECRET',
         'POST',
         $query,

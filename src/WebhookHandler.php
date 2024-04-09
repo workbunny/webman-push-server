@@ -26,44 +26,62 @@ class WebhookHandler implements HookHandlerInterface
         return self::$_instance;
     }
 
+    /**
+     * @param string $secret
+     * @param string $method
+     * @param array $query
+     * @param string $body
+     * @return string
+     */
+    public static function sign(string $secret, string $method, array $query, string $body): string
+    {
+        ksort($query);
+        return hash_hmac('sha256',
+            $method . PHP_EOL . \parse_url(HookServer::getConfig('webhook_url'), \PHP_URL_PATH) . PHP_EOL . http_build_query($query) . PHP_EOL . $body,
+            $secret,
+            false
+        );
+    }
+
     /** @inheritdoc  */
-    public function run(string $queue, string $group, array $dataArray)
+    public function run(string $queue, string $group, array $dataArray): void
     {
         $idArray = array_keys($dataArray);
         $messageArray = array_values($dataArray);
         // 如果没有配置webhook地址，直接ack
-        if (!HookServer::getConfig('webhook_url')) {
-            HookServer::instance()->ack($queue, $group, $idArray);
-        }
-        // http发送
-        $this->_request($method = 'POST', [
-            'header' => [
-                'sign' => HookServer::sign(HookServer::getConfig('webhook_secret'), $method, $query = ['id' => uuid()], $body = json_encode([
-                    'time_ms' => microtime(true),
-                    'events'  => $messageArray,
-                ]))
-            ],
-            'query'  => $query,
-            'data'   => $body,
-        ], function (Response $response) use ($queue, $group, $idArray, $dataArray) {
-            // 数据ack
-            if (HookServer::instance()->ack($queue, $group, $idArray)) {
-                // 失败数据重入队尾
-                if($response->getStatusCode() !== 200) {
-                    foreach ($dataArray as $value) {
-                        HookServer::instance()->publish($queue, $value, 'failed_count');
+        if (HookServer::getConfig('webhook_url')) {
+            // http发送
+            $this->_request($method = 'POST', [
+                'header' => [
+                    'sign' => self::sign(HookServer::getConfig('webhook_secret'), $method, $query = ['id' => uuid()], $body = json_encode([
+                        'time_ms' => microtime(true),
+                        'events'  => $messageArray,
+                    ]))
+                ],
+                'query'  => $query,
+                'data'   => $body,
+            ], function (Response $response) use ($queue, $group, $idArray, $dataArray) {
+                // 数据ack
+                if (HookServer::instance()->ack($queue, $group, $idArray)) {
+                    // 失败数据重入队尾
+                    if($response->getStatusCode() !== 200) {
+                        foreach ($dataArray as $value) {
+                            HookServer::instance()->publish($queue, $value, 'failed_count');
+                        }
                     }
                 }
-            }
-        }, function (Throwable $throwable) use ($queue, $group, $idArray, $dataArray) {
-            // 数据ack
-            if (HookServer::instance()->ack($queue, $group, $idArray)) {
-                // 重入队尾
-                foreach ($dataArray as $value) {
-                    HookServer::instance()->publish($queue, $value, 'error_count');
+            }, function (Throwable $throwable) use ($queue, $group, $idArray, $dataArray) {
+                // 数据ack
+                if (HookServer::instance()->ack($queue, $group, $idArray)) {
+                    // 重入队尾
+                    foreach ($dataArray as $value) {
+                        HookServer::instance()->publish($queue, $value, 'error_count');
+                    }
                 }
-            }
-        });
+            });
+            return;
+        }
+        HookServer::instance()->ack($queue, $group, $idArray);
     }
 
     /**

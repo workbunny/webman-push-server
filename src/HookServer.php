@@ -75,23 +75,6 @@ class HookServer implements ServerInterface
     }
 
     /**
-     * @param string $secret
-     * @param string $method
-     * @param array $query
-     * @param string $body
-     * @return string
-     */
-    public static function sign(string $secret, string $method, array $query, string $body): string
-    {
-        ksort($query);
-        return hash_hmac('sha256',
-            $method . PHP_EOL . \parse_url(self::getConfig('webhook_url'), \PHP_URL_PATH) . PHP_EOL . http_build_query($query) . PHP_EOL . $body,
-            $secret,
-            false
-        );
-    }
-
-    /**
      * 发布消息
      *
      * @param string $event 事件
@@ -118,18 +101,18 @@ class HookServer implements ServerInterface
             }
             return boolval(self::getStorage()->xAdd($queue,'*', $value));
         } catch (RedisException $exception) {
-            Log::channel('plugin.workbunny.webman-push-server.notice')->warning('Redis server error. ', [
-                'message' => $exception->getMessage(), 'code' => $exception->getCode(),
-                'queue'   => $queue, 'value'   => $value
+            Log::channel('plugin.workbunny.webman-push-server.warning')->warning('Redis server error. ', [
+                'message' => $exception->getMessage(), 'code' => $exception->getCode(), 'queue' => $queue,
+                // 本地储存
+                'id'   => $this->_tempInsert($queue, $value)
             ]);
-            $this->_tempInsert($queue, $value);
             return false;
         } catch (RuntimeException $exception) {
             Log::channel('plugin.workbunny.webman-push-server.notice')->notice('Publish failed. ', [
-                'message' => $exception->getMessage(), 'code' => $exception->getCode(),
-                'queue'   => $queue, 'value'   => $value
+                'message' => $exception->getMessage(), 'code' => $exception->getCode(), 'queue' => $queue,
+                // 本地储存
+                'id'   => $this->_tempInsert($queue, $value)
             ]);
-            $this->_tempInsert($queue, $value);
             return null;
         }
     }
