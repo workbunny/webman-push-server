@@ -29,12 +29,6 @@ class WsClient
     /** @var WsClient[] */
     protected static array $_wsClients= [];
 
-    /** @var int  */
-    protected static int $_connectTimeout = 30;
-
-    /** @var int  */
-    protected static int $_requestTimeout = 30;
-
     /** @var AsyncTcpConnection|null ws连接 */
     protected ?AsyncTcpConnection $_connection = null;
 
