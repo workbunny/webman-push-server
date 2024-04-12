@@ -172,10 +172,13 @@ class HookServer implements ServerInterface
             );
             return;
         }
+        $pendingTime = self::getConfig('pending_timeout', 0) * 1000;
+        if ($pendingTime <= 0) {
+            return;
+        }
         try {
             if ($idArray = self::getStorage()->xAutoClaim(
-                $queue, $group, $consumer,
-                self::getConfig('pending_timeout', 60 * 60) * 1000,
+                $queue, $group, $consumer, $pendingTime,
                 $this->claimStartTags[$queue][$group][$consumer] ?? '0-0', -1, true
             )) {
                 $this->claimStartTags[$queue][$group][$consumer] = $idArray[0] ?? '0-0';
@@ -321,6 +324,7 @@ class HookServer implements ServerInterface
             $this->_claimTimer = Timer::add(
                 $interval,
                 function () use ($queue, $group, $consumer) {
+                    // 处理pending消息
                     $this->claim($queue, $group, $consumer);
                 }
             );
@@ -329,8 +333,6 @@ class HookServer implements ServerInterface
         $this->_consumerTimer = Timer::add(
             $interval = self::getConfig('consumer_interval', 1) / 1000,
             function () use ($worker, $interval, $queue, $group, $consumer) {
-                // 处理pending消息
-                $this->claim($queue, $group, $consumer);
                 // 执行消费
                 $this->consumer($queue, $group, $consumer, (int)($interval * 1000));
             });
