@@ -11,6 +11,7 @@
  */
 declare(strict_types=1);
 
+use Workbunny\WebmanPushServer\DefaultHandler;
 use Workbunny\WebmanPushServer\WebhookHandler;
 use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_CHANNEL_OCCUPIED;
 use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_CHANNEL_VACATED;
@@ -50,6 +51,8 @@ return [
     ],
     // hook消费者配置
     'hook-server' => [
+        // 开关
+        'publish_enable'    => true, // false时 所有事件不会被publish
         // redis通道
         'redis_channel'     => 'default',
         // 队列名
@@ -60,11 +63,13 @@ return [
         // 消息重入队列定时间隔
         'requeue_interval'  => 5 * 60, // 0为不进行消息重入队列的处理 s
         // 事件消费相关
-        'consumer_interval' => 1, // 消费间隔 ms
-        'prefetch_count'    => 5, // 每次消费者消费的最大数量
+        'consumer_interval' => 100, // 消费间隔 ms
+        'prefetch_count'    => 20, // 每次消费者消费的最大数量
         'queue_limit'       => 0, // 队列长度限制，0为不限制
-        // 事件处理器
-        'hook_handler'      => WebhookHandler::class,
+        // 默认事件处理器
+        'hook_handler'      => DefaultHandler::class,
+//        // webhook回调事件处理器
+//        'hook_handler'      => WebhookHandler::class,
         // webhook相关配置
         'webhook_url'             => 'http://127.0.0.1:8002/webhook', // 样例接口
         'webhook_secret'          => 'YOUR_WEBHOOK_SECRET',           // 样例

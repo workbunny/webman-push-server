@@ -101,6 +101,9 @@ class HookServer implements ServerInterface
      */
     public function publish(string $event, array $data, ?string $republishCountKey = null): ?bool
     {
+        if (!self::getConfig('publish_enable', true)) {
+            return null;
+        }
         $queue = self::getConfig('queue_key');
         $queueLimit = self::getConfig('queue_limit', 0);
         $value = [
