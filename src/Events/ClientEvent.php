@@ -53,7 +53,7 @@ class ClientEvent extends AbstractEvent
             return;
         }
         // 事件必须以client-为前缀
-        if (strpos($this->getEvent(), 'client-') !== 0) {
+        if (!str_starts_with($this->getEvent(), 'client-')) {
             $pushServer->error($connection, null, 'Client event rejected - client events must be prefixed by \'client-\'');
             return;
         }

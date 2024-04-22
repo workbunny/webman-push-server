@@ -34,7 +34,8 @@
 		"symfony/var-dumper": "^6.0"
 	},
 	"suggest": {
-		"ext-uuid": "For unique socket id. "
+		"ext-uuid": "For unique socket id. ",
+		"workerman/redis": "Used instead of \"workerman/channel\" to improve performance"
 	},
 	"autoload": {
 		"psr-4": {
