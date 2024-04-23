@@ -12,6 +12,7 @@
 declare(strict_types=1);
 
 use Workbunny\WebmanPushServer\ApiService;
+use Workbunny\WebmanPushServer\ChannelClient;
 use Workbunny\WebmanPushServer\ChannelServer;
 use Workbunny\WebmanPushServer\HookServer;
 use Workbunny\WebmanPushServer\Server;
@@ -43,7 +44,7 @@ return [
         'reloadable'  => false, // 执行reload不重启
         'reusePort'   => true
     ]
-] + (config('plugin.workbunny.webman-push-server.app.push-server.channel_substitution_enable') ? [] : [
+] + (ChannelClient::isChannelEnv() ? [
     // channel server
     'channel-server' => [
         'handler'     => ChannelServer::class,
@@ -52,4 +53,4 @@ return [
         'reloadable'  => false, // 执行reload不重启
         'reusePort'   => true
     ],
-]);
+] : []);

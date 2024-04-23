@@ -16,7 +16,8 @@ class ChannelClient extends \Channel\Client
      */
     public static function isChannelEnv(): bool
     {
-        return !class_exists("\Workerman\Redis\Client", false);
+        return !class_exists("\Workerman\Redis\Client", false) and
+            !config('plugin.workbunny.webman-push-server.app.push-server.channel_substitution_enable');
     }
 
     /**
