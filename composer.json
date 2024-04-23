@@ -27,11 +27,13 @@
 		"illuminate/database": "^9.0 | ^10.0 | ^11.0",
 		"illuminate/events": "^9.0 | ^10.0 | ^11.0",
 		"monolog/monolog": "^2.0 | ^3.0"
+
 	},
 	"require-dev": {
 		"workerman/webman-framework": "^1.5",
 		"phpunit/phpunit": "^9.0",
-		"symfony/var-dumper": "^6.0"
+		"symfony/var-dumper": "^6.0",
+		"workerman/redis": "^2.0"
 	},
 	"suggest": {
 		"ext-uuid": "For unique socket id. ",
