@@ -8,8 +8,10 @@ use Workerman\Redis\Client;
 class ChannelClient extends \Channel\Client
 {
     protected static ?Client $_redisClient = null;
+    protected static ?string $_redisAddress = null;
+    protected static array $_redisOptions = [];
+
     /**
-     *
      * @return bool
      */
     public static function isChannelEnv(): bool
@@ -28,10 +30,8 @@ class ChannelClient extends \Channel\Client
     {
         if (self::isChannelEnv()) {
             parent::connect($ip, $port);
-
         } else {
-            self::$_redisClient = (new Client("redis://$ip:$port", $options));
-            self::$_redisClient?->connect();
+            self::connectRedis("redis://$ip:$port", $options);
         }
     }
 
@@ -66,10 +66,7 @@ class ChannelClient extends \Channel\Client
         if (self::isChannelEnv()) {
             return self::sendAnyway(array('type' => $type, 'channels' => $events, 'data' => $data));
         }
-        foreach ($events as $event) {
-            self::$_redisClient?->publish("workbunny:webman-push-server:$event", serialize($data));
-        }
-        return true;
+        return self::sendAnywayByRedis($events, $data);
     }
 
     /**
@@ -84,6 +81,39 @@ class ChannelClient extends \Channel\Client
         $body = serialize($data);
         if (self::$_isWorkermanEnv) {
             return self::$_remoteConnection->send($body);
+        } else {
+            throw new Exception('Not workerman env. ');
+        }
+    }
+
+    /**
+     * @param string $address
+     * @param array $options
+     * @return void
+     */
+    protected static function connectRedis(string $address, array $options = []): void
+    {
+        if (!self::$_redisClient) {
+            self::$_redisClient = (new Client(self::$_redisAddress = $address, self::$_redisOptions = $options));
+            self::$_redisClient?->connect();
+        }
+    }
+
+    /**
+     * @param array $events
+     * @param mixed $data
+     * @return bool
+     * @throws Exception
+     */
+    protected static function sendAnywayByRedis(array $events, mixed $data): bool
+    {
+        self::connectRedis(self::$_redisAddress, self::$_redisOptions);
+        if (self::$_isWorkermanEnv) {
+            $data = serialize($data);
+            foreach ($events as $event) {
+                self::$_redisClient?->publish("workbunny:webman-push-server:$event", $data);
+            }
+            return true;
         } else {
             throw new Exception('Not workerman env. ');
         }
