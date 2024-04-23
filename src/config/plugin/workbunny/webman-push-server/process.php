@@ -42,7 +42,8 @@ return [
         'count'       => cpu_count(),
         'reloadable'  => false, // 执行reload不重启
         'reusePort'   => true
-    ],
+    ]
+] + (config('plugin.workbunny.webman-push-server.app.push-server.channel_substitution_enable') ? [] : [
     // channel server
     'channel-server' => [
         'handler'     => ChannelServer::class,
@@ -51,4 +52,4 @@ return [
         'reloadable'  => false, // 执行reload不重启
         'reusePort'   => true
     ],
-];
+]);
