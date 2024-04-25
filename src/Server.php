@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Workbunny\WebmanPushServer;
 
+use Closure;
 use Exception;
 use RedisException;
 use support\Container;
@@ -94,6 +95,9 @@ class Server implements ServerInterface
     /** @var ServerInterface[]  */
     protected static array $_services = [];
 
+    /** @var Closure|null  */
+    protected static ?Closure $_publisher = null;
+
     /** @var int|null 心跳定时器 */
     protected ?int $_heartbeatTimer = null;
 
@@ -146,6 +150,16 @@ class Server implements ServerInterface
                 }
             }
         }
+        // 设置publisher缺省值
+        if (!self::getPublisher()) {
+            self::setPublisher(function (string $event, array $data) {
+                try {
+                    HookServer::instance()->publish($event, $data);
+                } catch (RedisException $exception) {
+                    error_log($exception->getMessage() . PHP_EOL);
+                }
+            });
+        }
     }
 
     /**
@@ -154,6 +168,23 @@ class Server implements ServerInterface
     public static function isDebug(): bool
     {
         return self::$debug;
+    }
+
+    /**
+     * @param Closure $closure = function (string $event, array $data) {}
+     * @return void
+     */
+    public static function setPublisher(Closure $closure): void
+    {
+        self::$_publisher = $closure;
+    }
+
+    /**
+     * @return Closure|null
+     */
+    public static function getPublisher(): ?Closure
+    {
+        return self::$_publisher;
     }
 
     /**
@@ -290,14 +321,12 @@ class Server implements ServerInterface
         $connection->send($response ? json_encode($response, JSON_UNESCAPED_UNICODE) : '{}');
 
         if($event){
-            if(AbstractEvent::pre($event) === AbstractEvent::SERVER_EVENT) {
-                try {
-                    HookServer::instance()->publish( PUSH_SERVER_EVENT_SERVER_EVENT, array_merge($response, [
+            if (AbstractEvent::pre($event) === AbstractEvent::SERVER_EVENT) {
+                if (self::$_publisher) {
+                    call_user_func(self::$_publisher, PUSH_SERVER_EVENT_SERVER_EVENT, array_merge($response, [
                         'id'      => uuid(),
                         'time_ms' => microtime(true)
                     ]));
-                }catch (RedisException $exception){
-                    error_log($exception->getMessage() . PHP_EOL);
                 }
             }
         }

@@ -23,6 +23,7 @@ use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRIVATE;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PUBLIC;
 use const Workbunny\WebmanPushServer\EVENT_MEMBER_REMOVED;
 use const Workbunny\WebmanPushServer\EVENT_UNSUBSCRIPTION_SUCCEEDED;
+use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_CHANNEL_OCCUPIED;
 use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_CHANNEL_VACATED;
 use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_MEMBER_REMOVED;
 
@@ -83,13 +84,15 @@ class Unsubscribe extends AbstractEvent
                         ], JSON_UNESCAPED_UNICODE)
                     );
                     // PUSH_SERVER_EVENT_MEMBER_REMOVED 用户移除事件
-                    HookServer::instance()->publish(PUSH_SERVER_EVENT_MEMBER_REMOVED, [
-                        'id'      => uuid(),
-                        'app_key' => $appKey,
-                        'channel' => $channel,
-                        'user_id' => $uid,
-                        'time_ms' => microtime(true)
-                    ]);
+                    if ($callback = Server::getPublisher()) {
+                        call_user_func($callback, PUSH_SERVER_EVENT_MEMBER_REMOVED, [
+                            'id'      => uuid(),
+                            'app_key' => $appKey,
+                            'channel' => $channel,
+                            'user_id' => $uid,
+                            'time_ms' => microtime(true)
+                        ]);
+                    }
                 }
             }
 
@@ -110,14 +113,16 @@ class Unsubscribe extends AbstractEvent
 
             if($channelVacated ?? false){
                 // PUSH_SERVER_EVENT_CHANNEL_VACATED 通道移除事件
-                HookServer::instance()->publish(PUSH_SERVER_EVENT_CHANNEL_VACATED, [
-                    'id'      => uuid(),
-                    'app_key' => $appKey,
-                    'channel' => $channel,
-                    'time_ms' => microtime(true)
-                ]);
+                if ($callback = Server::getPublisher()) {
+                    call_user_func($callback, PUSH_SERVER_EVENT_CHANNEL_VACATED, [
+                        'id'      => uuid(),
+                        'app_key' => $appKey,
+                        'channel' => $channel,
+                        'time_ms' => microtime(true)
+                    ]);
+                }
             }
-        }catch (RedisException $exception){
+        } catch (RedisException $exception) {
             error_log("{$exception->getMessage()}\n");
         }
     }

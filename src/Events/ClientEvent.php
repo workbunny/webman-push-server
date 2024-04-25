@@ -20,6 +20,7 @@ use function Workbunny\WebmanPushServer\uuid;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRESENCE;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRIVATE;
 use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_CLIENT_EVENT;
+use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_MEMBER_ADDED;
 
 class ClientEvent extends AbstractEvent
 {
@@ -67,13 +68,12 @@ class ClientEvent extends AbstractEvent
             $data,
             $pushServer->_getConnectionProperty($connection,'socketId')
         );
-        try {
-            HookServer::instance()->publish(PUSH_SERVER_EVENT_CLIENT_EVENT, array_merge($request, [
+
+        if ($callback = Server::getPublisher()) {
+            call_user_func($callback, PUSH_SERVER_EVENT_CLIENT_EVENT, array_merge($request, [
                 'id'      => uuid(),
                 'app_key' => $appKey
             ]));
-        }catch (\RedisException $exception){
-            error_log($exception->getMessage() . PHP_EOL);
         }
     }
 }

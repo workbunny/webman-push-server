@@ -25,6 +25,7 @@ use const Workbunny\WebmanPushServer\EVENT_MEMBER_ADDED;
 use const Workbunny\WebmanPushServer\EVENT_SUBSCRIPTION_SUCCEEDED;
 use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_CHANNEL_OCCUPIED;
 use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_MEMBER_ADDED;
+use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_SERVER_EVENT;
 
 class Subscribe extends AbstractEvent
 {
@@ -160,14 +161,16 @@ class Subscribe extends AbstractEvent
                     'user_info' => $userInfoArray = json_decode($userInfo, true)
                 ], $socketId);
                 // PUSH_SERVER_EVENT_MEMBER_ADDED 成员添加事件
-                HookServer::instance()->publish(PUSH_SERVER_EVENT_MEMBER_ADDED, [
-                    'id'        => uuid(),
-                    'app_key'   => $appKey,
-                    'channel'   => $channel,
-                    'user_id'   => $userId,
-                    'user_info' => $userInfoArray,
-                    'time_ms'   => microtime(true)
-                ]);
+                if ($callback = Server::getPublisher()) {
+                    call_user_func($callback, PUSH_SERVER_EVENT_MEMBER_ADDED, [
+                        'id'        => uuid(),
+                        'app_key'   => $appKey,
+                        'channel'   => $channel,
+                        'user_id'   => $userId,
+                        'user_info' => $userInfoArray,
+                        'time_ms'   => microtime(true)
+                    ]);
+                }
             }
             /**
              * @private-channel:{"event":"pusher_internal:subscription_succeeded","data":"{}","channel":"my-channel"}
@@ -181,14 +184,16 @@ class Subscribe extends AbstractEvent
                 $isPresence ? json_encode($pushServer->_getPresenceChannelDataForSubscribe($appKey, $channel), JSON_UNESCAPED_UNICODE) : '{}'
             );
 
-            if(!$channelOccupied){
+            if (!$channelOccupied) {
                 // PUSH_SERVER_EVENT_CHANNEL_OCCUPIED 通道被创建事件
-                HookServer::instance()->publish(PUSH_SERVER_EVENT_CHANNEL_OCCUPIED, [
-                    'id'      => uuid(),
-                    'app_key' => $appKey,
-                    'channel' => $channel,
-                    'time_ms' => microtime(true)
-                ]);
+                if ($callback = Server::getPublisher()) {
+                    call_user_func($callback, PUSH_SERVER_EVENT_CHANNEL_OCCUPIED, [
+                        'id'      => uuid(),
+                        'app_key' => $appKey,
+                        'channel' => $channel,
+                        'time_ms' => microtime(true)
+                    ]);
+                }
             }
         }catch (RedisException $exception){
             error_log("{$exception->getMessage()}\n");

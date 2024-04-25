@@ -21,27 +21,18 @@
 
 ## 当前为2.x版本，[点击跳转1.x文档](https://github.com/workbunny/webman-push-server/blob/1.x/README.md)
 
-### 2.x与1.x的区别
-- PHP版本要求升级^8.0
-- 【废弃】Client类
-- 【替代】使用WsClient替代Client
-- 【废弃】pusher/pusher-php-server包
-- 【重写】ApiClient类
-- 【优化】ApiService 支持 keep-alive
-
 ## 简介
 
-- 本项目是对[Pusher-Channel](https://support.pusher.com/hc/en-us/categories/4411973917585-Channels)进行了一比一复刻，是一个完整的即时通讯服务，利用该插件可以轻松实现聊天、在线推送等业务服务，也可以利用该插件作为微服务的消息订阅服务；
+- 本项目的诞生初期是为了实现我司商业化项目中的**在线推送服务**，早期考察了[webman/push](https://www.workerman.net/plugin/2)，对它进行了多进程的实现，并且根据[Pusher-Channel](https://support.pusher.com/hc/en-us/categories/4411973917585-Channels)服务的文档进行了改造，
+[Pusher-Channel](https://support.pusher.com/hc/en-us/categories/4411973917585-Channels)服务的一比一复刻版本，是一个完整的即时通讯服务；利用该插件可以轻松实现聊天、在线推送等业务服务，也可以利用该插件作为微服务的消息订阅服务；
+本插件的商业化项目已于22年初上线稳定运行至今。
 该服务是**生产可用**的服务，在商业化项目作为**在线推送服务**和**数字大屏服务**中已稳定运行半年以上。
-- 本项目是[webman/push](https://www.workerman.net/plugin/2)的**多进程**实现版本，并且完善了消息事件、权限验证、多租户支持等功能。
 - 如遇问题，欢迎 **[issue](https://github.com/workbunny/webman-push-server/issues) & PR**；
-- 兼容[Pusher-Channel](https://support.pusher.com/hc/en-us/categories/4411973917585-Channels)的客户端，包含JS、安卓(java)、IOS(swift)、IOS(Obj-C)、uniapp等；
-后端推送SDK支持PHP、Node、Ruby、Asp、Java、Python、Go等；客户端自带心跳和断线自动重连，使用起来非常简单稳定；
 
 ## 依赖
 
 - **php >=8.0**
-- **redis >= 6.2 【建议使用最新】**
+- **redis >= 6.2**
 
 ## 安装
 
@@ -49,17 +40,35 @@
 composer require workbunny/webman-push-server
 ```
 
-## 说明
+## 简介
 
-- **Server.php：** 基于websocket的消息推送服务
-- **ApiService.php：** 基于http的推送APIs
-- **ApiClient.php：** 基于http-api的后端推送SDK
-- **WsClient.php：** 基于websocket的后端客户端
-- **HookServer.php：** 基于redis-stream的持久化服务端事件订阅服务
-- **ChannelClient.php：** 服务内部通讯客户端组件
-- **ChannelServer.php：** 服务内部通讯服务
+### 架构设计：
 
-### 配置说明
+```
+                                                     ┌─────────────┐
+                                                     | Api-service |
+                                                     └─────────────┘
+                                                            |
+                                   ┌─────────────┐        2 | 3
+                             ┌───> | Push-server | ────── ─ · ─       <─────────────┐
+                             |     └─────────────┘        1 | 4 ··· n               ↓
+    ┌────────────────────┐ ──┘     ┌────────────────┐                       ┌────────────────┐      
+    | webman-push-server | ──────> | Channel-server | ─── 1           <───> | Channel-client |
+    └────────────────────┘ ──┐     └────────────────┘                       └────────────────┘
+                             |     ┌─────────────┐        2 | 3                     ↑
+                             └───> | Hook-server | ────── ─ · ─       <─────────────┘
+                                   └─────────────┘        1 | 4 ··· n
+                                     
+```
+
+
+- **Push-server：** websocket主服务
+  - **Api-service：** 主服务挂载的http-api服务
+- **Hook-server：** 通道事件监听服务
+- **Channel-server：** 进程通讯服务
+- **Channel-client：** 进程通讯客户端
+
+### 配置说明：
 
 配置信息及对应功能在代码注释中均有解释，详见对应代码注释；
 
@@ -73,13 +82,6 @@ composer require workbunny/webman-push-server
             |-- process.php    # 启动进程
             |-- route.php      # APIs路由信息
 ```
-
-push-server会启动以下三种类型进程：
-
-- push-server：主服务；负责启动推送服务及其service
-  - ApiService 与主服务共用一个进程、事件循环
-- hook-server：事件消费服务；负责消费服务内部的钩子事件
-- channel-server：进程通道服务；负责多进程通讯
 
 ### 频道说明：
 
@@ -431,15 +433,13 @@ API子服务提供REST风格的http-APIs，接口内容与 [pusher-channel-api](
 
 ##### API客户端
 
-1. 使用pusher提供的api客户端
-    - 不建议使用，客户端请求没有使用keep-alive
+1. 使用pusher提供的api客户端 **【不建议使用，客户端请求没有使用keep-alive】**
 
-```
-composer require pusher/pusher-php-server
-```
+    ```
+    composer require pusher/pusher-php-server
+    ```
 
-2. 或者使用\Workbunny\WebmanPushServer\ApiClient
-   - 建议使用
+2. 或者使用\Workbunny\WebmanPushServer\ApiClient **【建议使用】**
 
 **服务端推送（PHP示例）：**
 
@@ -510,3 +510,8 @@ var connection = new Push({
 
 兼容pusher，其他语言(Java Swift .NET Objective-C Unity Flutter Android IOS AngularJS等)客户端地址下载地址：
 https://pusher.com/docs/channels/channels_libraries/libraries/
+
+
+## 优化
+
+### todo
