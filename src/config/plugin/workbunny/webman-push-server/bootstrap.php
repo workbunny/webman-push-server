@@ -15,5 +15,6 @@ use Workbunny\WebmanPushServer\ApiRoute;
 
 // API子服务路由加载
 return [
-    ApiRoute::class
+    ApiRoute::class,
+    support\bootstrap\LaravelDb::class,
 ];
