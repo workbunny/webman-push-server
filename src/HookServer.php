@@ -48,6 +48,8 @@ class HookServer implements ServerInterface
     /** @var array 队列分组下次claim的游标 */
     protected array $claimStartTags = [];
 
+    protected bool $_init = false;
+
     /** @inheritDoc */
     public static function getConfig(string $key, mixed $default = null): mixed
     {
@@ -198,7 +200,10 @@ class HookServer implements ServerInterface
     {
         try {
             // 创建组
-            self::getStorage()->xGroup('CREATE', $queue, $group, '0', true);
+            if (!$this->_init) {
+                self::getStorage()->xGroup('CREATE', $queue, $group, '0', true);
+                $this->_init = true;
+            }
             // 读取未确认的消息组
             if ($res = self::getStorage()->xReadGroup(
                 $group, $consumer, [$queue => '>'], self::getConfig('prefetch_count'), $blockTime
@@ -226,6 +231,7 @@ class HookServer implements ServerInterface
             Log::channel('plugin.workbunny.webman-push-server.warning')->warning('Storage consumer error. ', [
                 'message' => $exception->getMessage(), 'code' => $exception->getCode()
             ]);
+            $this->_init = false;
         }
     }
 
