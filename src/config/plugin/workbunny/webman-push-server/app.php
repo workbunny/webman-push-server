@@ -36,11 +36,11 @@ return [
         'redis_channel'                 => 'default',
         // 心跳检查，0为不检查
         'heartbeat'                     => 60,
-        // 是否使用redis替代channel
+        // 是否使用redis替代channel 【false为关闭 | 具体的redis channel name为开启】
         'channel_substitution_enable'   => false,
-        // channel默认地址
+        // channel默认地址 【启用redis替代后，该参数无意义】
         'channel_host'                  => '127.0.0.1',
-        // channel默认端口
+        // channel默认端口 【启用redis替代后，该参数无意义】
         'channel_port'                  => 2206,
         // 验证app_key
         'apps_query'    => function (string $appKey, ?string $appId = null): array

@@ -3,6 +3,7 @@
 namespace Workbunny\WebmanPushServer;
 
 use Exception;
+use support\Redis;
 use Workerman\Redis\Client;
 
 class ChannelClient extends \Channel\Client
@@ -16,8 +17,17 @@ class ChannelClient extends \Channel\Client
      */
     public static function isChannelEnv(): bool
     {
-        return !class_exists("\Workerman\Redis\Client", false) and
-            !config('plugin.workbunny.webman-push-server.app.push-server.channel_substitution_enable');
+        return
+            !class_exists("\Workerman\Redis\Client", false) and
+            !self::getChannelSubstitution();
+    }
+
+    /**
+     * @return false|string
+     */
+    public static function getChannelSubstitution(): false|string
+    {
+        return config('plugin.workbunny.webman-push-server.app.push-server.channel_substitution_enable', false);
     }
 
     /**
@@ -32,6 +42,20 @@ class ChannelClient extends \Channel\Client
         if (self::isChannelEnv()) {
             parent::connect($ip, $port);
         } else {
+            $channelName = self::getChannelSubstitution();
+            if (!$config = config('redis.' . $channelName)) {
+                throw new \InvalidArgumentException("Redis channel [$channelName] not found. ");
+            }
+            $ip = $config['host'];
+            $port = $config['port'];
+            self::$_redisClient = (new Client(self::$_redisAddress = "redis://$ip:$port", self::$_redisOptions = $options));
+            self::$_redisClient->connect();
+            if ($passport = $config['password'] ?? null) {
+                self::$_redisClient->auth($passport);
+            }
+            if ($database = $config['database'] ?? 0) {
+                self::$_redisClient->select($database);
+            }
             self::connectRedis("redis://$ip:$port", $options);
         }
     }
@@ -108,15 +132,13 @@ class ChannelClient extends \Channel\Client
      */
     protected static function sendAnywayByRedis(array $events, mixed $data): bool
     {
-        self::connectRedis(self::$_redisAddress, self::$_redisOptions);
-        if (self::$_isWorkermanEnv) {
-            $data = serialize($data);
-            foreach ($events as $event) {
-                self::$_redisClient?->publish("workbunny:webman-push-server:$event", $data);
-            }
-            return true;
-        } else {
-            throw new Exception('Not workerman env. ');
+        $channelName = self::getChannelSubstitution();
+        if (!config('redis.' . $channelName)) {
+            throw new \InvalidArgumentException("Redis channel [$channelName] not found. ");
         }
+        foreach ($events as $event) {
+            Redis::connection($channelName)->client()->publish("workbunny:webman-push-server:$event", serialize($data));
+        }
+        return true;
     }
 }
