@@ -5,7 +5,7 @@
 **<p align="center">🐇  Webman plugin for push server implementation. 🐇</p>**
 
 <div align="center">
-    <a href="https://github.com/workbunny/webman-push-server/actions">
+    <a href="https://github.com/workbunny/webman-push-server/actions?query=branch%3A2.x">
         <img src="https://github.com/workbunny/webman-push-server/actions/workflows/CI.yml/badge.svg" alt="Build Status">
     </a>
     <a href="https://github.com/workbunny/webman-push-server/releases">
