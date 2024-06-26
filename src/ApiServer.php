@@ -18,8 +18,9 @@ use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
 use Workerman\Protocols\Http\Response;
 use Workerman\Worker;
+use function config;
 
-class ApiService implements ServerInterface
+class ApiServer
 {
     /**
      * 初始化
@@ -31,16 +32,16 @@ class ApiService implements ServerInterface
         ApiRoute::initDispatcher();
     }
 
-    /** @inheritDoc */
+    /**
+     * @param string $key
+     * @param mixed|null $default
+     * @return mixed
+     */
     public static function getConfig(string $key, mixed $default = null): mixed
     {
-        return Server::getConfig($key, $default);
-    }
-
-    /** @inheritDoc */
-    public static function getStorage(): \Redis
-    {
-        return Server::getStorage();
+        return config(
+            'plugin.workbunny.webman-push-server.app.api-server.' . $key, $default
+        );
     }
 
     /**
@@ -53,7 +54,7 @@ class ApiService implements ServerInterface
     {
         $response->withHeader('Content-Type', 'application/json');
         $response->withHeader('Server', 'workbunny/webman-push-server');
-        $response->withHeader('Version', Server::$version);
+        $response->withHeader('Version', PushServer::$version);
         if ($request) {
             $keepAlive = $request->header('connection');
             if (
@@ -68,19 +69,32 @@ class ApiService implements ServerInterface
         $connection->close($response);
     }
 
-    /** @inheritDoc */
+    /**
+     * @param Worker $worker
+     * @return void
+     */
     public function onWorkerStart(Worker $worker): void{}
 
-    /** @inheritDoc */
+    /**
+     * @param Worker $worker
+     * @return void
+     */
     public function onWorkerStop(Worker $worker): void{}
 
-    /** @inheritDoc */
+    /**
+     * @param TcpConnection $connection
+     * @return void
+     */
     public function onConnect(TcpConnection $connection): void{}
 
-    /** @inheritDoc */
+    /**
+     * @param TcpConnection $connection
+     * @param $data
+     * @return void
+     */
     public function onMessage(TcpConnection $connection, $data): void
     {
-        if(!$data instanceof Request){
+        if (!$data instanceof Request){
             $this->send(\Workbunny\WebmanPushServer\response(400, 'Bad Request.'), $connection);
             return;
         }
@@ -101,7 +115,7 @@ class ApiService implements ServerInterface
             function (...$arguments) use ($handler) {
                 return $handler(...$arguments);
             }
-        ), Server::getServer(), $data, $params);
+        ), $data, $params);
         if(!$response instanceof Response){
             $this->send(\Workbunny\WebmanPushServer\response(500, 'Server Error.'), $connection, $data);
             return;
@@ -109,6 +123,9 @@ class ApiService implements ServerInterface
         $this->send($response, $connection, $data);
     }
 
-    /** @inheritDoc */
-    public function onClose(TcpConnection $connection): void{}
+    /**
+     * @param TcpConnection $connection
+     * @return void
+     */
+    public function onClose(TcpConnection $connection): void {}
 }

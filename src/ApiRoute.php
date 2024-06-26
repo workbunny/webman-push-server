@@ -19,6 +19,8 @@ use FastRoute\Dispatcher;
 use FastRoute\RouteCollector;
 use FastRoute\RouteParser\Std;
 use Webman\Bootstrap;
+use function config_path;
+use function is_file;
 
 /**
  * @link RouteCollector::get()
@@ -88,7 +90,7 @@ class ApiRoute implements Bootstrap
     protected static array $_middlewares = [];
 
     /** @inheritDoc */
-    public static function start($worker)
+    public static function start($worker): void
     {
         self::initCollector();
     }
@@ -98,11 +100,7 @@ class ApiRoute implements Bootstrap
      */
     public static function initRoutes(): void
     {
-        if(Server::isDebug()){
-            require_once  __DIR__ . '/config/plugin/workbunny/webman-push-server/route.php';
-            return;
-        }
-        if(\is_file($file = \config_path() . '/plugin/workbunny/webman-push-server/route.php')){
+        if (is_file($file = config_path() . '/plugin/workbunny/webman-push-server/route.php')) {
             require_once $file;
         }
     }
@@ -112,7 +110,7 @@ class ApiRoute implements Bootstrap
      */
     public static function initCollector(): void
     {
-        if(!self::$_collector){
+        if (!self::$_collector) {
             self::$_collector =  new RouteCollector(
                 new Std(), new GroupCountBased()
             );
@@ -207,7 +205,7 @@ class ApiRoute implements Bootstrap
      * @return void
      * @see RouteCollector::addRoute()
      */
-    public static function route($httpMethod, string $route, Closure $handler, Closure ...$middlewares): void
+    public static function route(array|string $httpMethod, string $route, Closure $handler, Closure ...$middlewares): void
     {
         $methods = is_array($httpMethod) ? $httpMethod : [$httpMethod];
         foreach ($methods as $method){

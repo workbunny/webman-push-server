@@ -13,67 +13,61 @@ declare(strict_types=1);
 
 namespace Workbunny\WebmanPushServer\Events;
 
-use Workbunny\WebmanPushServer\HookServer;
-use Workbunny\WebmanPushServer\Server;
+use RedisException;
+use support\Log;
+use Workbunny\WebmanPushServer\PushServer;
+use Workbunny\WebmanPushServer\Traits\ChannelMethods;
 use Workerman\Connection\TcpConnection;
-use function Workbunny\WebmanPushServer\uuid;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRESENCE;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRIVATE;
-use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_CLIENT_EVENT;
-use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_MEMBER_ADDED;
 
 class ClientEvent extends AbstractEvent
 {
     /**
      * 客户端仅能向private和presence通道发送消息
      * public用于服务广播通知
-     * @param Server $pushServer
+     *
      * @param TcpConnection $connection
      * @param array $request
      * @return void
      */
-    public function response(Server $pushServer, TcpConnection $connection, array $request): void
+    public function response(TcpConnection $connection, array $request): void
     {
-        if(!$channel = $request['channel'] ?? null){
-            $pushServer->error($connection, null, 'Bad channel');
+        // 事件必须以client-为前缀
+        if (!str_starts_with($this->getEvent(), 'client-')) {
+            PushServer::error($connection, null, 'Client event rejected - client events must be prefixed by \'client-\'');
             return;
         }
-        if(!$data = $request['data'] ?? []){
-            $pushServer->error($connection, null, 'Bad data');
+        if (!$channel = $request['channel'] ?? null){
+            PushServer::error($connection, null, 'Bad channel');
             return;
         }
-        // 客户端触发事件必须是private 或者 presence的channel
-        $channelType = $pushServer->_getChannelType($channel);
-        if ($channelType !== CHANNEL_TYPE_PRIVATE and $channelType !== CHANNEL_TYPE_PRESENCE) {
-            $pushServer->error($connection, null, 'Client event rejected - only supported on private and presence channels');
+        if (!$data = $request['data'] ?? []){
+            PushServer::error($connection, null, 'Bad data');
             return;
         }
         // 当前链接没有订阅这个channel
-        if (!isset($pushServer->_getConnectionProperty($connection, 'channels')[$channel])) {
-            $pushServer->error($connection, null, 'Client event rejected - you didn\'t subscribe this channel');
+        if (!isset(PushServer::_getConnectionProperty($connection, 'channels')[$channel])) {
+            PushServer::error($connection, null, 'Client event rejected - you didn\'t subscribe this channel');
             return;
         }
-        // 事件必须以client-为前缀
-        if (!str_starts_with($this->getEvent(), 'client-')) {
-            $pushServer->error($connection, null, 'Client event rejected - client events must be prefixed by \'client-\'');
+        // 客户端触发事件必须是private 或者 presence的channel
+        $channelType = PushServer::_getChannelType($channel);
+        if ($channelType !== CHANNEL_TYPE_PRIVATE and $channelType !== CHANNEL_TYPE_PRESENCE) {
+            PushServer::error($connection, null, 'Client event rejected - only supported on private and presence channels');
             return;
         }
-
-        // @todo 检查是否设置了可前端发布事件
-        // 全局发布事件
-        $pushServer->publishToClients(
-            $appKey = $pushServer->_getConnectionProperty($connection, 'appKey'),
-            $channel,
-            $this->getEvent(),
-            $data,
-            $pushServer->_getConnectionProperty($connection,'socketId')
-        );
-
-        if ($callback = Server::getPublisher()) {
-            call_user_func($callback, PUSH_SERVER_EVENT_CLIENT_EVENT, array_merge($request, [
-                'id'      => uuid(),
-                'app_key' => $appKey
-            ]));
+        try {
+            // 广播 客户端消息
+            ChannelMethods::publish(ChannelMethods::$publishTypeClient, [
+                'appKey'    => PushServer::_getConnectionProperty($connection,'appKey'),
+                'channel'   => $channel,
+                'event'     => $this->getEvent(),
+                'data'      => $data,
+                'socketId'  => PushServer::_getConnectionProperty($connection,'socketId')
+            ]);
+        } catch (RedisException $exception) {
+            Log::channel('plugin.workbunny.webman-push-server.error')->error("[PUSH-SERVER] {$exception->getMessage()}");
         }
     }
 }

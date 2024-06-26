@@ -11,46 +11,24 @@
  */
 declare(strict_types=1);
 
-use Workbunny\WebmanPushServer\ApiService;
-use Workbunny\WebmanPushServer\ChannelClient;
-use Workbunny\WebmanPushServer\ChannelServer;
-use Workbunny\WebmanPushServer\HookServer;
-use Workbunny\WebmanPushServer\Server;
+use Workbunny\WebmanPushServer\ApiServer;
+use Workbunny\WebmanPushServer\PushServer;
 
 return [
     // 推送服务器
     'push-server' => [
-        'handler'     => Server::class,
+        'handler'     => PushServer::class,
         'listen'      => 'websocket://0.0.0.0:8001',
         'count'       => cpu_count(),
         'reloadable'  => false, // 执行reload不重启
         'reusePort'   => true,
-        'constructor' => [
-            'services'    => [
-                ApiService::class => [
-                    'handler'     => ApiService::class,
-                    'listen'      => 'http://0.0.0.0:8002',
-                    'context'     => [],
-                    'constructor' => []
-                ]
-            ]
-        ],
     ],
-    // hook钩子消费者
-    'hook-server' => [
-        'handler'     => HookServer::class,
-        'listen'      => null,
+    // api服务器
+    'api-server' => [
+        'handler'     => ApiServer::class,
+        'listen'      => 'websocket://0.0.0.0:8001',
         'count'       => cpu_count(),
         'reloadable'  => false, // 执行reload不重启
-        'reusePort'   => true
-    ]
-] + (ChannelClient::isChannelEnv() ? [
-    // channel server
-    'channel-server' => [
-        'handler'     => ChannelServer::class,
-        'listen'      => 'frame://0.0.0.0:' .
-            config('plugin.workbunny.webman-push-server.app.push-server.channel_port'),
-        'reloadable'  => false, // 执行reload不重启
-        'reusePort'   => true
+        'reusePort'   => true,
     ],
-] : []);
+];

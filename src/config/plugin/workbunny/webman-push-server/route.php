@@ -11,12 +11,13 @@
  */
 declare(strict_types=1);
 
+use support\Log;
 use Workbunny\WebmanPushServer\ApiClient;
-use Workbunny\WebmanPushServer\WebhookHandler;
+use Workbunny\WebmanPushServer\ApiServer;
 use Workerman\Protocols\Http\Request;
 use support\Response;
 use Workbunny\WebmanPushServer\ApiRoute;
-use Workbunny\WebmanPushServer\Server;
+use Workbunny\WebmanPushServer\PushServer;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRESENCE;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRIVATE;
 use function Workbunny\WebmanPushServer\response;
@@ -37,46 +38,16 @@ ApiRoute::get('/plugin/workbunny/webman-push-server/push.js', function () {
 
 /**
  * TODO 该接口是样例接口，请自行实现业务
- * webhook接口
- * @url POST /webhook
- */
-ApiRoute::post('/webhook', function (Server $server, Request $request) {
-    parse_str($request->queryString(), $query);
-    $sign = WebhookHandler::sign(
-        'YOUR_WEBHOOK_SECRET',
-        'POST',
-        $query,
-        $request->rawBody()
-    );
-    if($request->header('sign') !== $sign){
-        return response(403, ['error' => 'Invalid Sign']);
-    }
-
-    if(!$timeMs = $request->post('time_ms')){
-        return response(400, ['error' => 'Required time_ms']);
-    }
-    if(!$events = $request->post('events', [])){
-        return response(400, ['error' => 'Required events']);
-    }
-
-    // TODO 根据业务进行数据处理，如日志
-    dump($timeMs, $events); // 打印
-
-    return response(200, '{}');
-});
-
-/**
- * TODO 该接口是样例接口，请自行实现业务
  * 通道鉴权接口
  * @url POST /subscribe/auth
  */
-ApiRoute::post('/subscribe/auth', function (Server $server, Request $request) {
+ApiRoute::post('/subscribe/auth', function (Request $request) {
     if(!$channelName = $request->post('channel_name')){
         return response(400, ['error' => 'Required channel_name']);
     }
     if(
-        $server->_getChannelType($channelName) !== CHANNEL_TYPE_PRESENCE and
-        $server->_getChannelType($channelName) !== CHANNEL_TYPE_PRIVATE
+        PushServer::_getChannelType($channelName) !== CHANNEL_TYPE_PRESENCE and
+        PushServer::_getChannelType($channelName) !== CHANNEL_TYPE_PRIVATE
     ){
         return response(400, ['error' => 'Invalid channel_name']);
     }
@@ -107,7 +78,7 @@ ApiRoute::post('/subscribe/auth', function (Server $server, Request $request) {
         'U2FsdGVkX1+vlfFH8Q9XdZ9t9h2bABGYAZltEYAX6UM=', // TODO 动态配置
         $socketId,
         $channelName,
-        $server->_getChannelType($channelName) === CHANNEL_TYPE_PRESENCE ? $response['channel_data'] : []
+        PushServer::_getChannelType($channelName) === CHANNEL_TYPE_PRESENCE ? $response['channel_data'] : []
     );
     /**
      * @private {"auth": "workbunny:xxxxxxxxxxxxxxxx"}
@@ -126,32 +97,33 @@ ApiRoute::addGroup('/apps/{appId}', function () {
      * @url /apps/[app_id]/channels
      * @method GET
      */
-    ApiRoute::get('/channels', function (Server $server, Request $request, array $urlParams): Response {
+    ApiRoute::get('/channels', function (Request $request, array $urlParams): Response {
         $appKey = $request->get('auth_key');
         $requestInfo = explode(',', $request->get('info', ''));
         $prefix = $request->get('filter_by_prefix');
         $channels = [];
         $fields = ['type'];
-        if(in_array('subscription_count', $requestInfo)){
+        if (in_array('subscription_count', $requestInfo)){
             $fields[] = 'subscription_count';
         }
-        if(in_array('user_count', $requestInfo)){
+        if (in_array('user_count', $requestInfo)){
             $fields[] = 'user_count';
         }
         try {
-            $keys = Server::getStorage()->keys($server->_getChannelStorageKey($appKey));
+            $storage = PushServer::getStorageClient();
+            $keys = $storage->keys(PushServer::_getChannelStorageKey($appKey));
             foreach ($keys as $key) {
-                $channel = $server->_getChannelName($key);
-                $channelType = $server->_getChannelType($channel);
+                $channel = PushServer::_getChannelName($key);
+                $channelType = PushServer::_getChannelType($channel);
                 if($prefix !== null and $channelType !== $prefix){
                     continue;
 
                 }
-                $channels[$channel] = Server::getStorage()->hMGet($key, $fields) ?? [];
+                $channels[$channel] = $storage->hMGet($key, $fields) ?? [];
             }
             return response(200, ['channels' => $channels]);
-        } catch (\Throwable $throwable) {
-            //TODO log
+        } catch (\Throwable $exception) {
+            Log::channel('plugin.workbunny.webman-push-server.warning')->warning("[API-SERVER] {$exception->getMessage()}");
             return response(500, 'Server Error [Channels]');
         }
     });
@@ -161,24 +133,25 @@ ApiRoute::addGroup('/apps/{appId}', function () {
      * @url /apps/[app_id]/channels/[channel_name]
      * @method GET
      */
-    ApiRoute::get('/channels/{channelName}', function (Server $server, Request $request, array $urlParams): Response {
+    ApiRoute::get('/channels/{channelName}', function (Request $request, array $urlParams): Response {
         $appKey = $request->get('auth_key');
         $requestInfo = explode(',', $request->get('info', ''));
         $channelName = $urlParams['channelName'];
         $fields = ['type'];
-        if(in_array('subscription_count', $requestInfo)){
+        if (in_array('subscription_count', $requestInfo)){
             $fields[] = 'subscription_count';
         }
-        if(in_array('user_count', $requestInfo)){
+        if (in_array('user_count', $requestInfo)){
             $fields[] = 'user_count';
         }
         try {
-            $channels = Server::getStorage()->hMGet($server->_getChannelStorageKey($appKey,$channelName), $fields);
+            $storage = PushServer::getStorageClient();
+            $channels = $storage->hMGet(PushServer::_getChannelStorageKey($appKey,$channelName), $fields);
             return response(200, $channels ? array_merge([
                 'occupied' => true,
             ], $channels) : '{}');
-        }catch (RedisException $exception){
-            //TODO log
+        } catch (RedisException $exception){
+            Log::channel('plugin.workbunny.webman-push-server.warning')->warning("[API-SERVER] {$exception->getMessage()}");
             return response(500,'Server Error [channel]');
         }
     });
@@ -188,7 +161,7 @@ ApiRoute::addGroup('/apps/{appId}', function () {
      * @url /apps/[app_id]/events
      * @method POST
      */
-    ApiRoute::post('/events', function (Server $server, Request $request, array $urlParams): Response {
+    ApiRoute::post('/events', function (Request $request, array $urlParams): Response {
         $appKey = $request->get('auth_key');
         $channel = $request->post('channel');
         $channels = $request->post('channels', []);
@@ -204,7 +177,13 @@ ApiRoute::addGroup('/apps/{appId}', function () {
         }
         $channels = ($channel !== null) ? [(string)$channel] : $channels;
         foreach ($channels as $channel) {
-            $server->publishToClients($appKey, $channel, $event, $data, $socketId);
+            PushServer::publish(PushServer::$publishTypeClient, PushServer::staticFilter([
+                'appKey'    => $appKey,
+                'channel'   => $channel,
+                'event'     => $event,
+                'data'      => $data,
+                'socketId'  => $socketId,
+            ]));
         }
         return response(200, json_encode([
             'channels' => $channels
@@ -216,7 +195,7 @@ ApiRoute::addGroup('/apps/{appId}', function () {
      * @url /apps/[app_id]/batch_events
      * @method POST
      */
-    ApiRoute::post('/batch_events', function (Server $server, Request $request, array $urlParams): Response {
+    ApiRoute::post('/batch_events', function (Request $request, array $urlParams): Response {
         $appKey = $request->get('auth_key');
         $packages = $request->post('batch');
         if (!$packages) {
@@ -227,8 +206,14 @@ ApiRoute::addGroup('/apps/{appId}', function () {
             $channels[] = $channel = $package['channel'];
             $event = $package['name'];
             $data = $package['data'];
-            $socket_id = $package['socket_id'] ?? null;
-            $server->publishToClients($appKey, $channel, $event, $data, $socket_id);
+            $socketId = $package['socket_id'] ?? null;
+            PushServer::publish(PushServer::$publishTypeClient, PushServer::staticFilter([
+                'appKey'    => $appKey,
+                'channel'   => $channel,
+                'event'     => $event,
+                'data'      => $data,
+                'socketId'  => $socketId,
+            ]));
         }
         return response(200,json_encode([
             'channels' => $channels
@@ -240,16 +225,17 @@ ApiRoute::addGroup('/apps/{appId}', function () {
      * @url /apps/[app_id]/users/[user_id]/terminate_connections
      * @method POST
      */
-    ApiRoute::post('/users/{userId}/terminate_connections', function (Server $server, Request $request, array $urlParams): Response {
+    ApiRoute::post('/users/{userId}/terminate_connections', function (Request $request, array $urlParams): Response {
         $appKey = $request->get('auth_key');
         $userId = $urlParams['userId'];
         $socketIds = [];
-        $userKeys = Server::getStorage()->keys($server->_getUserStorageKey($appKey, null, $userId));
+        $storage = PushServer::getStorageClient();
+        $userKeys = $storage->keys(PushServer::_getUserStorageKey($appKey, null, $userId));
         foreach ($userKeys as $userKey){
-            $socketIds[] = Server::getStorage()->hGet($userKey, 'socket_id');
+            $socketIds[] = $storage->hGet($userKey, 'socket_id');
         }
         foreach ($socketIds as $socketId){
-            $server->terminateConnections($appKey, $socketId, [
+            PushServer::terminateConnections($appKey, $socketId, [
                 'message' => 'Terminate connection by API'
             ]);
         }
@@ -261,36 +247,37 @@ ApiRoute::addGroup('/apps/{appId}', function () {
      * @url /apps/[app_id]/channels/[channel_name]/users
      * @method GET
      */
-    ApiRoute::get('/channels/{channelName}/users', function (Server $server, Request $request, array $urlParams): Response {
+    ApiRoute::get('/channels/{channelName}/users', function (Request $request, array $urlParams): Response {
         $appKey = $request->get('auth_key');
         $channelName = $urlParams['channelName'];
         $userIdArray = [];
         try {
-            $channelType = Server::getStorage()->hGet($server->_getChannelStorageKey($appKey, $channelName), 'type');
+            $storage = PushServer::getStorageClient();
+            $channelType = $storage->hGet(PushServer::_getChannelStorageKey($appKey, $channelName), 'type');
             if(!$channelType){
                 return response(404, ['error' => "Not Found [$channelName]"]);
             }
             if($channelType !== CHANNEL_TYPE_PRESENCE) {
                 return response(400, ['error' => "Invalid channel [$channelName]"]);
             }
-            $userKeys = Server::getStorage()->keys($server->_getUserStorageKey($appKey, $channelName));
+            $userKeys = $storage->keys(PushServer::_getUserStorageKey($appKey, $channelName));
             foreach ($userKeys as $userKey) {
-                $userIdArray[] = Server::getStorage()->hGet($userKey,'user_id');
+                $userIdArray[] = $storage->hGet($userKey,'user_id');
             }
             return response(200, ['users' => $userIdArray]);
-        }catch (\Throwable $throwable){
-            //TODO log
+        } catch (\Throwable $throwable){
+            Log::channel('plugin.workbunny.webman-push-server.warning')->warning("[API-SERVER] {$throwable->getMessage()}");
             return response(500,'Server Error [users]');
         }
     });
 
-}, function (Closure $next, Server $server, Request $request, array $urlParams): Response {
-    if($appId = $urlParams['appId'] ?? null){
+}, function (Closure $next, Request $request, array $urlParams): Response {
+    if ($appId = $urlParams['appId'] ?? null){
         if (!($appKey = $request->get('auth_key'))) {
             return response(400,['error' => 'Required auth_key']);
         }
-        $apps = Server::getConfig('apps_query')($appKey, $appId);
-        if(!$apps){
+        $apps = ApiServer::getConfig('apps_query')($appKey, $appId);
+        if (!$apps){
             return response(401,['error' => 'Invalid auth_key']);
         }
         $params = $request->get();
@@ -300,5 +287,5 @@ ApiRoute::addGroup('/apps/{appId}', function () {
             return response(401,['error' => 'Invalid signature']);
         }
     }
-    return $next($server, $request, $urlParams);
+    return $next($request, $urlParams);
 });

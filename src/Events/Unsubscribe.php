@@ -14,116 +14,122 @@ declare(strict_types=1);
 namespace Workbunny\WebmanPushServer\Events;
 
 use RedisException;
-use Workbunny\WebmanPushServer\HookServer;
-use Workbunny\WebmanPushServer\Server;
+use stdClass;
+use support\Log;
+use Workbunny\WebmanPushServer\PushServer;
+use Workbunny\WebmanPushServer\Traits\StorageMethods;
 use Workerman\Connection\TcpConnection;
 use function Workbunny\WebmanPushServer\uuid;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRESENCE;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRIVATE;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PUBLIC;
+use const Workbunny\WebmanPushServer\EVENT_CHANNEL_VACATED;
 use const Workbunny\WebmanPushServer\EVENT_MEMBER_REMOVED;
 use const Workbunny\WebmanPushServer\EVENT_UNSUBSCRIPTION_SUCCEEDED;
-use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_CHANNEL_OCCUPIED;
-use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_CHANNEL_VACATED;
-use const Workbunny\WebmanPushServer\PUSH_SERVER_EVENT_MEMBER_REMOVED;
 
 class Unsubscribe extends AbstractEvent
 {
     /**
      * @inheritDoc
      */
-    public function response(Server $pushServer, TcpConnection $connection, array $request): void
+    public function response(TcpConnection $connection, array $request): void
     {
         $channel = $request['data']['channel'] ?? '';
-        switch ($channelType = $pushServer->_getChannelType($channel)) {
+        switch ($channelType = PushServer::_getChannelType($channel)) {
             case CHANNEL_TYPE_PUBLIC:
             case CHANNEL_TYPE_PRIVATE:
-                self::unsubscribeChannel($pushServer, $connection, $channel, $channelType);
+                self::unsubscribeChannel($connection, $channel, $channelType);
                 return;
             case CHANNEL_TYPE_PRESENCE:
                 $userData = json_decode($request['data']['channel_data'] ?? '{}', true);
                 if (!$userData or !isset($userData['user_id'])) {
-                    $pushServer->error($connection,null, 'Bad channel_data');
+                    PushServer::error($connection, null, 'Bad channel_data');
                     return;
                 }
-                self::unsubscribeChannel($pushServer, $connection, $channel, $userData['user_id']);
+                self::unsubscribeChannel($connection, $channel, $userData['user_id']);
                 break;
             default:
-                $pushServer->error($connection, null, 'Bad channel_type');
-                return;
+                PushServer::error($connection, null, 'Bad channel_type');
         }
     }
 
     /**
      * 客户端取消订阅channel
-     * @param Server $server
-     * @param TcpConnection $connection
-     * @param string $channel
-     * @param string $type
-     * @param string|null $uid
+     *
+     * @param TcpConnection $connection 客户端连接
+     * @param string $channel 取消订阅的通道
+     * @param string|null $uid 用户id
+     * @param bool $send 是否向当前客户端发送退订消息
      * @return void
      */
-    public static function unsubscribeChannel(Server $server, TcpConnection $connection, string $channel, string $type, ?string $uid = null): void
+    public static function unsubscribeChannel(TcpConnection $connection, string $channel, ?string $uid = null, bool $send = true): void
     {
         try {
-            $appKey = $server->_getConnectionProperty($connection, 'appKey');
-            $channels = $server->_getConnectionProperty($connection, 'channels');
-            $isPresence = ($type === CHANNEL_TYPE_PRESENCE);
+            $appKey = PushServer::_getConnectionProperty($connection, 'appKey');
+            $socketId = PushServer::_getConnectionProperty($connection, 'socketId');
+            $channels = PushServer::_getConnectionProperty($connection, 'channels');
 
-            if ($isPresence) {
-                if ($server->getStorage()->exists($userKey = $server->_getUserStorageKey($appKey, $channel, $uid))) {
-                    $userCount = $server->getStorage()->hIncrBy($server->_getChannelStorageKey($appKey, $channel), 'user_count', -1);
-                    if ($userCount <= 0) {
-                        $server->getStorage()->del($userKey);
-                    }
-                    // {"event":"pusher_internal:member_removed","data":"{\"user_id\":\"14884657801\"}","channel":"presence-channel"}
-                    $server->publishToClients($appKey, $channel, EVENT_MEMBER_REMOVED,
-                        json_encode([
-                            'id'      => uuid(),
-                            'user_id' => $uid
-                        ], JSON_UNESCAPED_UNICODE)
-                    );
-                    // PUSH_SERVER_EVENT_MEMBER_REMOVED 用户移除事件
-                    if ($callback = Server::getPublisher()) {
-                        call_user_func($callback, PUSH_SERVER_EVENT_MEMBER_REMOVED, [
-                            'id'      => uuid(),
-                            'app_key' => $appKey,
+            if ($type = $channels[$channel] ?? null) {
+                $storage = StorageMethods::getStorageClient();
+                // presence通道
+                if ($type === CHANNEL_TYPE_PRESENCE) {
+                    if ($users = $storage->keys(StorageMethods::_getUserStorageKey($appKey, $channel, $uid))) {
+                        $userCount = $storage->hIncrBy(StorageMethods::_getChannelStorageKey($appKey, $channel), 'user_count', -count($users));
+                        if ($userCount <= 0) {
+                            $storage->del(...$users);
+                        }
+                        /**
+                         * 向通道广播成员移除事件
+                         *
+                         * {"event":"pusher_internal:member_removed","data":"{"user_id":"14884657801"}","channel":"presence-channel"}
+                         */
+                        PushServer::publishUseRetry(PushServer::$publishTypeClient, [
+                            'appKey'  => $appKey,
                             'channel' => $channel,
-                            'user_id' => $uid,
-                            'time_ms' => microtime(true)
+                            'event'   => EVENT_MEMBER_REMOVED,
+                            'data'    => [
+                                'id'      => uuid(),
+                                'user_id' => $uid
+                            ],
+                            'socketId' => $socketId
                         ]);
                     }
                 }
-            }
-
-            $subCount = $server->getStorage()->hIncrBy($key = $server->_getChannelStorageKey($appKey, $channel), 'subscription_count', -1);
-            if($subCount <= 0){
-                $server->getStorage()->del($key);
-                $channelVacated = true;
-            }
-            $server->_unsetConnection($connection, $appKey, $channel);
-            unset($channels[$channel]);
-            $server->_setConnectionProperty($connection, 'channels', $channels);
-            /**
-             * @private-channel:{"event":"pusher_internal:unsubscription_succeeded","data":"{}","channel":"my-channel"}
-             * @public-channel:{"event":"pusher_internal:unsubscription_succeeded","data":"{}","channel":"my-channel"}
-             * @presence-channel:{"event":"pusher_internal:unsubscription_succeeded","data":"{}","channel":"my-channel"}
-             **/
-            $server->send($connection, $channel, EVENT_UNSUBSCRIPTION_SUCCEEDED, new \stdClass());
-
-            if($channelVacated ?? false){
-                // PUSH_SERVER_EVENT_CHANNEL_VACATED 通道移除事件
-                if ($callback = Server::getPublisher()) {
-                    call_user_func($callback, PUSH_SERVER_EVENT_CHANNEL_VACATED, [
-                        'id'      => uuid(),
-                        'app_key' => $appKey,
-                        'channel' => $channel,
-                        'time_ms' => microtime(true)
+                // 查询通道订阅数量
+                $subCount = $storage->hIncrBy($key = StorageMethods::_getChannelStorageKey($appKey, $channel), 'subscription_count', -1);
+                if ($subCount <= 0) {
+                    $storage->del($key);
+                    // 内部事件广播 通道被移除事件
+                    PushServer::publishUseRetry(PushServer::$publishTypeServer, [
+                        'appKey'    => $appKey,
+                        'channel'   => $channel,
+                        'event'     => EVENT_CHANNEL_VACATED,
+                        'data'      => [
+                            'id'      => uuid(),
+                            'app_key' => $appKey,
+                            'channel' => $channel,
+                            'time_ms' => microtime(true)
+                        ]
                     ]);
                 }
+                // 移除通道
+                unset($channels[$channel]);
+                PushServer::_setConnectionProperty($connection, 'channels', $channels);
+                PushServer::_unsetChannels($appKey, $channel, $socketId);
+                if ($send) {
+                    /**
+                     * 发送退订成功事件消息
+                     *
+                     * @private-channel:{"event":"pusher_internal:unsubscription_succeeded","data":"{}","channel":"my-channel"}
+                     * @public-channel:{"event":"pusher_internal:unsubscription_succeeded","data":"{}","channel":"my-channel"}
+                     * @presence-channel:{"event":"pusher_internal:unsubscription_succeeded","data":"{}","channel":"my-channel"}
+                     **/
+                    PushServer::send($connection, $channel, EVENT_UNSUBSCRIPTION_SUCCEEDED, new stdClass());
+                }
             }
+
         } catch (RedisException $exception) {
-            error_log("{$exception->getMessage()}\n");
+            Log::channel('plugin.workbunny.webman-push-server.error')->error("[PUSH-SERVER] {$exception->getMessage()}");
         }
     }
 }

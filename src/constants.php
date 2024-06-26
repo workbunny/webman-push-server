@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 namespace Workbunny\WebmanPushServer;
 
-const VERSION = '2.0.0';
+const VERSION = '3.0.0';
 
 const EVENT_CONNECTION_ESTABLISHED     = 'pusher:connection_established';
 const EVENT_ERROR                      = 'pusher:error';
@@ -26,11 +26,8 @@ const EVENT_MEMBER_ADDED               = 'pusher_internal:member_added';
 const EVENT_MEMBER_REMOVED             = 'pusher_internal:member_removed';
 const EVENT_SUBSCRIPTION_SUCCEEDED     = 'pusher_internal:subscription_succeeded';
 const EVENT_UNSUBSCRIPTION_SUCCEEDED   = 'pusher_internal:unsubscription_succeeded';
-
-const PUSH_SERVER_EVENT_MEMBER_ADDED     = 'member_added';
-const PUSH_SERVER_EVENT_MEMBER_REMOVED   = 'member_removed';
-const PUSH_SERVER_EVENT_CHANNEL_OCCUPIED = 'channel_occupied';
-const PUSH_SERVER_EVENT_CHANNEL_VACATED  = 'channel_vacated';
+const EVENT_CHANNEL_VACATED            = 'pusher_internal:channel_vacated';
+const EVENT_CHANNEL_OCCUPIED           = 'pusher_internal:channel_occupied';
 const PUSH_SERVER_EVENT_CLIENT_EVENT     = 'client_event';
 const PUSH_SERVER_EVENT_SERVER_EVENT     = 'server_event';
 

@@ -20,8 +20,8 @@ use GuzzleHttp\RequestOptions;
 use Psr\Http\Message\ResponseInterface;
 use RuntimeException;
 use Throwable;
+use Workbunny\WebmanPushServer\Exceptions\ClientException;
 use Workerman\Connection\AsyncTcpConnection;
-use Workerman\Http\Response;
 use Workerman\Timer;
 
 class WsClient

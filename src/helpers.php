@@ -14,7 +14,6 @@ declare(strict_types=1);
 namespace Workbunny\WebmanPushServer;
 
 use support\Response;
-use Webman\Config;
 
 if (!function_exists('response')) {
     /**
@@ -23,7 +22,7 @@ if (!function_exists('response')) {
      * @param array $header
      * @return Response
      */
-    function response(int $httpStatus, $data, array $header = []): Response
+    function response(int $httpStatus, array|string $data, array $header = []): Response
     {
         return new Response($httpStatus, array_merge([
             'Content-Type' => 'application/json',

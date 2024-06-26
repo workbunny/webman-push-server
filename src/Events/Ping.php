@@ -13,7 +13,8 @@ declare(strict_types=1);
 
 namespace Workbunny\WebmanPushServer\Events;
 
-use Workbunny\WebmanPushServer\Server;
+use stdClass;
+use Workbunny\WebmanPushServer\PushServer;
 use Workerman\Connection\TcpConnection;
 use const Workbunny\WebmanPushServer\EVENT_PONG;
 
@@ -22,11 +23,11 @@ class Ping extends AbstractEvent
     /**
      * @inheritDoc
      */
-    public function response(Server $pushServer, TcpConnection $connection, array $request): void
+    public function response(TcpConnection $connection, array $request): void
     {
         /**
          * {"event":"pusher:pong","data":"{}"}
          */
-        $pushServer->send($connection, null, EVENT_PONG, new \stdClass());
+        PushServer::send($connection, null, EVENT_PONG, new stdClass());
     }
 }

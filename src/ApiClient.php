@@ -13,11 +13,12 @@ declare(strict_types=1);
 
 namespace Workbunny\WebmanPushServer;
 
-use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\RequestOptions;
+use Throwable;
 use Workbunny\WebmanPushServer\Events\Subscribe;
 use GuzzleHttp\Client;
+use Workbunny\WebmanPushServer\Exceptions\ClientException;
 
 class ApiClient
 {
@@ -107,7 +108,7 @@ class ApiClient
                 $e->getResponse()?->getBody()->getContents() ?: $e->getMessage(),
                 $e->getResponse()?->getStatusCode() ?: 0
             );
-        } catch (\Throwable $throwable) {
+        } catch (Throwable $throwable) {
             throw new ClientException(
                 "Push client request failed. [{$throwable->getMessage()}]", $throwable->getCode(), $throwable
             );
@@ -207,7 +208,7 @@ class ApiClient
      */
     public static function routeAuth(string $appKey, string $appSecret, string $httpMethod, string $httpPath, array $query): mixed
     {
-        return Server::isDebug() ? 'test' : self::build_auth_query_params($appKey, $appSecret, $httpMethod, $httpPath, $query)['auth_signature'];
+        return self::build_auth_query_params($appKey, $appSecret, $httpMethod, $httpPath, $query)['auth_signature'];
     }
 
     /**

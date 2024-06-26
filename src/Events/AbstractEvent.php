@@ -14,7 +14,6 @@ declare(strict_types=1);
 namespace Workbunny\WebmanPushServer\Events;
 
 use InvalidArgumentException;
-use Workbunny\WebmanPushServer\Server;
 use Workerman\Connection\TcpConnection;
 use const Workbunny\WebmanPushServer\EVENT_PING;
 use const Workbunny\WebmanPushServer\EVENT_SUBSCRIBE;
@@ -67,7 +66,7 @@ abstract class AbstractEvent
      */
     public static function factory(string $event): ?AbstractEvent
     {
-        if(self::exists($preEvent = self::pre($event))){
+        if (self::exists($preEvent = self::pre($event))) {
             return self::$_eventObj[$preEvent] ?? (self::$_eventObj[$preEvent] = new self::$_events[$preEvent]($event));
         }
         return null;
@@ -100,6 +99,7 @@ abstract class AbstractEvent
 
     /**
      * 预处理
+     *
      * @param string $event
      * @return string|null
      */
@@ -108,10 +108,10 @@ abstract class AbstractEvent
         if (isset(self::$_events[$event])) {
             return $event;
         }
-        if (strpos($event, 'client-') === 0) {
+        if (str_starts_with($event, 'client-')) {
             return self::CLIENT_EVENT;
         }
-        if (strpos($event, 'pusher:') === 0 or strpos($event, 'pusher_internal:') === 0) {
+        if (str_starts_with($event, 'pusher:') or str_starts_with($event, 'pusher_internal:')) {
             return self::SERVER_EVENT;
         }
         return null;
@@ -119,10 +119,10 @@ abstract class AbstractEvent
 
     /**
      * 响应
-     * @param Server $pushServer
+     *
      * @param TcpConnection $connection
      * @param array $request
      * @return void
      */
-    abstract public function response(Server $pushServer, TcpConnection $connection, array $request): void;
+    abstract public function response(TcpConnection $connection, array $request): void;
 }

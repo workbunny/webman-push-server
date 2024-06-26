@@ -5,7 +5,7 @@
 **<p align="center">🐇  Webman plugin for push server implementation. 🐇</p>**
 
 <div align="center">
-    <a href="https://github.com/workbunny/webman-push-server/actions">
+    <a href="https://github.com/workbunny/webman-push-server/actions?query=branch%3Amain">
         <img src="https://github.com/workbunny/webman-push-server/actions/workflows/CI.yml/badge.svg" alt="Build Status">
     </a>
     <a href="https://github.com/workbunny/webman-push-server/releases">
@@ -19,14 +19,15 @@
     </a>
 </div>
 
-## 当前为2.x版本，[点击跳转1.x文档](https://github.com/workbunny/webman-push-server/blob/1.x/README.md)
+## 当前为3.x版本，[点击跳转2.x文档](https://github.com/workbunny/webman-push-server/blob/2.x/README.md)
 
 ## 简介
 
-- 本项目的诞生初期是为了实现我司商业化项目中的**在线推送服务**，早期考察了[webman/push](https://www.workerman.net/plugin/2)，对它进行了多进程的实现，并且根据[Pusher-Channel](https://support.pusher.com/hc/en-us/categories/4411973917585-Channels)服务的文档进行了改造，
-[Pusher-Channel](https://support.pusher.com/hc/en-us/categories/4411973917585-Channels)服务的一比一复刻版本，是一个完整的即时通讯服务；利用该插件可以轻松实现聊天、在线推送等业务服务，也可以利用该插件作为微服务的消息订阅服务；
-本插件的商业化项目已于22年初上线稳定运行至今。
-该服务是**生产可用**的服务，在商业化项目作为**在线推送服务**和**数字大屏服务**中已稳定运行半年以上。
+- 全新重构的分布式推送服务，更简单的使用，更简单的部署，更简单的代码！
+- 完整且高效的即时通讯服务，支持聊天、在线推送、数字大屏等业务场景；
+- 高保真复刻的[Pusher-Channel](https://support.pusher.com/hc/en-us/categories/4411973917585-Channels)，可以利用现有的[Pusher-Channel](https://support.pusher.com/hc/en-us/categories/4411973917585-Channels)客户端，其他语言(Java Swift .NET Objective-C Unity Flutter Android IOS AngularJS等)客户端地址下载地址：
+  https://pusher.com/docs/channels/channels_libraries/libraries/
+- 本项目1.x/2.x版本承接实现了诸多商业项目的即时通讯服务，最高日活连接达到20万+，最久的商业化项目已稳定运行3年，性能与稳定性兼顾；
 - 如遇问题，欢迎 **[issue](https://github.com/workbunny/webman-push-server/issues) & PR**；
 
 ## 依赖
@@ -44,29 +45,28 @@ composer require workbunny/webman-push-server
 
 ### 架构设计：
 
+- 摒弃了api-service服务需要挂载在Push-server的设计，独立化api-server，性能更好
+- 使用redis Publish/Subscribe 代替workerman/channel作为分布式广播
+- 使用redis Publish/Subscribe 代替HookServer队列作为事件监听中间件
+- 简化Push-server的代码内容
+- 简化了Api逻辑
+
 ```
-                                                     ┌─────────────┐
-                                                     | Api-service |
-                                                     └─────────────┘
-                                                            |
-                                   ┌─────────────┐        2 | 3
-                             ┌───> | Push-server | ────── ─ · ─       <─────────────┐
-                             |     └─────────────┘        1 | 4 ··· n               ↓
-    ┌────────────────────┐ ──┘     ┌────────────────┐                       ┌────────────────┐      
-    | webman-push-server | ──────> | Channel-server | ─── 1           <───> | Channel-client |
-    └────────────────────┘ ──┐     └────────────────┘                       └────────────────┘
-                             |     ┌─────────────┐        2 | 3                     ↑
-                             └───> | Hook-server | ────── ─ · ─       <─────────────┘
-                                   └─────────────┘        1 | 4 ··· n
+                                   ┌─────────────┐     2 | 3
+                             ┌───> | Push-server | ─── ─ · ─
+                             |     └─────────────┘     1 | 4 ··· n
+                             |       Hash |              ↑
+                             |            |          PUB | SUB
+    ┌────────────────────┐ ──┘     ┌──────────────┐ ←────┘                     
+    | webman-push-server | ──────> | Redis-server | 
+    └────────────────────┘ ──┐     └──────────────┘ ←────┐     
+                             |            |          PUB | SUB
+                             |       Hash |              ↓
+                             |      ┌────────────┐     2 | 3
+                             └────> | API-server | ─── ─ · ─
+                                    └────────────┘     1 | 4 ··· n
                                      
 ```
-
-
-- **Push-server：** websocket主服务
-  - **Api-service：** 主服务挂载的http-api服务
-- **Hook-server：** 通道事件监听服务
-- **Channel-server：** 进程通讯服务
-- **Channel-client：** 进程通讯客户端
 
 ### 配置说明：
 
@@ -377,48 +377,12 @@ $client->publish();
    - push-server
      - 主服务进程，用于监听websocket协议信息
      - 配置位于config/plugin/workbunny/webman-push-server/app.php
-     - api-service子服务
-       - api子服务，用于提供http-api接口服务
-       - 路由配置位于config/plugin/workbunny/webman-push-server/route.php
-   - hook-server
-     - hook多进程消费服务，用于消费事件钩子，进行webhook通知
-     - 配置位于config/plugin/workbunny/webman-push-server/app.php
+   - api-server
+     - 用于提供http-api接口服务
+     - 路由配置位于config/plugin/workbunny/webman-push-server/route.php
+#### 1.API服务
 
-#### 1.HOOK服务
-
-##### 支持的HOOK事件：
-
-- 通道类型事件
-  - channel_occupied：当通道被建立时，该事件触发
-  - channel_vacated：当通道被销毁时，该事件被触发
-- 用户类型事件
-  - member_added：当用户加入通道时，该事件被触发
-  - member_removed：当用户被移除通道时，该事件被触发
-- 消息类型事件
-  - client_event：当通道产生客户端消息时，该事件被触发
-  - server-event：当通道产生服务端消息（服务端推送消息、服务端回执消息）时，该事件被触发
-
-##### 事件处理器：
-
-1. Hook服务是多进程消费队列，进程数详见**config/plugin/workbunny/webman-push-server/process.php**；
-2. 默认使用webhook方式进行消费通知，详见**WebhookHandler**;
-3. 支持自定义消费方式，方法如下：
-   - 创建自定义handler类，实现接口**HookHandlerInterface**
-   - 将类名添加至配置文件**config/plugin/workbunny/webman-push-server/app.php**的**hook_handler**中
-   - 重启服务
-
-##### 注意事项：
-
-1. 在队列无法发布消息等意外情况下，队列消息会暂时持久化至本地数据库，直到队列恢复后队列消息将自动恢复至队列；
-    - 本地数据库默认采用SQLite3，配置详见**config/plugin/workbunny/webman-push-server/database.php**
-    - 本地暂存的队列消息会以定时器的方式重载至队列，配置详见**config/plugin/workbunny/webman-push-server/app.php -> hook_server.requeue_interval**
-2. 队列消息存在一定的pending时间，配置支持设置**pending_timeout**和**claim_interval**用于缓解可能存在的消息数据冗余；
-    - **config/plugin/workbunny/webman-push-server/app.php -> hook_server.claim_interval**用于创建消息回收定时器来进行冗余消息回收
-    - **config/plugin/workbunny/webman-push-server/app.php -> hook_server.pending_timeout**用于确定需要被回收的冗余消息，pending时间达到该配置的消息将会被消息回收定时器回收
-
-#### 2.API子服务
-
-API子服务提供REST风格的http-APIs，接口内容与 [pusher-channel-api](https://pusher.com/docs/channels/library_auth_reference/rest-api/) 基本保持一致；
+API服务提供REST风格的http-APIs，接口内容与 [pusher-channel-api](https://pusher.com/docs/channels/library_auth_reference/rest-api/) 基本保持一致；
 
 ##### 支持的http-api接口：
 
@@ -510,8 +474,3 @@ var connection = new Push({
 
 兼容pusher，其他语言(Java Swift .NET Objective-C Unity Flutter Android IOS AngularJS等)客户端地址下载地址：
 https://pusher.com/docs/channels/channels_libraries/libraries/
-
-
-## 优化
-
-### todo
