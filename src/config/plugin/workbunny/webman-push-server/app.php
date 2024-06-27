@@ -15,6 +15,20 @@ return [
     'enable'      => true,
     // 心跳检查， 0为不检查
     'heartbeat'   => 60,
+    // 验证app_key
+    'app_verify' => function (string $appKey): array
+    {
+        // todo 这里是模拟的app配置，实际过程中这里可以是通过数据库读取
+        // $apps = Db::select('apps')->toArray();
+        $apps = [
+            'workbunny' => [
+                'app_id'     => 1,
+                'app_key'    => 'workbunny',
+                'app_secret' => 'U2FsdGVkX1+vlfFH8Q9XdZ9t9h2bABGYAZltEYAX6UM=',
+            ]
+        ];
+        return $apps[$appKey] ?? [];
+    },
     // 推送服务配置
     'push-server' => [
         // 心跳检查，0为不检查
@@ -22,22 +36,6 @@ return [
     ],
     // api服务配置
     'api-server' => [
-        // 验证app_key
-        'apps_query' => function (string $appKey, ?string $appId = null): array
-        {
-            // 默认app_key
-            $apps = [
-                'workbunny' => [
-                    'app_id'     => '1',
-                    'app_key'    => 'workbunny',
-                    'app_secret' => 'U2FsdGVkX1+vlfFH8Q9XdZ9t9h2bABGYAZltEYAX6UM=',
-                ]
-            ];
-            $app = $apps[$appKey] ?? [];
-            if ($appId === null){
-                return $app;
-            }
-            return (($app['app_id'] ?? null) === $appId) ? $app : [];
-        },
+
     ],
 ];

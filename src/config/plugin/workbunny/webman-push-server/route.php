@@ -272,19 +272,23 @@ ApiRoute::addGroup('/apps/{appId}', function () {
     });
 
 }, function (Closure $next, Request $request, array $urlParams): Response {
-    if ($appId = $urlParams['appId'] ?? null){
+    if ($appId = $urlParams['appId'] ?? null) {
         if (!($appKey = $request->get('auth_key'))) {
             return response(400,['error' => 'Required auth_key']);
         }
-        $apps = ApiServer::getConfig('apps_query')($appKey, $appId);
-        if (!$apps){
-            return response(401,['error' => 'Invalid auth_key']);
-        }
-        $params = $request->get();
-        unset($params['auth_signature']);
-        $realAuthSignature = ApiClient::routeAuth($appKey, $apps['app_secret'], $request->method(), $request->path(), $params);
-        if ($request->get('auth_signature') !== $realAuthSignature) {
-            return response(401,['error' => 'Invalid signature']);
+        if ($appVerifyCallback = ApiServer::getConfig('app_verify')) {
+            if (
+                !$app = call_user_func($appVerifyCallback, $appKey) or
+                ($app['app_id'] !== $appId)
+            ) {
+                return response(401,['error' => 'Invalid auth_key']);
+            }
+            $params = $request->get();
+            unset($params['auth_signature']);
+            $realAuthSignature = ApiClient::routeAuth($appKey, $app['app_secret'], $request->method(), $request->path(), $params);
+            if ($request->get('auth_signature') !== $realAuthSignature) {
+                return response(401,['error' => 'Invalid signature']);
+            }
         }
     }
     return $next($request, $urlParams);

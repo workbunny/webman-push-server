@@ -77,20 +77,23 @@ class PushServer
      *
      * @param string $key
      * @param mixed|null $default
+     * @param bool $getBase
      * @return mixed
      */
-    public static function getConfig(string $key, mixed $default = null): mixed
+    public static function getConfig(string $key, mixed $default = null, bool $getBase = false): mixed
     {
         return \config(
-            'plugin.workbunny.webman-push-server.app.push-server.' . $key, $default
+            ($getBase ?
+                'plugin.workbunny.webman-push-server.app.' :
+                'plugin.workbunny.webman-push-server.app.push-server.') .
+            $key, $default
         );
     }
 
     /**
-     * @param Worker $worker
      * @return void
      */
-    public function onWorkerStart(Worker $worker): void
+    public function onWorkerStart(): void
     {
         // 通道订阅
         ChannelMethods::subscribe();
@@ -121,10 +124,9 @@ class PushServer
     }
 
     /**
-     * @param Worker $worker
      * @return void
      */
-    public function onWorkerStop(Worker $worker): void{
+    public function onWorkerStop(): void{
         if ($this->_heartbeatTimer ){
             Timer::del($this->_heartbeatTimer);
             $this->_heartbeatTimer = 0;
@@ -147,9 +149,13 @@ class PushServer
                 static::error($connection, null, 'Invalid app', true);
                 return;
             }
-            if(!self::getConfig('apps_query')($appKey = $match[1])){
-                static::error($connection, null, "Invalid app_key", true);
-                return;
+            // 获取app验证回调，如果没有验证回调则忽略验证
+            $appKey = '';
+            if ($appVerifyCallback = static::getConfig('app_verify', getBase: true)) {
+                if (!call_user_func($appVerifyCallback, $appKey = $match[1])) {
+                    static::error($connection, null, "Invalid app_key", true);
+                    return;
+                }
             }
             // 为TcpConnection object设置属性
             static::_setConnectionProperty($connection, 'clientNotSendPingCount', 0);
@@ -159,7 +165,6 @@ class PushServer
             static::_setConnectionProperty($connection, 'channels', []);
             // 新增连接
             static::_setConnection($appKey, $socketId, $connection);
-
             /**
              * 向客户端发送链接成功的消息
              * {"event":"pusher:connection_established","data":"{"socket_id":"208836.27464492","activity_timeout":120}"}

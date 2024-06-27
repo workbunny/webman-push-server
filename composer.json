@@ -27,7 +27,7 @@
 	"require-dev": {
 		"workerman/webman-framework": "^1.5",
 		"symfony/var-dumper": "^6.0",
-		"kahlan/kahlan": "^5.2"
+		"phpunit/phpunit": "^9.0"
 	},
 	"suggest": {
 		"ext-uuid": "For unique socket id. "
@@ -48,7 +48,7 @@
 	},
 	"autoload-dev": {
 		"psr-4": {
-			"Spec\\": "spec"
+			"Tests\\": "tests"
 		}
 	}
 }

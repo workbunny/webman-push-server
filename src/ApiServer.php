@@ -23,14 +23,20 @@ use function config;
 class ApiServer
 {
     /**
+     * 获取配置
+     *
      * @param string $key
      * @param mixed|null $default
+     * @param bool $getBase
      * @return mixed
      */
-    public static function getConfig(string $key, mixed $default = null): mixed
+    public static function getConfig(string $key, mixed $default = null, bool $getBase = false): mixed
     {
-        return config(
-            'plugin.workbunny.webman-push-server.app.api-server.' . $key, $default
+        return \config(
+            ($getBase ?
+                'plugin.workbunny.webman-push-server.app.' :
+                'plugin.workbunny.webman-push-server.app.api-server.') .
+            $key, $default
         );
     }
 
