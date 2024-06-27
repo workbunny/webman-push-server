@@ -47,7 +47,7 @@ trait ChannelMethods
      */
     public static function connect(string $redisChannel = 'server-channel'): Client
     {
-        if (!self::$_redisClients[$redisChannel] ?? null) {
+        if (!(self::$_redisClients[$redisChannel] ?? null)) {
             if (!$config = config('redis')["plugin.workbunny.webman-push-server.$redisChannel"] ?? []) {
                 throw new \InvalidArgumentException("Redis channel [$redisChannel] not found. ");
             }

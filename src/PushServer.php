@@ -96,7 +96,7 @@ class PushServer
     public function onWorkerStart(): void
     {
         // 通道订阅
-        ChannelMethods::subscribe();
+        static::subscribe();
         // 心跳设置
         if ($this->_heartbeatTimer > 0) {
             $this->_heartbeatTimer = Timer::add($this->_keepaliveTimeout / 2, function () {
@@ -131,7 +131,7 @@ class PushServer
             Timer::del($this->_heartbeatTimer);
             $this->_heartbeatTimer = 0;
         }
-        ChannelMethods::close();
+        static::close();
     }
 
     /**
