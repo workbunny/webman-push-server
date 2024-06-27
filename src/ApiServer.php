@@ -23,16 +23,6 @@ use function config;
 class ApiServer
 {
     /**
-     * 初始化
-     */
-    public function __construct()
-    {
-        ApiRoute::initCollector();
-        ApiRoute::initRoutes();
-        ApiRoute::initDispatcher();
-    }
-
-    /**
      * @param string $key
      * @param mixed|null $default
      * @return mixed

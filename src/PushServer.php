@@ -94,20 +94,26 @@ class PushServer
     {
         // 通道订阅
         ChannelMethods::subscribe();
-        // 心跳检查
-        if ($this->_keepaliveTimeout > 0) {
-            $this->_heartbeatTimer = Timer::add($this->_keepaliveTimeout / 2, function (){
-                foreach (static::$_connections as $appKeyConnections) {
-                    if ($channelConnections = $appKeyConnections[''] ?? []) {
-                        foreach ($channelConnections as $connection){
-                            $count = static::_getConnectionProperty($connection, 'clientNotSendPingCount', 0);
-                            if ($count > 1) {
-                                $connection->destroy();
-                                static::_unsetConnection($connection, static::_getConnectionProperty($connection, 'appKey'), '');
-                                continue;
-                            }
-                            static::_setConnectionProperty($connection, 'clientNotSendPingCount', $count + 1);
+        // 心跳设置
+        if ($this->_heartbeatTimer > 0) {
+            $this->_heartbeatTimer = Timer::add($this->_keepaliveTimeout / 2, function () {
+                /**
+                 * @var string $appKey
+                 * @var array $connections
+                 */
+                foreach (static::$_connections as $appKey => $connections) {
+                    /**
+                     * @var string $socketId
+                     * @var TcpConnection $connection
+                     */
+                    foreach ($connections as $socketId => $connection) {
+                        $count = static::_getConnectionProperty($connection, 'clientNotSendPingCount', 0);
+                        if ($count > 1) {
+                            $connection->destroy();
+                            static::_unsetConnection($appKey, $socketId);
+                            continue;
                         }
+                        static::_setConnectionProperty($connection, 'clientNotSendPingCount', $count + 1);
                     }
                 }
             });
@@ -174,14 +180,13 @@ class PushServer
     {
         if (is_string($data)) {
             static::_setConnectionProperty($connection, 'clientNotSendPingCount', 0);
-            if (!$data = @json_decode($data, true)){
-                return;
-            }
-            // 获取事件
-            if ($factory = AbstractEvent::factory($data['event'] ?? '')){
-                // 事件响应
-                $factory->response($connection, $data);
-                return;
+            if ($data = @json_decode($data, true)){
+                // 获取事件
+                if ($factory = AbstractEvent::factory($data['event'] ?? '')){
+                    // 事件响应
+                    $factory->response($connection, $data);
+                    return;
+                }
             }
             static::error($connection,null, 'Client event rejected - Unknown event');
         }
@@ -242,7 +247,7 @@ class PushServer
      */
     public static function send(TcpConnection $connection, ?string $channel, ?string $event, mixed $data): void
     {
-        $response = HelperMethods::staticFilter([
+        $response = static::staticFilter([
             'channel' => $channel,
             'event'   => $event,
             'data'    => $data
@@ -250,7 +255,7 @@ class PushServer
         // 向连接发送消息
         $connection->send($response ? json_encode($response, JSON_UNESCAPED_UNICODE) : '{}');
         // 向通道发送一个type=server的消息
-        ChannelMethods::publishUseRetry(ChannelMethods::$publishTypeServer, $response);
+        static::publishUseRetry(static::$publishTypeServer, $response);
     }
 
     /**

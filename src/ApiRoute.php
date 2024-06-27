@@ -92,7 +92,9 @@ class ApiRoute implements Bootstrap
     /** @inheritDoc */
     public static function start($worker): void
     {
-        self::initCollector();
+        ApiRoute::initCollector();
+        ApiRoute::initRoutes();
+        ApiRoute::initDispatcher();
     }
 
     /**
