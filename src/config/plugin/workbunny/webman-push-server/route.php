@@ -236,7 +236,8 @@ ApiRoute::addGroup('/apps/{appId}', function () {
         }
         foreach ($socketIds as $socketId){
             PushServer::terminateConnections($appKey, $socketId, [
-                'message' => 'Terminate connection by API'
+                'type'      => 'API',
+                'message'   => 'Terminate connection by API'
             ]);
         }
         return response(200, '{}');

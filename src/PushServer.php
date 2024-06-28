@@ -119,10 +119,11 @@ class PushServer
                          */
                         foreach ($connections as $socketId => $connection) {
                             $count = static::_getConnectionProperty($connection, 'clientNotSendPingCount');
-                            dump($connection, $count);
                             if ($count === null or $count > 1) {
-                                $connection->destroy();
-                                static::_unsetConnection($appKey, $socketId);
+                                static::terminateConnections($appKey, $socketId, [
+                                    'type'      => 'heartbeat',
+                                    'message'   => 'Terminate connection by heartbeat'
+                                ]);
                                 continue;
                             }
                             static::_setConnectionProperty($connection, 'clientNotSendPingCount', $count + 1);
@@ -157,7 +158,7 @@ class PushServer
         // 设置websocket握手事件回调
         static::_setConnectionProperty($connection, 'onWebSocketConnect',
             // ws 连接会调用该回调
-            function(TcpConnection $connection, string $header) use ($appKey, $socketId) {
+            function (TcpConnection $connection, string $header) use ($appKey, $socketId) {
                 $request = new Request($header);
                 if (!preg_match('/\/app\/([^\/^\?^]+)/', $request->path() ?? '', $match)) {
                     static::error($connection, null, 'Invalid app', true);
@@ -228,10 +229,10 @@ class PushServer
                     Unsubscribe::unsubscribeChannel($connection, $channel);
                     // 移除通道
                     static::_unsetChannels($appKey, $channel, $socketId);
-                    // 移除连接
-                    static::_unsetConnection($appKey, $socketId);
                 }
             }
+            // 移除连接
+            static::_unsetConnection($appKey, $socketId);
         }
     }
 
@@ -348,9 +349,10 @@ class PushServer
     public static function send(TcpConnection $connection, ?string $channel, ?string $event, mixed $data): void
     {
         $response = static::staticFilter([
-            'channel' => $channel,
-            'event'   => $event,
-            'data'    => $data
+            'timestamp' => intval(microtime(true) * 1000),
+            'channel'   => $channel,
+            'event'     => $event,
+            'data'      => $data
         ]);
         // 向连接发送消息
         $connection->send($response ? json_encode($response, JSON_UNESCAPED_UNICODE) : '{}');
@@ -492,6 +494,7 @@ class PushServer
      */
     public static function _unsetConnection(string $appKey, string $socketId): void
     {
+        // 移除connections
         unset(static::$_connections[$appKey][$socketId]);
     }
 
@@ -534,9 +537,9 @@ class PushServer
     public static function _unsetChannels(string $appKey, string $channel, ?string $socketId = null): void
     {
         if ($socketId !== null) {
-            unset(static::$_connections[$appKey][$channel][$socketId]);
+            unset(static::$_channels[$appKey][$channel][$socketId]);
             return;
         }
-        unset(static::$_connections[$appKey][$channel]);
+        unset(static::$_channels[$appKey][$channel]);
     }
 }
