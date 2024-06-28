@@ -70,7 +70,7 @@ class PushServer
     /** @var AbstractEvent|null 最近一个事件 */
     protected ?AbstractEvent $_lastEvent = null;
 
-    protected function __construct()
+    public function __construct()
     {
         $this->_keepaliveTimeout = self::getConfig('heartbeat', 60);
     }
