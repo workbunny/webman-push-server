@@ -61,13 +61,16 @@ class PushServer
      */
     protected static array $_channels = [];
 
-    /** @var int 心跳定时器 */
-    protected int $_heartbeatTimer = 0;
+    /** @var int|null 心跳定时器 */
+    protected ?int $_heartbeatTimer = null;
 
     /** @var int 心跳 */
     protected int $_keepaliveTimeout = 60;
 
-    public function __construct()
+    /** @var AbstractEvent|null 最近一个事件 */
+    protected ?AbstractEvent $_lastEvent = null;
+
+    protected function __construct()
     {
         $this->_keepaliveTimeout = self::getConfig('heartbeat', 60);
     }
@@ -98,7 +101,7 @@ class PushServer
         // 通道订阅
         static::subscribe();
         // 心跳设置
-        if ($this->_heartbeatTimer > 0) {
+        if ($this->_keepaliveTimeout > 0 and !$this->_heartbeatTimer) {
             $this->_heartbeatTimer = Timer::add($this->_keepaliveTimeout / 2, function () {
                 /**
                  * @var string $appKey
@@ -184,12 +187,14 @@ class PushServer
     public function onMessage(TcpConnection $connection, $data): void
     {
         if (is_string($data)) {
-            static::_setConnectionProperty($connection, 'clientNotSendPingCount', 0);
-            if ($data = @json_decode($data, true)){
+            if ($data = @json_decode($data, true)) {
                 // 获取事件
-                if ($factory = AbstractEvent::factory($data['event'] ?? '')){
+                $this->setLastEvent(AbstractEvent::factory($data['event'] ?? ''));
+                if ($event = $this->getLastEvent()) {
+                    // 心跳计数归零
+                    static::_setConnectionProperty($connection, 'clientNotSendPingCount', 0);
                     // 事件响应
-                    $factory->response($connection, $data);
+                    $event->response($connection, $data);
                     return;
                 }
             }
@@ -219,6 +224,23 @@ class PushServer
                 }
             }
         }
+    }
+
+    /**
+     * @return AbstractEvent|null
+     */
+    public function getLastEvent(): ?AbstractEvent
+    {
+        return $this->_lastEvent;
+    }
+
+    /**
+     * @param AbstractEvent|null $lastEvent
+     * @return void
+     */
+    public function setLastEvent(?AbstractEvent $lastEvent): void
+    {
+        $this->_lastEvent = $lastEvent;
     }
 
     /**
@@ -282,7 +304,7 @@ class PushServer
     }
 
     /** @inheritDoc */
-    protected static function _subscribeResponse(string $type, array $data): void
+    public static function _subscribeResponse(string $type, array $data): void
     {
         if ($type === ChannelMethods::$publishTypeClient) {
             try {

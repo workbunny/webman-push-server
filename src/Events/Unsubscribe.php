@@ -17,7 +17,6 @@ use RedisException;
 use stdClass;
 use support\Log;
 use Workbunny\WebmanPushServer\PushServer;
-use Workbunny\WebmanPushServer\Traits\StorageMethods;
 use Workerman\Connection\TcpConnection;
 use function Workbunny\WebmanPushServer\uuid;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRESENCE;
@@ -70,11 +69,11 @@ class Unsubscribe extends AbstractEvent
             $channels = PushServer::_getConnectionProperty($connection, 'channels');
 
             if ($type = $channels[$channel] ?? null) {
-                $storage = StorageMethods::getStorageClient();
+                $storage = PushServer::getStorageClient();
                 // presence通道
                 if ($type === CHANNEL_TYPE_PRESENCE) {
-                    if ($users = $storage->keys(StorageMethods::_getUserStorageKey($appKey, $channel, $uid))) {
-                        $userCount = $storage->hIncrBy(StorageMethods::_getChannelStorageKey($appKey, $channel), 'user_count', -count($users));
+                    if ($users = $storage->keys(PushServer::_getUserStorageKey($appKey, $channel, $uid))) {
+                        $userCount = $storage->hIncrBy(PushServer::_getChannelStorageKey($appKey, $channel), 'user_count', -count($users));
                         if ($userCount <= 0) {
                             $storage->del(...$users);
                         }
@@ -96,7 +95,7 @@ class Unsubscribe extends AbstractEvent
                     }
                 }
                 // 查询通道订阅数量
-                $subCount = $storage->hIncrBy($key = StorageMethods::_getChannelStorageKey($appKey, $channel), 'subscription_count', -1);
+                $subCount = $storage->hIncrBy($key = PushServer::_getChannelStorageKey($appKey, $channel), 'subscription_count', -1);
                 if ($subCount <= 0) {
                     $storage->del($key);
                     // 内部事件广播 通道被移除事件

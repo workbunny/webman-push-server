@@ -163,5 +163,5 @@ trait ChannelMethods
      * @param array $data 消息数据
      * @return void
      */
-    abstract protected static function _subscribeResponse(string $type, array $data): void;
+    abstract public static function _subscribeResponse(string $type, array $data): void;
 }

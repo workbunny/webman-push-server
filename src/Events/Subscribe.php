@@ -16,8 +16,6 @@ namespace Workbunny\WebmanPushServer\Events;
 use RedisException;
 use support\Log;
 use Workbunny\WebmanPushServer\PushServer;
-use Workbunny\WebmanPushServer\Traits\ChannelMethods;
-use Workbunny\WebmanPushServer\Traits\StorageMethods;
 use Workerman\Connection\TcpConnection;
 use function Workbunny\WebmanPushServer\uuid;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRESENCE;
@@ -132,14 +130,14 @@ class Subscribe extends AbstractEvent
             // 为当前进程增加订阅的通道
             PushServer::_setChannel($appKey, $channel, $socketId);
 
-            $storage = StorageMethods::getStorageClient();
+            $storage = PushServer::getStorageClient();
             // 通道是否已经被建立
-            $channelExists = $storage->exists($key = StorageMethods::_getChannelStorageKey($appKey, $channel));
+            $channelExists = $storage->exists($key = PushServer::_getChannelStorageKey($appKey, $channel));
             if (!$channelExists) {
                 /** @see PushServer::$_storage */
                 $storage->hSet($key, 'type', $type);
                 // 内部事件广播 通道被创建事件
-                ChannelMethods::publish(ChannelMethods::$publishTypeServer, [
+                PushServer::publish(PushServer::$publishTypeServer, [
                     'appKey'    => $appKey,
                     'channel'   => $channel,
                     'event'     => EVENT_CHANNEL_OCCUPIED,
@@ -163,7 +161,7 @@ class Subscribe extends AbstractEvent
             }
             // 如果是presence通道
             if ($isPresence = ($type === CHANNEL_TYPE_PRESENCE)) {
-                if (!$storage->exists($userKey = StorageMethods::_getUserStorageKey($appKey, $channel, $userId))) {
+                if (!$storage->exists($userKey = PushServer::_getUserStorageKey($appKey, $channel, $userId))) {
                     $storage->hIncrBy($key ,'user_count', 1);
                     $storage->hMSet($userKey, [
                         'user_id'   => $userId,
@@ -176,7 +174,7 @@ class Subscribe extends AbstractEvent
                      *
                      * {"event":"pusher_internal:member_added","data":{"user_id":1488465780,"user_info":"{\"name\":\"123\",\"sex:\"1\"}","channel ":"presence-channel"}}
                      */
-                    ChannelMethods::publishUseRetry(PushServer::$publishTypeClient, [
+                    PushServer::publishUseRetry(PushServer::$publishTypeClient, [
                         'appKey'   => $appKey,
                         'channel'  => $channel,
                         'event'    => EVENT_MEMBER_ADDED,
@@ -201,7 +199,7 @@ class Subscribe extends AbstractEvent
                 $channel,
                 EVENT_SUBSCRIPTION_SUCCEEDED,
                 $isPresence ?
-                    StorageMethods::_getPresenceChannelDataForSubscribe($appKey, $channel) :
+                    PushServer::_getPresenceChannelDataForSubscribe($appKey, $channel) :
                     '{}'
             );
         } catch (RedisException $exception){
