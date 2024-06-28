@@ -21,6 +21,7 @@ use Workbunny\WebmanPushServer\PushServer;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRESENCE;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRIVATE;
 use function Workbunny\WebmanPushServer\response;
+use const Workbunny\WebmanPushServer\EVENT_TERMINATE_CONNECTION;
 
 /**
  * @url GET /index
@@ -123,7 +124,10 @@ ApiRoute::addGroup('/apps/{appId}', function () {
             }
             return response(200, ['channels' => $channels]);
         } catch (\Throwable $exception) {
-            Log::channel('plugin.workbunny.webman-push-server.warning')->warning("[API-SERVER] {$exception->getMessage()}");
+            Log::channel('plugin.workbunny.webman-push-server.warning')
+                ->warning("[API-SERVER] {$exception->getMessage()}", [
+                    'method' => __METHOD__
+                ]);
             return response(500, 'Server Error [Channels]');
         }
     });
@@ -151,7 +155,10 @@ ApiRoute::addGroup('/apps/{appId}', function () {
                 'occupied' => true,
             ], $channels) : '{}');
         } catch (RedisException $exception){
-            Log::channel('plugin.workbunny.webman-push-server.warning')->warning("[API-SERVER] {$exception->getMessage()}");
+            Log::channel('plugin.workbunny.webman-push-server.warning')
+                ->warning("[API-SERVER] {$exception->getMessage()}", [
+                    'method' => __METHOD__
+                ]);
             return response(500,'Server Error [channel]');
         }
     });
@@ -235,9 +242,14 @@ ApiRoute::addGroup('/apps/{appId}', function () {
             $socketIds[] = $storage->hGet($userKey, 'socket_id');
         }
         foreach ($socketIds as $socketId){
-            PushServer::terminateConnections($appKey, $socketId, [
-                'type'      => 'API',
-                'message'   => 'Terminate connection by API'
+            PushServer::publish(PushServer::$publishTypeServer, [
+                'appKey'    => $appKey,
+                'socket_id' => $socketId,
+                'event'     => EVENT_TERMINATE_CONNECTION,
+                'data'      => [
+                    'type'      => 'API',
+                    'message'   => 'Terminate connection by API'
+                ]
             ]);
         }
         return response(200, '{}');
@@ -267,7 +279,10 @@ ApiRoute::addGroup('/apps/{appId}', function () {
             }
             return response(200, ['users' => $userIdArray]);
         } catch (\Throwable $throwable){
-            Log::channel('plugin.workbunny.webman-push-server.warning')->warning("[API-SERVER] {$throwable->getMessage()}");
+            Log::channel('plugin.workbunny.webman-push-server.warning')
+                ->warning("[API-SERVER] {$throwable->getMessage()}", [
+                    'method' => __METHOD__
+                ]);
             return response(500,'Server Error [users]');
         }
     });

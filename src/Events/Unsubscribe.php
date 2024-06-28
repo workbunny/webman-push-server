@@ -128,7 +128,10 @@ class Unsubscribe extends AbstractEvent
             }
 
         } catch (RedisException $exception) {
-            Log::channel('plugin.workbunny.webman-push-server.error')->error("[PUSH-SERVER] {$exception->getMessage()}");
+            Log::channel('plugin.workbunny.webman-push-server.error')
+                ->error("[PUSH-SERVER] {$exception->getMessage()}", [
+                    'method' => __METHOD__
+                ]);
         }
     }
 }

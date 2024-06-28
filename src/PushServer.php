@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Workbunny\WebmanPushServer;
 
+use support\Log;
 use Workbunny\WebmanPushServer\Events\AbstractEvent;
 use Workbunny\WebmanPushServer\Events\Unsubscribe;
 use Workbunny\WebmanPushServer\Traits\ChannelMethods;
@@ -381,8 +382,9 @@ class PushServer
     /** @inheritDoc */
     public static function _subscribeResponse(string $type, array $data): void
     {
-        if ($type === ChannelMethods::$publishTypeClient) {
-            try {
+        try {
+            // 客户端事件
+            if ($type === static::$publishTypeClient) {
                 static::staticVerify($data, [
                     ['appKey', 'is_string', true],
                     ['channel', 'is_string', true],
@@ -407,7 +409,28 @@ class PushServer
                         }
                     }
                 }
-            } catch (\InvalidArgumentException) {}
+            }
+            // 服务事件
+            if ($type === static::$publishTypeServer) {
+                static::staticVerify($data, [
+                    ['appKey', 'is_string', true],
+                    ['event', 'is_string', true],
+                    ['socketId', 'is_string', false],
+                ]);
+                // 断开连接事件
+                if (
+                    ($socketId = $data['socketId'] ?? null) and
+                    $data['event'] === EVENT_TERMINATE_CONNECTION
+                ) {
+                    static::terminateConnections($data['appKey'], $socketId, $data['data'] ?? []);
+                }
+            }
+        } catch (\InvalidArgumentException $exception) {
+            Log::channel('plugin.workbunny.webman-push-server.warning')
+                ->warning("[PUSH-SERVER] {$exception->getMessage()}", [
+                    'args' => func_get_args(),
+                    'method' => __METHOD__
+                ]);
         }
     }
 
