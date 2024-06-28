@@ -13,7 +13,6 @@ declare(strict_types=1);
 
 namespace Workbunny\WebmanPushServer;
 
-use Exception;
 use Workbunny\WebmanPushServer\Events\AbstractEvent;
 use Workbunny\WebmanPushServer\Events\Unsubscribe;
 use Workbunny\WebmanPushServer\Traits\ChannelMethods;
@@ -22,7 +21,6 @@ use Workbunny\WebmanPushServer\Traits\StorageMethods;
 use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
 use Workerman\Timer;
-use Workerman\Worker;
 
 class PushServer
 {
@@ -70,14 +68,14 @@ class PushServer
     protected ?int $_heartbeatTimer = null;
 
     /** @var int 心跳 */
-    protected int $_keepaliveTimeout = 60;
+    protected int $_keepaliveTimeout;
 
     /** @var AbstractEvent|null 最近一个事件 */
     protected ?AbstractEvent $_lastEvent = null;
 
     public function __construct()
     {
-        $this->_keepaliveTimeout = self::getConfig('heartbeat', 60);
+        $this->_keepaliveTimeout = (int)self::getConfig('heartbeat', 60);
     }
 
     /**
@@ -106,9 +104,9 @@ class PushServer
         // 通道订阅
         static::subscribe();
         // 心跳设置
-        if ($this->_keepaliveTimeout > 0 and !$this->_heartbeatTimer) {
-            $this->_heartbeatTimer = Timer::add(
-                round($this->_keepaliveTimeout / 2, 2),
+        if ($this->getKeepaliveTimeout() > 0 and !$this->getHeartbeatTimer()) {
+            $this->setHeartbeatTimer(Timer::add(
+                round($this->getKeepaliveTimeout() / 2, 2),
                 function () {
                     /**
                      * @var string $appKey
@@ -121,6 +119,7 @@ class PushServer
                          */
                         foreach ($connections as $socketId => $connection) {
                             $count = static::_getConnectionProperty($connection, 'clientNotSendPingCount');
+                            dump($connection, $count);
                             if ($count === null or $count > 1) {
                                 $connection->destroy();
                                 static::_unsetConnection($appKey, $socketId);
@@ -129,7 +128,8 @@ class PushServer
                             static::_setConnectionProperty($connection, 'clientNotSendPingCount', $count + 1);
                         }
                     }
-                });
+                })
+            );
         }
     }
 
@@ -137,9 +137,9 @@ class PushServer
      * @return void
      */
     public function onWorkerStop(): void{
-        if ($this->_heartbeatTimer){
-            Timer::del($this->_heartbeatTimer);
-            $this->_heartbeatTimer = 0;
+        if ($this->getHeartbeatTimer()){
+            Timer::del($this->getHeartbeatTimer());
+            $this->setHeartbeatTimer(null);
         }
         static::close();
     }
@@ -250,6 +250,57 @@ class PushServer
     public function setLastEvent(?AbstractEvent $lastEvent): void
     {
         $this->_lastEvent = $lastEvent;
+    }
+
+    /**
+     * @return int|null
+     */
+    public function getHeartbeatTimer(): ?int
+    {
+        return $this->_heartbeatTimer;
+    }
+
+    /**
+     * @param int|null $heartbeatTimer
+     * @return void
+     */
+    public function setHeartbeatTimer(?int $heartbeatTimer): void
+    {
+        $this->_heartbeatTimer = $heartbeatTimer;
+    }
+
+    /**
+     * @return int
+     */
+    public function getKeepaliveTimeout(): int
+    {
+        return $this->_keepaliveTimeout;
+    }
+
+    /**
+     * @param int $keepaliveTimeout
+     * @return void
+     */
+    public function setKeepaliveTimeout(int $keepaliveTimeout): void
+    {
+        $this->_keepaliveTimeout = $keepaliveTimeout;
+    }
+
+    /**
+     * @return \Workerman\Connection\TcpConnection[][]
+     */
+    public static function getConnections(): array
+    {
+        return self::$_connections;
+    }
+
+    /**
+     * @param array $connections
+     * @return void
+     */
+    public static function setConnections(array $connections): void
+    {
+        self::$_connections = $connections;
     }
 
     /**

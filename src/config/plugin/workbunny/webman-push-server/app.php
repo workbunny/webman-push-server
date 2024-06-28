@@ -13,8 +13,6 @@ declare(strict_types=1);
 
 return [
     'enable'      => true,
-    // 心跳检查， 0为不检查
-    'heartbeat'   => 60,
     // 验证app_key
     'app_verify' => function (string $appKey): array
     {
