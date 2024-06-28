@@ -79,7 +79,9 @@ composer require workbunny/webman-push-server
             |-- app.php        # 主配置信息
             |-- bootstrap.php  # 自动加载
             |-- command.php    # 支持命令
+            |-- log.php        # 日志配置
             |-- process.php    # 启动进程
+            |-- redis.php      # redis配置
             |-- route.php      # APIs路由信息
 ```
 

@@ -27,15 +27,28 @@ class PushServerBaseTest extends BaseTestCase
     {
         $connection = new MockTcpConnection();
         $this->assertFalse(property_exists($connection, 'onWebSocketConnect'));
-        // 模拟onConnect
-        $this->getPushServer()->onConnect($connection);
-        $this->assertTrue(property_exists($connection, 'onWebSocketConnect'));
-
         $this->assertFalse(property_exists($connection, 'appKey'));
         $this->assertFalse(property_exists($connection, 'clientNotSendPingCount'));
         $this->assertFalse(property_exists($connection, 'queryString'));
         $this->assertFalse(property_exists($connection, 'socketId'));
         $this->assertFalse(property_exists($connection, 'channels'));
+        // 模拟onConnect
+        $this->getPushServer()->onConnect($connection);
+        $this->assertEquals(
+            PushServer::$unknownTag,
+            PushServer::_getConnectionProperty($connection, 'appKey', 'has-not')
+        );
+        $this->assertEquals(
+            0,
+            PushServer::_getConnectionProperty($connection, 'clientNotSendPingCount', 'has-not')
+        );
+        $this->assertNotEquals(
+            'has-not',
+            PushServer::_getConnectionProperty($connection, 'socketId', 'has-not')
+        );
+        $this->assertFalse(property_exists($connection, 'queryString'));
+        $this->assertFalse(property_exists($connection, 'channels'));
+        $this->assertTrue(property_exists($connection, 'onWebSocketConnect'));
         // 模拟调用$connection->onWebSocketConnect
         ($connection->onWebSocketConnect)($connection, $this->getWebsocketHeader());
         $this->assertEquals(
