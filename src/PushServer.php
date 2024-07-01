@@ -143,7 +143,7 @@ class PushServer
             Timer::del($this->getHeartbeatTimer());
             $this->setHeartbeatTimer(null);
         }
-        static::close();
+        static::channelClose();
     }
 
     /**

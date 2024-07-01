@@ -90,4 +90,20 @@ trait HelperMethods
             }
         }
     }
+
+    /**
+     * 通配符校验
+     *
+     * @param string $rule 带有通配符的规则字符串
+     * @param string $input 待校验字符串
+     * @return bool
+     */
+    public static function wildcard(string $rule, string $input): bool
+    {
+        $regex = '/^' . str_replace('?', '.',
+                str_replace('*', '.+', $rule)
+            ) . '$/';
+        preg_match($regex, $input, $match);
+        return !empty($match);
+    }
 }

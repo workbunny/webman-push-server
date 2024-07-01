@@ -59,7 +59,7 @@ class ClientEvent extends AbstractEvent
         }
         try {
             // 广播 客户端消息
-            ChannelMethods::publish(ChannelMethods::$publishTypeClient, [
+            PushServer::publish(PushServer::$publishTypeClient, [
                 'appKey'    => PushServer::_getConnectionProperty($connection,'appKey'),
                 'channel'   => $channel,
                 'event'     => $this->getEvent(),
