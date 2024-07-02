@@ -137,7 +137,7 @@ class Subscribe extends AbstractEvent
                 /** @see PushServer::$_storage */
                 $storage->hSet($key, 'type', $type);
                 // 内部事件广播 通道被创建事件
-                PushServer::publish(PushServer::$publishTypeServer, [
+                PushServer::publishUseRetry(PushServer::$publishTypeServer, [
                     'appKey'    => $appKey,
                     'channel'   => $channel,
                     'event'     => EVENT_CHANNEL_OCCUPIED,

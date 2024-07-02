@@ -184,7 +184,7 @@ ApiRoute::addGroup('/apps/{appId}', function () {
         }
         $channels = ($channel !== null) ? [(string)$channel] : $channels;
         foreach ($channels as $channel) {
-            PushServer::publish(PushServer::$publishTypeClient, PushServer::filter([
+            PushServer::publishUseRetry(PushServer::$publishTypeClient, PushServer::filter([
                 'appKey'    => $appKey,
                 'channel'   => $channel,
                 'event'     => $event,
@@ -214,7 +214,7 @@ ApiRoute::addGroup('/apps/{appId}', function () {
             $event = $package['name'];
             $data = $package['data'];
             $socketId = $package['socket_id'] ?? null;
-            PushServer::publish(PushServer::$publishTypeClient, PushServer::filter([
+            PushServer::publishUseRetry(PushServer::$publishTypeClient, PushServer::filter([
                 'appKey'    => $appKey,
                 'channel'   => $channel,
                 'event'     => $event,
@@ -242,7 +242,7 @@ ApiRoute::addGroup('/apps/{appId}', function () {
             $socketIds[] = $storage->hGet($userKey, 'socket_id');
         }
         foreach ($socketIds as $socketId){
-            PushServer::publish(PushServer::$publishTypeServer, [
+            PushServer::publishUseRetry(PushServer::$publishTypeServer, [
                 'appKey'    => $appKey,
                 'socket_id' => $socketId,
                 'event'     => EVENT_TERMINATE_CONNECTION,

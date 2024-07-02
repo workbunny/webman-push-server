@@ -117,17 +117,23 @@ trait ChannelMethods
     public static function publishUseRetry(string $type, array $data, float $retryInterval = 0.5, string $redisChannel = 'server-channel'): int|bool
     {
         try {
-            if (($res = static::publish($type, $data, $redisChannel)) === false) {
-                return $timerId = Timer::add($retryInterval, function () use (
-                    &$timerId, $redisChannel, $type, $data
-                ) {
-                    if (static::publish($type, $data, $redisChannel) !== false) {
-                        Timer::del($timerId);
-                    }
-                });
-            }
-        } catch (\Throwable) {
+            $res = static::publish($type, $data, $redisChannel);
+        } catch (RedisException $exception) {
+            Log::channel('plugin.workbunny.webman-push-server.error')
+                ->error("[CHANNEL-PUBLISH-RETRY] {$exception->getMessage()}", [
+                    'args'   => func_get_args(),
+                    'method' => __METHOD__,
+                ]);
             $res = false;
+        }
+        if ($res === false) {
+            return $timerId = Timer::add($retryInterval, function () use (
+                &$timerId, $redisChannel, $type, $data
+            ) {
+                if (static::publish($type, $data, $redisChannel) !== false) {
+                    Timer::del($timerId);
+                }
+            });
         }
         return $res;
     }

@@ -57,20 +57,13 @@ class ClientEvent extends AbstractEvent
             PushServer::error($connection, null, 'Client event rejected - only supported on private and presence channels');
             return;
         }
-        try {
-            // 广播 客户端消息
-            PushServer::publish(PushServer::$publishTypeClient, [
-                'appKey'    => PushServer::getConnectionProperty($connection,'appKey'),
-                'channel'   => $channel,
-                'event'     => $this->getEvent(),
-                'data'      => $data,
-                'socketId'  => PushServer::getConnectionProperty($connection,'socketId')
-            ]);
-        } catch (RedisException $exception) {
-            Log::channel('plugin.workbunny.webman-push-server.error')
-                ->error("[PUSH-SERVER] {$exception->getMessage()}", [
-                    'method' => __METHOD__
-                ]);
-        }
+        // 广播 客户端消息
+        PushServer::publishUseRetry(PushServer::$publishTypeClient, [
+            'appKey'    => PushServer::getConnectionProperty($connection,'appKey'),
+            'channel'   => $channel,
+            'event'     => $this->getEvent(),
+            'data'      => $data,
+            'socketId'  => PushServer::getConnectionProperty($connection,'socketId')
+        ]);
     }
 }
