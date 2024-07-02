@@ -50,14 +50,14 @@ class Subscribe extends AbstractEvent
         $channelData = $request['data']['channel_data'] ?? [];
         $clientAuth = $request['data']['auth'] ?? '';
         $auth = self::auth(
-            $appKey = PushServer::_getConnectionProperty($connection, 'appKey'),
+            $appKey = PushServer::getConnectionProperty($connection, 'appKey'),
             PushServer::getConfig('apps_query')($appKey)['app_secret'],
-            PushServer::_getConnectionProperty($connection, 'socketId'),
+            PushServer::getConnectionProperty($connection, 'socketId'),
             $channel,
             $channelData
         );
         // private- 和 presence- 开头的channel需要验证
-        switch ($channelType = PushServer::_getChannelType($channel)){
+        switch ($channelType = PushServer::getChannelType($channel)){
             case CHANNEL_TYPE_PRESENCE:
                 if (!$channelData) {
                     PushServer::error($connection, null, 'Empty channel_data');
@@ -122,17 +122,17 @@ class Subscribe extends AbstractEvent
     public static function subscribeChannel(TcpConnection $connection, string $channel, string $type, string ...$params): void
     {
         try {
-            $appKey = PushServer::_getConnectionProperty($connection, 'appKey');
-            $socketId = PushServer::_getConnectionProperty($connection, 'socketId');
-            $channels = PushServer::_getConnectionProperty($connection, 'channels');
+            $appKey = PushServer::getConnectionProperty($connection, 'appKey');
+            $socketId = PushServer::getConnectionProperty($connection, 'socketId');
+            $channels = PushServer::getConnectionProperty($connection, 'channels');
             $userId = $params[0] ?? 'unknown';
             $userInfo = $params[1] ?? '{}';
             // 为当前进程增加订阅的通道
-            PushServer::_setChannel($appKey, $channel, $socketId);
+            PushServer::setChannel($appKey, $channel, $socketId);
 
             $storage = PushServer::getStorageClient();
             // 通道是否已经被建立
-            $channelExists = $storage->exists($key = PushServer::_getChannelStorageKey($appKey, $channel));
+            $channelExists = $storage->exists($key = PushServer::getChannelStorageKey($appKey, $channel));
             if (!$channelExists) {
                 /** @see PushServer::$_storage */
                 $storage->hSet($key, 'type', $type);
@@ -153,15 +153,15 @@ class Subscribe extends AbstractEvent
             $type = $channels[$channel] ?? null;
             if (!$type) {
                 $channels[$channel] = $type;
-                PushServer::_setConnectionProperty($connection, 'channels', $channels);
-                PushServer::_setConnection($appKey, $socketId, $socketId);
+                PushServer::setConnectionProperty($connection, 'channels', $channels);
+                PushServer::setConnection($appKey, $socketId, $socketId);
                 // 递增订阅数
                 /** @see PushServer::$_storage */
                 $storage->hIncrBy($key,'subscription_count', 1);
             }
             // 如果是presence通道
             if ($isPresence = ($type === CHANNEL_TYPE_PRESENCE)) {
-                if (!$storage->exists($userKey = PushServer::_getUserStorageKey($appKey, $channel, $userId))) {
+                if (!$storage->exists($userKey = PushServer::getUserStorageKey($appKey, $channel, $userId))) {
                     $storage->hIncrBy($key ,'user_count', 1);
                     $storage->hMSet($userKey, [
                         'user_id'   => $userId,
@@ -199,7 +199,7 @@ class Subscribe extends AbstractEvent
                 $channel,
                 EVENT_SUBSCRIPTION_SUCCEEDED,
                 $isPresence ?
-                    PushServer::_getPresenceChannelDataForSubscribe($appKey, $channel) :
+                    PushServer::getPresenceChannelDataForSubscribe($appKey, $channel) :
                     '{}'
             );
         } catch (RedisException $exception){

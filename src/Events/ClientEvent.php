@@ -47,12 +47,12 @@ class ClientEvent extends AbstractEvent
             return;
         }
         // 当前链接没有订阅这个channel
-        if (!isset(PushServer::_getConnectionProperty($connection, 'channels')[$channel])) {
+        if (!isset(PushServer::getConnectionProperty($connection, 'channels')[$channel])) {
             PushServer::error($connection, null, 'Client event rejected - you didn\'t subscribe this channel');
             return;
         }
         // 客户端触发事件必须是private 或者 presence的channel
-        $channelType = PushServer::_getChannelType($channel);
+        $channelType = PushServer::getChannelType($channel);
         if ($channelType !== CHANNEL_TYPE_PRIVATE and $channelType !== CHANNEL_TYPE_PRESENCE) {
             PushServer::error($connection, null, 'Client event rejected - only supported on private and presence channels');
             return;
@@ -60,11 +60,11 @@ class ClientEvent extends AbstractEvent
         try {
             // 广播 客户端消息
             PushServer::publish(PushServer::$publishTypeClient, [
-                'appKey'    => PushServer::_getConnectionProperty($connection,'appKey'),
+                'appKey'    => PushServer::getConnectionProperty($connection,'appKey'),
                 'channel'   => $channel,
                 'event'     => $this->getEvent(),
                 'data'      => $data,
-                'socketId'  => PushServer::_getConnectionProperty($connection,'socketId')
+                'socketId'  => PushServer::getConnectionProperty($connection,'socketId')
             ]);
         } catch (RedisException $exception) {
             Log::channel('plugin.workbunny.webman-push-server.error')

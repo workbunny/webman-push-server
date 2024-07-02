@@ -36,15 +36,15 @@ class PushServerBaseTest extends BaseTestCase
         $this->getPushServer()->onConnect($connection);
         $this->assertEquals(
             PushServer::$unknownTag,
-            PushServer::_getConnectionProperty($connection, 'appKey', 'has-not')
+            PushServer::getConnectionProperty($connection, 'appKey', 'has-not')
         );
         $this->assertEquals(
             0,
-            PushServer::_getConnectionProperty($connection, 'clientNotSendPingCount', 'has-not')
+            PushServer::getConnectionProperty($connection, 'clientNotSendPingCount', 'has-not')
         );
         $this->assertNotEquals(
             'has-not',
-            PushServer::_getConnectionProperty($connection, 'socketId', 'has-not')
+            PushServer::getConnectionProperty($connection, 'socketId', 'has-not')
         );
         $this->assertFalse(property_exists($connection, 'queryString'));
         $this->assertFalse(property_exists($connection, 'channels'));
@@ -53,23 +53,23 @@ class PushServerBaseTest extends BaseTestCase
         ($connection->onWebSocketConnect)($connection, $this->getWebsocketHeader());
         $this->assertEquals(
             'workbunny',
-            PushServer::_getConnectionProperty($connection, 'appKey', 'has-not')
+            PushServer::getConnectionProperty($connection, 'appKey', 'has-not')
         );
         $this->assertEquals(
             0,
-            PushServer::_getConnectionProperty($connection, 'clientNotSendPingCount', 'has-not')
+            PushServer::getConnectionProperty($connection, 'clientNotSendPingCount', 'has-not')
         );
         $this->assertEquals(
             'protocol=7&client=js&version=3.2.4&flash=false',
-            PushServer::_getConnectionProperty($connection, 'queryString', 'has-not')
+            PushServer::getConnectionProperty($connection, 'queryString', 'has-not')
         );
         $this->assertNotEquals(
             'has-not',
-            PushServer::_getConnectionProperty($connection, 'socketId', 'has-not')
+            PushServer::getConnectionProperty($connection, 'socketId', 'has-not')
         );
         $this->assertEquals(
             [],
-            PushServer::_getConnectionProperty($connection, 'channels', 'has-not')
+            PushServer::getConnectionProperty($connection, 'channels', 'has-not')
         );
     }
 

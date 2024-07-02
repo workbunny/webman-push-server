@@ -56,7 +56,7 @@ trait StorageMethods
      * @param string|null $channel
      * @return string
      */
-    public static function _getChannelStorageKey(string $appKey, ?string $channel = null): string
+    public static function getChannelStorageKey(string $appKey, ?string $channel = null): string
     {
         $channel = $channel !== null ? $channel : '*';
         return "workbunny:webman-push-server:appKey_$appKey:channel_$channel:info";
@@ -68,7 +68,7 @@ trait StorageMethods
      * @param string $channelStorageKey
      * @return string
      */
-    public static function _getChannelName(string $channelStorageKey): string
+    public static function getChannelName(string $channelStorageKey): string
     {
         $channelKey = explode(':', $channelStorageKey, 5)[3];
         return explode('_', $channelKey, 2)[1];
@@ -82,7 +82,7 @@ trait StorageMethods
      * @param string|null $uid
      * @return string
      */
-    public static function _getUserStorageKey(string $appKey, ?string $channel = null, ?string $uid = null): string
+    public static function getUserStorageKey(string $appKey, ?string $channel = null, ?string $uid = null): string
     {
         $channel = $channel !== null ? $channel : '*';
         $uid = $uid !== null ? $uid : '*';
@@ -95,7 +95,7 @@ trait StorageMethods
      * @param string $userStorageKey
      * @return string
      */
-    public static function _getUserId(string $userStorageKey): string
+    public static function getUserId(string $userStorageKey): string
     {
         $userIdKey = explode(':', $userStorageKey, 5)[4];
         return explode('_', $userIdKey, 2)[1];
@@ -107,12 +107,12 @@ trait StorageMethods
      * @return array[]
      * @throws RedisException
      */
-    public static function _getPresenceChannelDataForSubscribe(string $appKey, string $channel): array
+    public static function getPresenceChannelDataForSubscribe(string $appKey, string $channel): array
     {
         $hash = [];
         $storage = self::getStorageClient();
         while(
-            false !== ($keys = $storage->scan($iterator, self::_getUserStorageKey($appKey, $channel),100))
+            false !== ($keys = $storage->scan($iterator, self::getUserStorageKey($appKey, $channel),100))
         ) {
             foreach($keys as $key) {
                 $result = $storage->hGetAll($key);

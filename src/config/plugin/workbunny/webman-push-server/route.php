@@ -47,8 +47,8 @@ ApiRoute::post('/subscribe/auth', function (Request $request) {
         return response(400, ['error' => 'Required channel_name']);
     }
     if(
-        PushServer::_getChannelType($channelName) !== CHANNEL_TYPE_PRESENCE and
-        PushServer::_getChannelType($channelName) !== CHANNEL_TYPE_PRIVATE
+        PushServer::getChannelType($channelName) !== CHANNEL_TYPE_PRESENCE and
+        PushServer::getChannelType($channelName) !== CHANNEL_TYPE_PRIVATE
     ){
         return response(400, ['error' => 'Invalid channel_name']);
     }
@@ -79,7 +79,7 @@ ApiRoute::post('/subscribe/auth', function (Request $request) {
         'U2FsdGVkX1+vlfFH8Q9XdZ9t9h2bABGYAZltEYAX6UM=', // TODO 动态配置
         $socketId,
         $channelName,
-        PushServer::_getChannelType($channelName) === CHANNEL_TYPE_PRESENCE ? $response['channel_data'] : []
+        PushServer::getChannelType($channelName) === CHANNEL_TYPE_PRESENCE ? $response['channel_data'] : []
     );
     /**
      * @private {"auth": "workbunny:xxxxxxxxxxxxxxxx"}
@@ -112,10 +112,10 @@ ApiRoute::addGroup('/apps/{appId}', function () {
         }
         try {
             $storage = PushServer::getStorageClient();
-            $keys = $storage->keys(PushServer::_getChannelStorageKey($appKey));
+            $keys = $storage->keys(PushServer::getChannelStorageKey($appKey));
             foreach ($keys as $key) {
-                $channel = PushServer::_getChannelName($key);
-                $channelType = PushServer::_getChannelType($channel);
+                $channel = PushServer::getChannelName($key);
+                $channelType = PushServer::getChannelType($channel);
                 if($prefix !== null and $channelType !== $prefix){
                     continue;
 
@@ -150,7 +150,7 @@ ApiRoute::addGroup('/apps/{appId}', function () {
         }
         try {
             $storage = PushServer::getStorageClient();
-            $channels = $storage->hMGet(PushServer::_getChannelStorageKey($appKey,$channelName), $fields);
+            $channels = $storage->hMGet(PushServer::getChannelStorageKey($appKey,$channelName), $fields);
             return response(200, $channels ? array_merge([
                 'occupied' => true,
             ], $channels) : '{}');
@@ -184,7 +184,7 @@ ApiRoute::addGroup('/apps/{appId}', function () {
         }
         $channels = ($channel !== null) ? [(string)$channel] : $channels;
         foreach ($channels as $channel) {
-            PushServer::publish(PushServer::$publishTypeClient, PushServer::staticFilter([
+            PushServer::publish(PushServer::$publishTypeClient, PushServer::filter([
                 'appKey'    => $appKey,
                 'channel'   => $channel,
                 'event'     => $event,
@@ -214,7 +214,7 @@ ApiRoute::addGroup('/apps/{appId}', function () {
             $event = $package['name'];
             $data = $package['data'];
             $socketId = $package['socket_id'] ?? null;
-            PushServer::publish(PushServer::$publishTypeClient, PushServer::staticFilter([
+            PushServer::publish(PushServer::$publishTypeClient, PushServer::filter([
                 'appKey'    => $appKey,
                 'channel'   => $channel,
                 'event'     => $event,
@@ -237,7 +237,7 @@ ApiRoute::addGroup('/apps/{appId}', function () {
         $userId = $urlParams['userId'];
         $socketIds = [];
         $storage = PushServer::getStorageClient();
-        $userKeys = $storage->keys(PushServer::_getUserStorageKey($appKey, null, $userId));
+        $userKeys = $storage->keys(PushServer::getUserStorageKey($appKey, null, $userId));
         foreach ($userKeys as $userKey){
             $socketIds[] = $storage->hGet($userKey, 'socket_id');
         }
@@ -266,14 +266,14 @@ ApiRoute::addGroup('/apps/{appId}', function () {
         $userIdArray = [];
         try {
             $storage = PushServer::getStorageClient();
-            $channelType = $storage->hGet(PushServer::_getChannelStorageKey($appKey, $channelName), 'type');
+            $channelType = $storage->hGet(PushServer::getChannelStorageKey($appKey, $channelName), 'type');
             if(!$channelType){
                 return response(404, ['error' => "Not Found [$channelName]"]);
             }
             if($channelType !== CHANNEL_TYPE_PRESENCE) {
                 return response(400, ['error' => "Invalid channel [$channelName]"]);
             }
-            $userKeys = $storage->keys(PushServer::_getUserStorageKey($appKey, $channelName));
+            $userKeys = $storage->keys(PushServer::getUserStorageKey($appKey, $channelName));
             foreach ($userKeys as $userKey) {
                 $userIdArray[] = $storage->hGet($userKey,'user_id');
             }

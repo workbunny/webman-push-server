@@ -44,8 +44,8 @@ class PushServer
      *
      * @var TcpConnection[][] = [
      *  'appKey_1' => [
-     *      'socketId_1' => TcpConnection_1, @see self::_getConnectionProperty()
-     *      'socketId_2' => TcpConnection_2, @see self::_getConnectionProperty()
+     *      'socketId_1' => TcpConnection_1, @see self::getConnectionProperty()
+     *      'socketId_2' => TcpConnection_2, @see self::getConnectionProperty()
      *  ],
      * ]
      */
@@ -131,11 +131,11 @@ class PushServer
     public function onConnect(TcpConnection $connection): void
     {
         // 为TcpConnection object设置属性
-        static::_setConnectionProperty($connection, 'appKey', $appKey = static::$unknownTag);
-        static::_setConnectionProperty($connection, 'clientNotSendPingCount', 0);
-        static::_setConnectionProperty($connection, 'socketId', $socketId = static::_createSocketId());
+        static::setConnectionProperty($connection, 'appKey', $appKey = static::$unknownTag);
+        static::setConnectionProperty($connection, 'clientNotSendPingCount', 0);
+        static::setConnectionProperty($connection, 'socketId', $socketId = static::createSocketId());
         // 设置websocket握手事件回调
-        static::_setConnectionProperty($connection, 'onWebSocketConnect',
+        static::setConnectionProperty($connection, 'onWebSocketConnect',
             // ws 连接会调用该回调
             function (TcpConnection $connection, string $header) use ($appKey, $socketId) {
                 $request = new Request($header);
@@ -152,9 +152,9 @@ class PushServer
                     }
                 }
                 // 设置push client connection属性
-                static::_setConnectionProperty($connection, 'appKey', $appKey);
-                static::_setConnectionProperty($connection, 'queryString', $request->queryString() ?? '');
-                static::_setConnectionProperty($connection, 'channels', []);
+                static::setConnectionProperty($connection, 'appKey', $appKey);
+                static::setConnectionProperty($connection, 'queryString', $request->queryString() ?? '');
+                static::setConnectionProperty($connection, 'channels', []);
                 /**
                  * 向客户端发送链接成功的消息
                  * {"event":"pusher:connection_established","data":"{"socket_id":"208836.27464492","activity_timeout":120}"}
@@ -165,7 +165,7 @@ class PushServer
                 ]);
             });
         // 设置连接
-        static::_setConnection($appKey, $socketId, $connection);
+        static::setConnection($appKey, $socketId, $connection);
     }
 
     /**
@@ -181,7 +181,7 @@ class PushServer
                 $this->setLastEvent(AbstractEvent::factory($data['event'] ?? ''));
                 if ($event = $this->getLastEvent()) {
                     // 心跳计数归零
-                    static::_setConnectionProperty($connection, 'clientNotSendPingCount', 0);
+                    static::setConnectionProperty($connection, 'clientNotSendPingCount', 0);
                     // 事件响应
                     $event->response($connection, $data);
                     return;
@@ -198,20 +198,20 @@ class PushServer
     public function onClose(TcpConnection $connection): void
     {
         if (
-            $socketId = static::_getConnectionProperty($connection, 'socketId') and
-            $appKey = static::_getConnectionProperty($connection, 'appKey')
+            $socketId = static::getConnectionProperty($connection, 'socketId') and
+            $appKey = static::getConnectionProperty($connection, 'appKey')
         ) {
             // 退订频道
-            if ($channels = static::_getConnectionProperty($connection, 'channels', [])) {
+            if ($channels = static::getConnectionProperty($connection, 'channels', [])) {
                 foreach ($channels as $channel => $type) {
                     // 退订事件
                     Unsubscribe::unsubscribeChannel($connection, $channel);
                     // 移除通道
-                    static::_unsetChannels($appKey, $channel, $socketId);
+                    static::unsetChannels($appKey, $channel, $socketId);
                 }
             }
             // 移除连接
-            static::_unsetConnection($appKey, $socketId);
+            static::unsetConnection($appKey, $socketId);
         }
     }
 
@@ -267,23 +267,6 @@ class PushServer
     }
 
     /**
-     * @return \Workerman\Connection\TcpConnection[][]
-     */
-    public static function getConnections(): array
-    {
-        return self::$_connections;
-    }
-
-    /**
-     * @param array $connections
-     * @return void
-     */
-    public static function setConnections(array $connections): void
-    {
-        self::$_connections = $connections;
-    }
-
-    /**
      * 向连接发送错误消息
      *
      * @param TcpConnection $connection 连接
@@ -303,9 +286,9 @@ class PushServer
             if (static::getConfig('heartbeat', 0) <= 0) {
                 Timer::add(60, function() use ($connection) {
                     $connection->destroy();
-                    static::_unsetConnection(
-                        static::_getConnectionProperty($connection, 'appKey'),
-                        static::_getConnectionProperty($connection, 'socketId')
+                    static::unsetConnection(
+                        static::getConnectionProperty($connection, 'appKey'),
+                        static::getConnectionProperty($connection, 'socketId')
                     );
                 });
             }
@@ -327,7 +310,7 @@ class PushServer
      */
     public static function send(TcpConnection $connection, ?string $channel, ?string $event, mixed $data): void
     {
-        $response = static::staticFilter([
+        $response = static::filter([
             'timestamp' => intval(microtime(true) * 1000),
             'channel'   => $channel,
             'event'     => $event,
@@ -357,26 +340,175 @@ class PushServer
         }
     }
 
+    /**
+     * 创建一个全局的客户端id
+     *
+     * @return string
+     */
+    public static function createSocketId(): string
+    {
+        return uuid();
+    }
+
+    /**
+     * 获得channel类型
+     *
+     * @param string $channel
+     * @return string
+     */
+    public static function getChannelType(string $channel): string
+    {
+        return (str_starts_with($channel, 'private-'))
+            ? CHANNEL_TYPE_PRIVATE
+            : ((str_starts_with($channel, 'presence-')) ? CHANNEL_TYPE_PRESENCE : CHANNEL_TYPE_PUBLIC);
+    }
+
+    /**
+     * 设置连接信息
+     *
+     * @param TcpConnection $connection
+     * @param string $property = clientNotSendPingCount (int) | appKey (string) | queryString (string) | socketId (string) | channels = [ channel => ''|uid]
+     * @param mixed|null $value
+     * @return void
+     */
+    public static function setConnectionProperty(TcpConnection $connection, string $property, mixed $value): void
+    {
+        $connection->$property = $value;
+    }
+
+    /**
+     * 获取连接信息
+     *
+     * @param TcpConnection $connection
+     * @param string $property = clientNotSendPingCount (int) | appKey (string) | queryString (string) | socketId (string) | channels = [ channel => ''|uid]
+     * @param mixed|null $default
+     * @return mixed|null
+     */
+    public static function getConnectionProperty(TcpConnection $connection, string $property, mixed $default = null): mixed
+    {
+        return $connection->$property ?? $default;
+    }
+
+    /**
+     * @return TcpConnection[][]
+     */
+    public static function getConnections(): array
+    {
+        return self::$_connections;
+    }
+
+    /**
+     * @param array $connections
+     * @return void
+     */
+    public static function setConnections(array $connections): void
+    {
+        self::$_connections = $connections;
+    }
+
+    /**
+     * 设置连接
+     *
+     * @param string $appKey
+     * @param string $socketId
+     * @param TcpConnection $connection
+     * @return void
+     */
+    public static function setConnection(string $appKey, string $socketId, TcpConnection $connection): void
+    {
+        static::$_connections[$appKey][$socketId] = $connection;
+    }
+
+    /**
+     * 获取连接
+     *
+     * @param string $appKey
+     * @param string $socketId
+     * @return TcpConnection|null
+     */
+    public static function getConnection(string $appKey, string $socketId): ?TcpConnection
+    {
+        return static::$_connections[$appKey][$socketId] ?? null;
+    }
+
+    /**
+     * 移除连接
+     *
+     * @param string $appKey
+     * @param string $socketId
+     * @return void
+     */
+    public static function unsetConnection(string $appKey, string $socketId): void
+    {
+        // 移除connections
+        unset(static::$_connections[$appKey][$socketId]);
+    }
+
+    /**
+     * 设置通道
+     *
+     * @param string $appKey
+     * @param string $channel
+     * @param string $socketId
+     * @return void
+     */
+    public static function setChannel(string $appKey, string $channel, string $socketId): void
+    {
+        static::$_channels[$appKey][$channel][$socketId] = $socketId;
+    }
+
+    /**
+     * 获取通道
+     *
+     * @param string $appKey
+     * @param string $channel
+     * @param string|null $socketId
+     * @return string|array|null
+     */
+    public static function getChannels(string $appKey, string $channel, ?string $socketId = null): string|array|null
+    {
+        return ($socketId !== null) ?
+            (static::$_channels[$appKey][$channel][$socketId] ?? null) :
+            (static::$_channels[$appKey][$channel] ?? []);
+    }
+
+    /**
+     * 移除通道
+     *
+     * @param string $appKey
+     * @param string $channel
+     * @param string|null $socketId
+     * @return void
+     */
+    public static function unsetChannels(string $appKey, string $channel, ?string $socketId = null): void
+    {
+        if ($socketId !== null) {
+            unset(static::$_channels[$appKey][$channel][$socketId]);
+            return;
+        }
+        unset(static::$_channels[$appKey][$channel]);
+    }
+
     /** @inheritDoc */
     public static function _subscribeResponse(string $type, array $data): void
     {
         try {
             // 客户端事件
             if ($type === static::$publishTypeClient) {
-                static::staticVerify($data, [
+                static::verify($data, [
                     ['appKey', 'is_string', true],
                     ['channel', 'is_string', true],
                     ['event', 'is_string', true],
                     ['socketId', 'is_string', false]
                 ]);
                 // 查询通道下的所有socketId
-                $socketIds = static::_getChannels($appKey = $data['appKey'], $data['channel']);
+                $socketIds = static::getChannels($appKey = $data['appKey'], $data['channel']);
                 // 发送至socketId对应的连接
                 foreach ($socketIds as $socketId) {
                     // 如果存在socketId字段，则是需要做忽略发送
                     if ($socketId !== ($data['socketId'] ?? null)) {
                         // 获取对应connection对象
-                        if ($connection = static::_getConnection($appKey, $socketId)) {
+                        if ($connection = static::getConnection($appKey, $socketId)) {
                             // 发送
                             static::send(
                                 $connection,
@@ -390,7 +522,7 @@ class PushServer
             }
             // 服务事件
             if ($type === static::$publishTypeServer) {
-                static::staticVerify($data, [
+                static::verify($data, [
                     ['appKey', 'is_string', true],
                     ['event', 'is_string', true],
                     ['socketId', 'is_string', false],
@@ -413,138 +545,6 @@ class PushServer
     }
 
     /**
-     * 创建一个全局的客户端id
-     *
-     * @return string
-     */
-    public static function _createSocketId(): string
-    {
-        return uuid();
-    }
-
-    /**
-     * 获得channel类型
-     *
-     * @param string $channel
-     * @return string
-     */
-    public static function _getChannelType(string $channel): string
-    {
-        return (str_starts_with($channel, 'private-'))
-            ? CHANNEL_TYPE_PRIVATE
-            : ((str_starts_with($channel, 'presence-')) ? CHANNEL_TYPE_PRESENCE : CHANNEL_TYPE_PUBLIC);
-    }
-
-    /**
-     * 设置连接信息
-     *
-     * @param TcpConnection $connection
-     * @param string $property = clientNotSendPingCount (int) | appKey (string) | queryString (string) | socketId (string) | channels = [ channel => ''|uid]
-     * @param mixed|null $value
-     * @return void
-     */
-    public static function _setConnectionProperty(TcpConnection $connection, string $property, mixed $value): void
-    {
-        $connection->$property = $value;
-    }
-
-    /**
-     * 获取连接信息
-     *
-     * @param TcpConnection $connection
-     * @param string $property = clientNotSendPingCount (int) | appKey (string) | queryString (string) | socketId (string) | channels = [ channel => ''|uid]
-     * @param mixed|null $default
-     * @return mixed|null
-     */
-    public static function _getConnectionProperty(TcpConnection $connection, string $property, mixed $default = null): mixed
-    {
-        return $connection->$property ?? $default;
-    }
-
-    /**
-     * 设置连接
-     *
-     * @param string $appKey
-     * @param string $socketId
-     * @param TcpConnection $connection
-     * @return void
-     */
-    public static function _setConnection(string $appKey, string $socketId, TcpConnection $connection): void
-    {
-        static::$_connections[$appKey][$socketId] = $connection;
-    }
-
-    /**
-     * 获取连接
-     *
-     * @param string $appKey
-     * @param string $socketId
-     * @return TcpConnection|null
-     */
-    public static function _getConnection(string $appKey, string $socketId): ?TcpConnection
-    {
-        return static::$_connections[$appKey][$socketId] ?? null;
-    }
-
-    /**
-     * 移除连接
-     *
-     * @param string $appKey
-     * @param string $socketId
-     * @return void
-     */
-    public static function _unsetConnection(string $appKey, string $socketId): void
-    {
-        // 移除connections
-        unset(static::$_connections[$appKey][$socketId]);
-    }
-
-    /**
-     * 设置通道
-     *
-     * @param string $appKey
-     * @param string $channel
-     * @param string $socketId
-     * @return void
-     */
-    public static function _setChannel(string $appKey, string $channel, string $socketId): void
-    {
-        static::$_channels[$appKey][$channel][$socketId] = $socketId;
-    }
-
-    /**
-     * 获取通道
-     *
-     * @param string $appKey
-     * @param string $channel
-     * @param string|null $socketId
-     * @return string|array|null
-     */
-    public static function _getChannels(string $appKey, string $channel, ?string $socketId = null): string|array|null
-    {
-        return ($socketId !== null) ?
-            (static::$_channels[$appKey][$channel][$socketId] ?? null) :
-            (static::$_channels[$appKey][$channel] ?? []);
-    }
-
-    /**
-     * 移除通道
-     *
-     * @param string $appKey
-     * @param string $channel
-     * @param string|null $socketId
-     * @return void
-     */
-    public static function _unsetChannels(string $appKey, string $channel, ?string $socketId = null): void
-    {
-        if ($socketId !== null) {
-            unset(static::$_channels[$appKey][$channel][$socketId]);
-            return;
-        }
-        unset(static::$_channels[$appKey][$channel]);
-    }
-
-    /**
      * @return void
      */
     public static function _heartbeatChecker(): void
@@ -553,13 +553,13 @@ class PushServer
          * @var string $appKey
          * @var array $connections
          */
-        foreach (static::$_connections as $appKey => $connections) {
+        foreach (static::getConnections() as $appKey => $connections) {
             /**
              * @var string $socketId
              * @var TcpConnection $connection
              */
             foreach ($connections as $socketId => $connection) {
-                $count = static::_getConnectionProperty($connection, 'clientNotSendPingCount');
+                $count = static::getConnectionProperty($connection, 'clientNotSendPingCount');
                 if ($count === null or $count > 1) {
                     static::terminateConnections($appKey, $socketId, [
                         'type'      => 'heartbeat',
@@ -567,7 +567,7 @@ class PushServer
                     ]);
                     continue;
                 }
-                static::_setConnectionProperty($connection, 'clientNotSendPingCount', $count + 1);
+                static::setConnectionProperty($connection, 'clientNotSendPingCount', $count + 1);
             }
         }
     }

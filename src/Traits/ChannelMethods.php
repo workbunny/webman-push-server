@@ -133,6 +133,8 @@ trait ChannelMethods
     }
 
     /**
+     * 订阅回调
+     *
      * @param $channel
      * @param $message
      * @return void

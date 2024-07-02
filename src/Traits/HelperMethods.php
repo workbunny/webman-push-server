@@ -16,17 +16,12 @@ use function function_exists;
  */
 trait HelperMethods
 {
-    /** @see PackageTrait::staticFilter() */
-    public function filter(array $input): array
-    {
-        return self::staticFilter($input);
-    }
 
     /**
      * @param array $input
      * @return array
      */
-    public static function staticFilter(array $input): array
+    public static function filter(array $input): array
     {
         $result = [];
         foreach ($input as $key => $value) {
@@ -40,17 +35,6 @@ trait HelperMethods
 
     /**
      * @param array $options
-     * @param array $validators
-     * @return void
-     * @throws InvalidArgumentException
-     */
-    public function verify(array $options, array $validators): void
-    {
-        self::staticVerify($options, $validators);
-    }
-
-    /**
-     * @param array $options
      * @param array $validators = [
      *      ['serviceName', 'is_string', true],
      *      ['port', 'is_int', false]
@@ -58,7 +42,7 @@ trait HelperMethods
      * @return void
      * @throws InvalidArgumentException
      */
-    public static function staticVerify(mixed $options, array $validators): void
+    public static function verify(mixed $options, array $validators): void
     {
         if (!is_array($options)) {
             throw new InvalidArgumentException('Invalid Options. ', -1);

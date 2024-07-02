@@ -34,7 +34,7 @@ class Unsubscribe extends AbstractEvent
     public function response(TcpConnection $connection, array $request): void
     {
         $channel = $request['data']['channel'] ?? '';
-        switch ($channelType = PushServer::_getChannelType($channel)) {
+        switch ($channelType = PushServer::getChannelType($channel)) {
             case CHANNEL_TYPE_PUBLIC:
             case CHANNEL_TYPE_PRIVATE:
                 self::unsubscribeChannel($connection, $channel, $channelType);
@@ -64,16 +64,16 @@ class Unsubscribe extends AbstractEvent
     public static function unsubscribeChannel(TcpConnection $connection, string $channel, ?string $uid = null, bool $send = true): void
     {
         try {
-            $appKey = PushServer::_getConnectionProperty($connection, 'appKey');
-            $socketId = PushServer::_getConnectionProperty($connection, 'socketId');
-            $channels = PushServer::_getConnectionProperty($connection, 'channels');
+            $appKey = PushServer::getConnectionProperty($connection, 'appKey');
+            $socketId = PushServer::getConnectionProperty($connection, 'socketId');
+            $channels = PushServer::getConnectionProperty($connection, 'channels');
 
             if ($type = $channels[$channel] ?? null) {
                 $storage = PushServer::getStorageClient();
                 // presence通道
                 if ($type === CHANNEL_TYPE_PRESENCE) {
-                    if ($users = $storage->keys(PushServer::_getUserStorageKey($appKey, $channel, $uid))) {
-                        $userCount = $storage->hIncrBy(PushServer::_getChannelStorageKey($appKey, $channel), 'user_count', -count($users));
+                    if ($users = $storage->keys(PushServer::getUserStorageKey($appKey, $channel, $uid))) {
+                        $userCount = $storage->hIncrBy(PushServer::getChannelStorageKey($appKey, $channel), 'user_count', -count($users));
                         if ($userCount <= 0) {
                             $storage->del(...$users);
                         }
@@ -95,7 +95,7 @@ class Unsubscribe extends AbstractEvent
                     }
                 }
                 // 查询通道订阅数量
-                $subCount = $storage->hIncrBy($key = PushServer::_getChannelStorageKey($appKey, $channel), 'subscription_count', -1);
+                $subCount = $storage->hIncrBy($key = PushServer::getChannelStorageKey($appKey, $channel), 'subscription_count', -1);
                 if ($subCount <= 0) {
                     $storage->del($key);
                     // 内部事件广播 通道被移除事件
@@ -113,8 +113,8 @@ class Unsubscribe extends AbstractEvent
                 }
                 // 移除通道
                 unset($channels[$channel]);
-                PushServer::_setConnectionProperty($connection, 'channels', $channels);
-                PushServer::_unsetChannels($appKey, $channel, $socketId);
+                PushServer::setConnectionProperty($connection, 'channels', $channels);
+                PushServer::unsetChannels($appKey, $channel, $socketId);
                 if ($send) {
                     /**
                      * 发送退订成功事件消息
