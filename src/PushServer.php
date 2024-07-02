@@ -138,13 +138,13 @@ class PushServer
         static::setConnectionProperty($connection, 'onWebSocketConnect',
             // ws 连接会调用该回调
             function (TcpConnection $connection, string $header) use ($appKey, $socketId) {
+                $unknown = $appKey;
                 $request = new Request($header);
                 if (!preg_match('/\/app\/([^\/^\?^]+)/', $request->path() ?? '', $match)) {
                     static::error($connection, null, 'Invalid app', true);
                     return;
                 }
                 // 获取app验证回调，如果没有验证回调则忽略验证
-                $appKey = '';
                 if ($appVerifyCallback = static::getConfig('app_verify', getBase: true)) {
                     if (!call_user_func($appVerifyCallback, $appKey = $match[1])) {
                         static::error($connection, null, "Invalid app_key", true);
@@ -155,6 +155,10 @@ class PushServer
                 static::setConnectionProperty($connection, 'appKey', $appKey);
                 static::setConnectionProperty($connection, 'queryString', $request->queryString() ?? '');
                 static::setConnectionProperty($connection, 'channels', []);
+                // 移除unknown连接
+                static::unsetConnection($unknown, $socketId);
+                // 设置连接
+                static::setConnection($appKey, $socketId, $connection);
                 /**
                  * 向客户端发送链接成功的消息
                  * {"event":"pusher:connection_established","data":"{"socket_id":"208836.27464492","activity_timeout":120}"}
@@ -394,7 +398,7 @@ class PushServer
      */
     public static function getConnections(): array
     {
-        return self::$_connections;
+        return static::$_connections;
     }
 
     /**
@@ -403,7 +407,7 @@ class PushServer
      */
     public static function setConnections(array $connections): void
     {
-        self::$_connections = $connections;
+        static::$_connections = $connections;
     }
 
     /**

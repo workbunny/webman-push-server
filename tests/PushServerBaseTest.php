@@ -13,7 +13,6 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use Exception;
 use Tests\MockClass\MockTcpConnection;
 use Workbunny\WebmanPushServer\Events\Ping;
 use Workbunny\WebmanPushServer\PushServer;
@@ -36,17 +35,21 @@ class PushServerBaseTest extends BaseTestCase
         $this->assertFalse(property_exists($connection, 'queryString'));
         $this->assertFalse(property_exists($connection, 'socketId'));
         $this->assertFalse(property_exists($connection, 'channels'));
+        $this->assertEquals([], PushServer::getConnections()[PushServer::$unknownTag] ?? []);
         // 模拟onConnect
         $this->getPushServer()->onConnect($connection);
         // 断言判定
         $this->assertEquals(
-            PushServer::$unknownTag, PushServer::getConnectionProperty($connection, 'appKey', 'has-not')
+            PushServer::$unknownTag, $appKey = PushServer::getConnectionProperty($connection, 'appKey', 'has-not')
         );
         $this->assertEquals(
             0, PushServer::getConnectionProperty($connection, 'clientNotSendPingCount', 'has-not')
         );
         $this->assertNotEquals(
-            'has-not', PushServer::getConnectionProperty($connection, 'socketId', 'has-not')
+            'has-not', $socketId = PushServer::getConnectionProperty($connection, 'socketId', 'has-not')
+        );
+        $this->assertEquals(
+            $connection, PushServer::getConnection($appKey, $socketId)
         );
         $this->assertNotEquals(
             '', PushServer::getConnectionProperty($connection, 'queryString', 'has-not')
@@ -61,8 +64,9 @@ class PushServerBaseTest extends BaseTestCase
         // 模拟调用$connection->onWebSocketConnect
         call_user_func(PushServer::getConnectionProperty($connection, 'onWebSocketConnect'), $connection, $this->getWebsocketHeader());
         // 断言判定
+        $this->assertEquals([],PushServer::getConnections()[PushServer::$unknownTag] ?? []);
         $this->assertEquals(
-            'workbunny', PushServer::getConnectionProperty($connection, 'appKey', 'has-not')
+            'workbunny', $appKey = PushServer::getConnectionProperty($connection, 'appKey', 'has-not')
         );
         $this->assertEquals(
             0, PushServer::getConnectionProperty($connection, 'clientNotSendPingCount', 'has-not')
@@ -71,7 +75,10 @@ class PushServerBaseTest extends BaseTestCase
             'protocol=7&client=js&version=3.2.4&flash=false', PushServer::getConnectionProperty($connection, 'queryString', 'has-not')
         );
         $this->assertNotEquals(
-            'has-not', PushServer::getConnectionProperty($connection, 'socketId', 'has-not')
+            'has-not', $socketId = PushServer::getConnectionProperty($connection, 'socketId', 'has-not')
+        );
+        $this->assertEquals(
+            $connection, PushServer::getConnection($appKey, $socketId)
         );
         $this->assertEquals(
             [], PushServer::getConnectionProperty($connection, 'channels', 'has-not')
@@ -89,6 +96,8 @@ class PushServerBaseTest extends BaseTestCase
         $connection = new MockTcpConnection();
         // 模拟onConnect
         $this->getPushServer()->onConnect($connection);
+        // 模拟调用$connection->onWebSocketConnect
+        call_user_func(PushServer::getConnectionProperty($connection, 'onWebSocketConnect'), $connection, $this->getWebsocketHeader());
         // 断言检测心跳计数为0
         $this->assertEquals(
             0, PushServer::getConnectionProperty($connection, 'clientNotSendPingCount', 'has-not')
@@ -101,8 +110,8 @@ class PushServerBaseTest extends BaseTestCase
         );
         // 断言检测事件初始为null
         $this->assertNull($this->getPushServer()->getLastEvent());
-        // 断言检测初始buffer为空
-        $this->assertTrue(!$connection->getSendBuffer());
+        // EVENT_CONNECTION_ESTABLISHED事件回复
+        $this->assertEquals(EVENT_CONNECTION_ESTABLISHED, @json_decode($connection->getSendBuffer(), true)['event'] ?? null);
         // 模拟心跳
         $this->getPushServer()->onMessage($connection, '{"event":"pusher:ping"}');
         // 断言检测心跳累计为0
@@ -113,6 +122,35 @@ class PushServerBaseTest extends BaseTestCase
         $this->assertTrue(($this->getPushServer()->getLastEvent()) instanceof Ping);
         // 断言检测回执buffer为pong事件
         $this->assertEquals(EVENT_PONG, @json_decode($connection->getSendBuffer(), true)['event'] ?? null);
+    }
+
+    /**
+     * @return void
+     */
+    public function testPushServerOnCloseHasNotChannel()
+    {
+        // 初始化一个mock tcp连接
+        $connection = new MockTcpConnection();
+        // 模拟onConnect
+        $this->getPushServer()->onConnect($connection);
+        // 模拟调用$connection->onWebSocketConnect
+        call_user_func(PushServer::getConnectionProperty($connection, 'onWebSocketConnect'), $connection, $this->getWebsocketHeader());
+        // 断言判定
+        $this->assertEquals(
+            'workbunny', $appKey = PushServer::getConnectionProperty($connection, 'appKey', 'has-not')
+        );
+        $this->assertNotEquals(
+            'has-not', $socketId = PushServer::getConnectionProperty($connection, 'socketId', 'has-not')
+        );
+        $this->assertEquals(
+            $connection, PushServer::getConnection($appKey, $socketId)
+        );
+        // 模拟onClose
+        $this->getPushServer()->onClose($connection);
+        // 断言判定
+        $this->assertEquals(
+            null, PushServer::getConnection($appKey, $socketId)
+        );
     }
 
 }
