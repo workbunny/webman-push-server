@@ -15,13 +15,15 @@ namespace Tests;
 
 use Exception;
 use Tests\MockClass\MockTcpConnection;
+use Workbunny\WebmanPushServer\Events\Ping;
 use Workbunny\WebmanPushServer\PushServer;
+use const Workbunny\WebmanPushServer\EVENT_CONNECTION_ESTABLISHED;
+use const Workbunny\WebmanPushServer\EVENT_PONG;
 
 class PushServerBaseTest extends BaseTestCase
 {
     /**
-     * 测试server初始化
-     * @throws Exception
+     * @return void
      */
     public function testPushServerOnConnect()
     {
@@ -55,6 +57,7 @@ class PushServerBaseTest extends BaseTestCase
         $this->assertTrue(
             is_callable(PushServer::getConnectionProperty($connection, 'onWebSocketConnect', 'has-not'))
         );
+        $this->assertTrue(!$connection->getSendBuffer());
         // 模拟调用$connection->onWebSocketConnect
         call_user_func(PushServer::getConnectionProperty($connection, 'onWebSocketConnect'), $connection, $this->getWebsocketHeader());
         // 断言判定
@@ -73,7 +76,43 @@ class PushServerBaseTest extends BaseTestCase
         $this->assertEquals(
             [], PushServer::getConnectionProperty($connection, 'channels', 'has-not')
         );
+        // EVENT_CONNECTION_ESTABLISHED事件回复
+        $this->assertEquals(EVENT_CONNECTION_ESTABLISHED, @json_decode($connection->getSendBuffer(), true)['event'] ?? null);
     }
 
+    /**
+     * @return void
+     */
+    public function testPushServerOnMessage()
+    {
+        // 初始化一个mock tcp连接
+        $connection = new MockTcpConnection();
+        // 模拟onConnect
+        $this->getPushServer()->onConnect($connection);
+        // 断言检测心跳计数为0
+        $this->assertEquals(
+            0, PushServer::getConnectionProperty($connection, 'clientNotSendPingCount', 'has-not')
+        );
+        // 模拟未心跳，累计计数
+        PushServer::setConnectionProperty($connection, 'clientNotSendPingCount', 1);
+        // 断言检测心跳累计为1
+        $this->assertEquals(
+            1, PushServer::getConnectionProperty($connection, 'clientNotSendPingCount', 'has-not')
+        );
+        // 断言检测事件初始为null
+        $this->assertNull($this->getPushServer()->getLastEvent());
+        // 断言检测初始buffer为空
+        $this->assertTrue(!$connection->getSendBuffer());
+        // 模拟心跳
+        $this->getPushServer()->onMessage($connection, '{"event":"pusher:ping"}');
+        // 断言检测心跳累计为0
+        $this->assertEquals(
+            0, PushServer::getConnectionProperty($connection, 'clientNotSendPingCount', 'has-not')
+        );
+        // 断言检测事件为ping
+        $this->assertTrue(($this->getPushServer()->getLastEvent()) instanceof Ping);
+        // 断言检测回执buffer为pong事件
+        $this->assertEquals(EVENT_PONG, @json_decode($connection->getSendBuffer(), true)['event'] ?? null);
+    }
 
 }
