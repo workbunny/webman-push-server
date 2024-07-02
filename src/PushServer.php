@@ -108,30 +108,8 @@ class PushServer
         if ($this->getKeepaliveTimeout() > 0 and !$this->getHeartbeatTimer()) {
             $this->setHeartbeatTimer(Timer::add(
                 round($this->getKeepaliveTimeout() / 2, 2),
-                function () {
-                    /**
-                     * @var string $appKey
-                     * @var array $connections
-                     */
-                    foreach (static::$_connections as $appKey => $connections) {
-                        /**
-                         * @var string $socketId
-                         * @var TcpConnection $connection
-                         */
-                        foreach ($connections as $socketId => $connection) {
-                            $count = static::_getConnectionProperty($connection, 'clientNotSendPingCount');
-                            if ($count === null or $count > 1) {
-                                static::terminateConnections($appKey, $socketId, [
-                                    'type'      => 'heartbeat',
-                                    'message'   => 'Terminate connection by heartbeat'
-                                ]);
-                                continue;
-                            }
-                            static::_setConnectionProperty($connection, 'clientNotSendPingCount', $count + 1);
-                        }
-                    }
-                })
-            );
+                [static::class, '_heartbeatChecker']
+            ));
         }
     }
 
@@ -564,5 +542,33 @@ class PushServer
             return;
         }
         unset(static::$_channels[$appKey][$channel]);
+    }
+
+    /**
+     * @return void
+     */
+    public static function _heartbeatChecker(): void
+    {
+        /**
+         * @var string $appKey
+         * @var array $connections
+         */
+        foreach (static::$_connections as $appKey => $connections) {
+            /**
+             * @var string $socketId
+             * @var TcpConnection $connection
+             */
+            foreach ($connections as $socketId => $connection) {
+                $count = static::_getConnectionProperty($connection, 'clientNotSendPingCount');
+                if ($count === null or $count > 1) {
+                    static::terminateConnections($appKey, $socketId, [
+                        'type'      => 'heartbeat',
+                        'message'   => 'Terminate connection by heartbeat'
+                    ]);
+                    continue;
+                }
+                static::_setConnectionProperty($connection, 'clientNotSendPingCount', $count + 1);
+            }
+        }
     }
 }
