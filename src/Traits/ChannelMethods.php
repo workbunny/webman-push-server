@@ -6,6 +6,7 @@
 
 namespace Workbunny\WebmanPushServer\Traits;
 
+use InvalidArgumentException;
 use RedisException;
 use support\Log;
 use support\Redis;
@@ -34,7 +35,7 @@ trait ChannelMethods
     {
         if (!(static::$_redisClients[$redisChannel] ?? null)) {
             if (!$config = config('redis')["plugin.workbunny.webman-push-server.$redisChannel"] ?? []) {
-                throw new \InvalidArgumentException("Redis channel [$redisChannel] not found. ");
+                throw new InvalidArgumentException("Redis channel [$redisChannel] not found. ");
             }
             $client = new Client(sprintf('redis://%s:%s', $config['host'], $config['port']), $config['options'] ?? []);
             $client->connect();
@@ -93,8 +94,8 @@ trait ChannelMethods
      */
     public static function publish(string $type, array $data, string $redisChannel = 'server-channel'): bool|int|\Redis
     {
-        if (!config('redis')["plugin.workbunny.webman-push-server.$redisChannel"] ?? []) {
-            throw new \InvalidArgumentException("Redis channel [$redisChannel] not found. ");
+        if (!(config('redis')[$redisChannel = "plugin.workbunny.webman-push-server.$redisChannel"] ?? [])) {
+            throw new InvalidArgumentException("Redis channel [$redisChannel] not found. ");
         }
         return Redis::connection($redisChannel)->client()->publish(
             static::$internalChannelKey,
@@ -112,9 +113,9 @@ trait ChannelMethods
      * @param array $data 消息数据
      * @param float $retryInterval 重试间隔
      * @param string $redisChannel redis通道
-     * @return int|bool
+     * @return int|bool|null
      */
-    public static function publishUseRetry(string $type, array $data, float $retryInterval = 0.5, string $redisChannel = 'server-channel'): int|bool
+    public static function publishUseRetry(string $type, array $data, float $retryInterval = 0.5, string $redisChannel = 'server-channel'): null|int|bool
     {
         try {
             $res = static::publish($type, $data, $redisChannel);
