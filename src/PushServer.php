@@ -131,19 +131,20 @@ class PushServer
     public function onConnect(TcpConnection $connection): void
     {
         // 为TcpConnection object设置属性
-        static::setConnectionProperty($connection, 'appKey', $appKey = static::$unknownTag);
+        static::setConnectionProperty($connection, 'appKey', static::$unknownTag);
         static::setConnectionProperty($connection, 'clientNotSendPingCount', 0);
         static::setConnectionProperty($connection, 'socketId', $socketId = static::createSocketId());
         // 设置websocket握手事件回调
         static::setConnectionProperty($connection, 'onWebSocketConnect',
             // ws 连接会调用该回调
-            function (TcpConnection $connection, string $header) use ($appKey, $socketId) {
-                $unknown = $appKey;
+            function (TcpConnection $connection, string $header) use ($socketId) {
                 $request = new Request($header);
                 if (!preg_match('/\/app\/([^\/^\?^]+)/', $request->path() ?? '', $match)) {
                     static::error($connection, null, 'Invalid app', true);
                     return;
                 }
+                // 默认在空字符串域
+                $appKey = '';
                 // 获取app验证回调，如果没有验证回调则忽略验证
                 if ($appVerifyCallback = static::getConfig('app_verify', getBase: true)) {
                     if (!call_user_func($appVerifyCallback, $appKey = $match[1])) {
@@ -155,9 +156,9 @@ class PushServer
                 static::setConnectionProperty($connection, 'appKey', $appKey);
                 static::setConnectionProperty($connection, 'queryString', $request->queryString() ?? '');
                 static::setConnectionProperty($connection, 'channels', []);
-                // 移除unknown连接
-                static::unsetConnection($unknown, $socketId);
-                // 设置连接
+                // 移除unknown连接中对应的socketId
+                static::unsetConnection(static::$unknownTag, $socketId);
+                // 设置appKey连接
                 static::setConnection($appKey, $socketId, $connection);
                 /**
                  * 向客户端发送链接成功的消息
@@ -168,8 +169,8 @@ class PushServer
                     'activity_timeout' => $this->_keepaliveTimeout - 5
                 ]);
             });
-        // 设置连接
-        static::setConnection($appKey, $socketId, $connection);
+        // 设置unknown连接, 交由心跳回收
+        static::setConnection(static::$unknownTag, $socketId, $connection);
     }
 
     /**
