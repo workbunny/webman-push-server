@@ -228,7 +228,8 @@ class Subscribe extends AbstractEvent
                     PushServer::getPresenceChannelDataForSubscribe($appKey, $channel) :
                     '{}'
             );
-        } catch (RedisException $exception){
+        } catch (RedisException $exception) {
+            PushServer::error($connection, '500', 'Server error - Subscribe');
             Log::channel('plugin.workbunny.webman-push-server.error')
                 ->error("[PUSH-SERVER] {$exception->getMessage()}", [
                     'method' => __METHOD__

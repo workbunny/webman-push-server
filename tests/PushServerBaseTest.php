@@ -17,7 +17,6 @@ use Tests\MockClass\MockTcpConnection;
 use Workbunny\WebmanPushServer\Events\Ping;
 use Workbunny\WebmanPushServer\Events\Subscribe;
 use Workbunny\WebmanPushServer\PushServer;
-use const Workbunny\WebmanPushServer\EVENT_CHANNEL_VACATED;
 use const Workbunny\WebmanPushServer\EVENT_CONNECTION_ESTABLISHED;
 use const Workbunny\WebmanPushServer\EVENT_PONG;
 use const Workbunny\WebmanPushServer\EVENT_UNSUBSCRIPTION_SUCCEEDED;
@@ -148,6 +147,7 @@ class PushServerBaseTest extends BaseTestCase
         $this->assertEquals(
             $connection, PushServer::getConnection($appKey, $socketId)
         );
+        $this->assertEquals([], PushServer::getConnectionProperty($connection, 'channels', []));
         // 模拟回执buffer初始化
         $connection->setSendBuffer(null);
         // 模拟onClose
@@ -158,6 +158,7 @@ class PushServerBaseTest extends BaseTestCase
         );
         // 断言检测回执buffer
         $this->assertEquals(null, $connection->getSendBuffer());
+        $this->assertEquals([], PushServer::getConnectionProperty($connection, 'channels', []));
     }
 
     /**
@@ -185,6 +186,9 @@ class PushServerBaseTest extends BaseTestCase
         $this->getPushServer()->onMessage($connection, '{"event":"pusher:subscribe","data":{"channel":"public-test"}}');
         // 断言判定
         $this->assertTrue($this->getPushServer()->getLastEvent() instanceof Subscribe);
+        $this->assertEquals([
+            'public-test' => 'public'
+        ], PushServer::getConnectionProperty($connection, 'channels', []));
         $this->assertEquals($socketId, PushServer::getChannels($appKey, 'public-test', $socketId));
         // 模拟onClose
         $this->getPushServer()->onClose($connection);
@@ -192,6 +196,7 @@ class PushServerBaseTest extends BaseTestCase
         $this->assertEquals(null, PushServer::getConnection($appKey, $socketId));
         // 断言检测回执buffer
         $this->assertEquals(EVENT_UNSUBSCRIPTION_SUCCEEDED, @json_decode($connection->getSendBuffer(), true)['event'] ?? null);
+        $this->assertEquals([], PushServer::getConnectionProperty($connection, 'channels', []));
         $this->assertNull(PushServer::getChannels($appKey, 'public-test', $socketId));
     }
 

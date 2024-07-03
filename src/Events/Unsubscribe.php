@@ -58,10 +58,9 @@ class Unsubscribe extends AbstractEvent
      * @param TcpConnection $connection 客户端连接
      * @param string $channel 取消订阅的通道
      * @param string|null $uid 用户id
-     * @param bool $send 是否向当前客户端发送退订消息
      * @return void
      */
-    public static function unsubscribeChannel(TcpConnection $connection, string $channel, ?string $uid = null, bool $send = true): void
+    public static function unsubscribeChannel(TcpConnection $connection, string $channel, ?string $uid = null): void
     {
         try {
             $appKey = PushServer::getConnectionProperty($connection, 'appKey');
@@ -115,19 +114,17 @@ class Unsubscribe extends AbstractEvent
                 unset($channels[$channel]);
                 PushServer::setConnectionProperty($connection, 'channels', $channels);
                 PushServer::unsetChannels($appKey, $channel, $socketId);
-                if ($send) {
-                    /**
-                     * 发送退订成功事件消息
-                     *
-                     * @private-channel:{"event":"pusher_internal:unsubscription_succeeded","data":"{}","channel":"my-channel"}
-                     * @public-channel:{"event":"pusher_internal:unsubscription_succeeded","data":"{}","channel":"my-channel"}
-                     * @presence-channel:{"event":"pusher_internal:unsubscription_succeeded","data":"{}","channel":"my-channel"}
-                     **/
-                    PushServer::send($connection, $channel, EVENT_UNSUBSCRIPTION_SUCCEEDED, new stdClass());
-                }
+                /**
+                 * 发送退订成功事件消息
+                 *
+                 * @private-channel:{"event":"pusher_internal:unsubscription_succeeded","data":"{}","channel":"my-channel"}
+                 * @public-channel:{"event":"pusher_internal:unsubscription_succeeded","data":"{}","channel":"my-channel"}
+                 * @presence-channel:{"event":"pusher_internal:unsubscription_succeeded","data":"{}","channel":"my-channel"}
+                 **/
+                PushServer::send($connection, $channel, EVENT_UNSUBSCRIPTION_SUCCEEDED, new stdClass());
             }
-
         } catch (RedisException $exception) {
+            PushServer::error($connection, '500', 'Server error - Unsubscribe');
             Log::channel('plugin.workbunny.webman-push-server.error')
                 ->error("[PUSH-SERVER] {$exception->getMessage()}", [
                     'method' => __METHOD__

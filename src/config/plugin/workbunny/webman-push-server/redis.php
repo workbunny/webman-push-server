@@ -3,14 +3,14 @@
 return [
     // push server 储存器
     'server-storage' => [
-        'host'     => 'host.docker.internal',
+        'host'     => 'redis',
         'password' => '',
         'port'     => 6379,
         'database' => 0,
     ],
     // 服务通讯频道
     'server-channel' => [
-        'host'     => 'host.docker.internal',
+        'host'     => 'redis',
         'password' => '',
         'port'     => 6379,
         'database' => 0,
