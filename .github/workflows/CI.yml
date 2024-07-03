@@ -24,6 +24,7 @@ jobs:
       - uses: supercharge/redis-github-action@1.8.0
         with:
           redis-version: ${{ matrix.redis }}
+          redis-container-name: redis
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
