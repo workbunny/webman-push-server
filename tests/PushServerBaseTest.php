@@ -15,9 +15,12 @@ namespace Tests;
 
 use Tests\MockClass\MockTcpConnection;
 use Workbunny\WebmanPushServer\Events\Ping;
+use Workbunny\WebmanPushServer\Events\Subscribe;
 use Workbunny\WebmanPushServer\PushServer;
+use const Workbunny\WebmanPushServer\EVENT_CHANNEL_VACATED;
 use const Workbunny\WebmanPushServer\EVENT_CONNECTION_ESTABLISHED;
 use const Workbunny\WebmanPushServer\EVENT_PONG;
+use const Workbunny\WebmanPushServer\EVENT_UNSUBSCRIPTION_SUCCEEDED;
 
 class PushServerBaseTest extends BaseTestCase
 {
@@ -145,12 +148,55 @@ class PushServerBaseTest extends BaseTestCase
         $this->assertEquals(
             $connection, PushServer::getConnection($appKey, $socketId)
         );
+        // 模拟回执buffer初始化
+        $connection->setSendBuffer(null);
         // 模拟onClose
         $this->getPushServer()->onClose($connection);
         // 断言判定
         $this->assertEquals(
             null, PushServer::getConnection($appKey, $socketId)
         );
+        // 断言检测回执buffer
+        $this->assertEquals(null, $connection->getSendBuffer());
+    }
+
+    /**
+     * @return void
+     */
+    public function testPushServerOnCloseHasChannel()
+    {
+        // 初始化一个mock tcp连接
+        $connection = new MockTcpConnection();
+        // 模拟onConnect
+        $this->getPushServer()->onConnect($connection);
+        // 模拟调用$connection->onWebSocketConnect
+        call_user_func(PushServer::getConnectionProperty($connection, 'onWebSocketConnect'), $connection, $this->getWebsocketHeader());
+        // 断言判定
+        $this->assertEquals(
+            'workbunny', $appKey = PushServer::getConnectionProperty($connection, 'appKey', 'has-not')
+        );
+        $this->assertNotEquals(
+            'has-not', $socketId = PushServer::getConnectionProperty($connection, 'socketId', 'has-not')
+        );
+        $this->assertEquals(
+            $connection, PushServer::getConnection($appKey, $socketId)
+        );
+        // 模拟订阅通道
+        $this->getPushServer()->onMessage($connection, '{"event":"pusher:subscribe","data":{"channel":"public-test"}}');
+        // 断言判定
+        $this->assertTrue($this->getPushServer()->getLastEvent() instanceof Subscribe);
+        $this->assertEquals($socketId, PushServer::getChannels($appKey, 'public-test', $socketId));
+
+
+        // 模拟回执buffer初始化
+        $connection->setSendBuffer(null);
+        // 模拟onClose
+        $this->getPushServer()->onClose($connection);
+        // 断言判定
+        $this->assertEquals(null, PushServer::getConnection($appKey, $socketId));
+        // 断言检测回执buffer
+        $this->assertEquals(EVENT_UNSUBSCRIPTION_SUCCEEDED, @json_decode($connection->getSendBuffer(), true)['event'] ?? null);
+        $this->assertNull(PushServer::getChannels($appKey, 'public-test', $socketId));
     }
 
 }

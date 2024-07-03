@@ -49,19 +49,30 @@ class Subscribe extends AbstractEvent
         $channel = $request['data']['channel'] ?? '';
         $channelData = $request['data']['channel_data'] ?? [];
         $clientAuth = $request['data']['auth'] ?? '';
-        $auth = self::auth(
-            $appKey = PushServer::getConnectionProperty($connection, 'appKey'),
-            PushServer::getConfig('apps_query')($appKey)['app_secret'],
-            PushServer::getConnectionProperty($connection, 'socketId'),
-            $channel,
-            $channelData
-        );
+        $appsCallback = PushServer::getConfig('apps_query', getBase: true);
+
         // private- 和 presence- 开头的channel需要验证
         switch ($channelType = PushServer::getChannelType($channel)){
             case CHANNEL_TYPE_PRESENCE:
                 if (!$channelData) {
                     PushServer::error($connection, null, 'Empty channel_data');
                     return;
+                }
+                if ($appsCallback) {
+                    $auth = self::auth(
+                        $appKey = PushServer::getConnectionProperty($connection, 'appKey'),
+                        call_user_func($appsCallback, $appKey)['app_secret'] ?? '',
+                        PushServer::getConnectionProperty($connection, 'socketId'),
+                        $channel,
+                        $channelData
+                    );
+                } else {
+                    $auth = '';
+                    Log::channel('plugin.workbunny.webman-push-server.warning')
+                        ->warning("[PUSH-SERVER] Subscribe auth error, Config apps_query not found. ", [
+                            'request' => $request,
+                            'method'  => __METHOD__
+                        ]);
                 }
                 if ($clientAuth !== $auth) {
                     PushServer::error($connection, null, 'Received invalid Auth ' . $clientAuth);
@@ -78,6 +89,22 @@ class Subscribe extends AbstractEvent
                 self::subscribeChannel($connection, $channel, $channelType, $channelData['user_id'], $channelData['user_info']);
                 break;
             case CHANNEL_TYPE_PRIVATE:
+                if ($appsCallback) {
+                    $auth = self::auth(
+                        $appKey = PushServer::getConnectionProperty($connection, 'appKey'),
+                        call_user_func($appsCallback, $appKey)['app_secret'] ?? '',
+                        PushServer::getConnectionProperty($connection, 'socketId'),
+                        $channel,
+                        $channelData
+                    );
+                } else {
+                    $auth = '';
+                    Log::channel('plugin.workbunny.webman-push-server.warning')
+                        ->warning("[PUSH-SERVER] Subscribe auth error, Config apps_query not found. ", [
+                            'request' => $request,
+                            'method'  => __METHOD__
+                        ]);
+                }
                 if ($clientAuth !== $auth) {
                     PushServer::error($connection,null, 'Received invalid Auth ' . $clientAuth);
                     return;
@@ -150,11 +177,10 @@ class Subscribe extends AbstractEvent
                 ]);
             }
             // 当前连接是否订阅过该channel
-            $type = $channels[$channel] ?? null;
-            if (!$type) {
+            if (!isset($channels[$channel])) {
                 $channels[$channel] = $type;
                 PushServer::setConnectionProperty($connection, 'channels', $channels);
-                PushServer::setConnection($appKey, $socketId, $socketId);
+                PushServer::setConnection($appKey, $socketId, $connection);
                 // 递增订阅数
                 /** @see PushServer::$_storage */
                 $storage->hIncrBy($key,'subscription_count', 1);

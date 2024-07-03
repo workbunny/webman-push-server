@@ -76,7 +76,9 @@ class PushServer
 
     public function __construct()
     {
-        $this->_keepaliveTimeout = (int)self::getConfig('heartbeat', 60);
+        $this->setKeepaliveTimeout(
+            intval(self::getConfig('heartbeat', 60))
+        );
     }
 
     /**

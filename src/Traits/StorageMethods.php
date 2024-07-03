@@ -35,7 +35,7 @@ trait StorageMethods
     protected static ?\Redis $_storageClient = null;
 
     /** @var string  */
-    protected static string $storageRedisChannelKey = 'plugin.workbunny.webman-push-server.storage';
+    protected static string $storageRedisChannelKey = 'plugin.workbunny.webman-push-server.server-storage';
 
     /**
      * @return \Redis
