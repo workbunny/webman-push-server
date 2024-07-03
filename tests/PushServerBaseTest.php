@@ -186,10 +186,6 @@ class PushServerBaseTest extends BaseTestCase
         // 断言判定
         $this->assertTrue($this->getPushServer()->getLastEvent() instanceof Subscribe);
         $this->assertEquals($socketId, PushServer::getChannels($appKey, 'public-test', $socketId));
-
-
-        // 模拟回执buffer初始化
-        $connection->setSendBuffer(null);
         // 模拟onClose
         $this->getPushServer()->onClose($connection);
         // 断言判定
