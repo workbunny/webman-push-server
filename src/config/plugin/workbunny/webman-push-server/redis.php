@@ -3,14 +3,14 @@
 return [
     // push server 储存器
     'server-storage' => [
-        'host'     => 'redis',
+        'host'     => '172.17.0.1',
         'password' => '',
         'port'     => 6379,
         'database' => 0,
     ],
     // 服务通讯频道
     'server-channel' => [
-        'host'     => 'redis',
+        'host'     => '172.17.0.1',
         'password' => '',
         'port'     => 6379,
         'database' => 0,
