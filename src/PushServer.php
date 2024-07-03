@@ -339,7 +339,7 @@ class PushServer
      */
     public static function terminateConnections(string $appKey, string $socketId, array $data): void
     {
-        if ($connection = static::$_connections[$appKey][$socketId] ?? null) {
+        if ($connection = static::getConnection($appKey, $socketId)) {
             // 发送断开连接信息
             static::send($connection, null, EVENT_TERMINATE_CONNECTION, $data);
             // 触发onClose事件

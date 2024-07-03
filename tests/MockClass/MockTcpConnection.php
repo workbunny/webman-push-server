@@ -77,7 +77,9 @@ class MockTcpConnection extends TcpConnection
      */
     public function close($data = null, $raw = false)
     {
-        $this->send($data, $raw);
+        if ($data) {
+            $this->send($data, $raw);
+        }
     }
 
     /**

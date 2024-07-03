@@ -19,12 +19,13 @@ use Workbunny\WebmanPushServer\Events\Subscribe;
 use Workbunny\WebmanPushServer\PushServer;
 use const Workbunny\WebmanPushServer\EVENT_CONNECTION_ESTABLISHED;
 use const Workbunny\WebmanPushServer\EVENT_PONG;
+use const Workbunny\WebmanPushServer\EVENT_TERMINATE_CONNECTION;
 use const Workbunny\WebmanPushServer\EVENT_UNSUBSCRIPTION_SUCCEEDED;
 
 class PushServerBaseTest extends BaseTestCase
 {
     /**
-     * @return void
+     * @runInSeparateProcess
      */
     public function testPushServerOnConnect()
     {
@@ -90,7 +91,7 @@ class PushServerBaseTest extends BaseTestCase
     }
 
     /**
-     * @return void
+     * @runInSeparateProcess
      */
     public function testPushServerOnMessage()
     {
@@ -127,7 +128,7 @@ class PushServerBaseTest extends BaseTestCase
     }
 
     /**
-     * @return void
+     * @runInSeparateProcess
      */
     public function testPushServerOnCloseHasNotChannel()
     {
@@ -162,7 +163,7 @@ class PushServerBaseTest extends BaseTestCase
     }
 
     /**
-     * @return void
+     * @runInSeparateProcess
      */
     public function testPushServerOnCloseHasChannel()
     {
@@ -200,62 +201,69 @@ class PushServerBaseTest extends BaseTestCase
         $this->assertNull(PushServer::getChannels($appKey, 'public-test', $socketId));
     }
 
-//    public function testPushServerHeartbeat()
-//    {
-//        // 初始化一个mock tcp连接
-//        $connection1 = new MockTcpConnection();
-//        $connection2 = new MockTcpConnection();
-//        // 模拟创建链接
-//        $this->getPushServer()->onConnect($connection1);
-//        $this->getPushServer()->onConnect($connection2);
-//        // 判断链接心跳计数
-//        $this->assertEquals(
-//            0, PushServer::getConnectionProperty($connection1, 'clientNotSendPingCount', 'has-not')
-//        );
-//        $this->assertEquals(
-//            0, PushServer::getConnectionProperty($connection2, 'clientNotSendPingCount', 'has-not')
-//        );
-//        $this->assertCount(2, PushServer::getConnections()[PushServer::$unknownTag] ?? []);
-//        // 模拟一次心跳检测
-//        call_user_func([PushServer::class, '_heartbeatChecker']);
-//        // 判断链接心跳计数
-//        $this->assertEquals(
-//            1, PushServer::getConnectionProperty($connection1, 'clientNotSendPingCount', 'has-not')
-//        );
-//        $this->assertEquals(
-//            1, PushServer::getConnectionProperty($connection2, 'clientNotSendPingCount', 'has-not')
-//        );
-//        $this->assertCount(2, PushServer::getConnections()[PushServer::$unknownTag] ?? []);
-//        // 为连接1模拟一次ping
-//        $this->getPushServer()->onMessage($connection1, '{"event":"pusher:ping"}');
-//        // 判断链接心跳计数
-//        $this->assertEquals(
-//            0, PushServer::getConnectionProperty($connection1, 'clientNotSendPingCount', 'has-not')
-//        );
-//        $this->assertEquals(
-//            1, PushServer::getConnectionProperty($connection2, 'clientNotSendPingCount', 'has-not')
-//        );
-//        $this->assertCount(2, PushServer::getConnections()[PushServer::$unknownTag] ?? []);
-//        // 模拟一次心跳检测
-//        call_user_func([PushServer::class, '_heartbeatChecker']);
-//        // 判断链接心跳计数
-//        $this->assertEquals(
-//            1, PushServer::getConnectionProperty($connection1, 'clientNotSendPingCount', 'has-not')
-//        );
-//        $this->assertEquals(
-//            2, PushServer::getConnectionProperty($connection2, 'clientNotSendPingCount', 'has-not')
-//        );
-//        $this->assertCount(2, PushServer::getConnections()[PushServer::$unknownTag] ?? []);
-//        // 模拟一次心跳检测
-//        call_user_func([PushServer::class, '_heartbeatChecker']);
-//        // 判断链接心跳计数
-//        $this->assertEquals(
-//            2, PushServer::getConnectionProperty($connection1, 'clientNotSendPingCount', 'has-not')
-//        );
-//        $this->assertEquals(
-//            'has-not', PushServer::getConnectionProperty($connection2, 'clientNotSendPingCount', 'has-not')
-//        );
-//        $this->assertCount(1, PushServer::getConnections()[PushServer::$unknownTag] ?? []);
-//    }
+    /**
+     * @runInSeparateProcess
+     */
+    public function testPushServerHeartbeat()
+    {
+        // 初始化一个mock tcp连接
+        $connection1 = new MockTcpConnection();
+        $connection2 = new MockTcpConnection();
+        // 模拟创建链接
+        $this->getPushServer()->onConnect($connection1);
+        $this->getPushServer()->onConnect($connection2);
+        // 判断链接心跳计数
+        $this->assertEquals(
+            0, PushServer::getConnectionProperty($connection1, 'clientNotSendPingCount', 'has-not')
+        );
+        $this->assertEquals(
+            0, PushServer::getConnectionProperty($connection2, 'clientNotSendPingCount', 'has-not')
+        );
+        $this->assertCount(2, PushServer::getConnections()[PushServer::$unknownTag] ?? []);
+        // 模拟一次心跳检测
+        call_user_func([PushServer::class, '_heartbeatChecker']);
+        // 判断链接心跳计数
+        $this->assertEquals(
+            1, PushServer::getConnectionProperty($connection1, 'clientNotSendPingCount', 'has-not')
+        );
+        $this->assertEquals(
+            1, PushServer::getConnectionProperty($connection2, 'clientNotSendPingCount', 'has-not')
+        );
+        $this->assertCount(2, PushServer::getConnections()[PushServer::$unknownTag] ?? []);
+        // 为连接1模拟一次ping
+        $this->getPushServer()->onMessage($connection1, '{"event":"pusher:ping"}');
+        // 判断链接心跳计数
+        $this->assertEquals(
+            0, PushServer::getConnectionProperty($connection1, 'clientNotSendPingCount', 'has-not')
+        );
+        $this->assertEquals(
+            1, PushServer::getConnectionProperty($connection2, 'clientNotSendPingCount', 'has-not')
+        );
+        $this->assertCount(2, PushServer::getConnections()[PushServer::$unknownTag] ?? []);
+        // 模拟一次心跳检测
+        call_user_func([PushServer::class, '_heartbeatChecker']);
+        // 判断链接心跳计数
+        $this->assertEquals(
+            1, PushServer::getConnectionProperty($connection1, 'clientNotSendPingCount', 'has-not')
+        );
+        $this->assertEquals(
+            2, PushServer::getConnectionProperty($connection2, 'clientNotSendPingCount', 'has-not')
+        );
+        $this->assertCount(2, PushServer::getConnections()[PushServer::$unknownTag] ?? []);
+        // 模拟一次心跳检测
+        call_user_func([PushServer::class, '_heartbeatChecker']);
+        // 判断链接心跳计数
+        $this->assertEquals(
+            2, PushServer::getConnectionProperty($connection1, 'clientNotSendPingCount', 'has-not')
+        );
+        // 连接2因为心跳次数超过阈值，所以不会累加
+        $this->assertEquals(
+            2, PushServer::getConnectionProperty($connection2, 'clientNotSendPingCount', 'has-not')
+        );
+        // 连接2因触发回收，所以接受一个销毁连接的事件
+        $this->assertEquals(EVENT_TERMINATE_CONNECTION, @json_decode($connection2->getSendBuffer(), true)['event'] ?? null);
+        // 由于断开连接时需要触发onClose，这里无法模拟，所以连接数还存在2
+        $this->assertCount(2, PushServer::getConnections()[PushServer::$unknownTag] ?? []);
+    }
 
 }
