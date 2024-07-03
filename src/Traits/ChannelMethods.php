@@ -156,7 +156,7 @@ trait ChannelMethods
             // 订阅响应
             static::_subscribeResponse($type, $data);
         } else {
-            Log::channel('plugin.workbunny.webman-push-server.debug')->debug(
+            Log::channel('plugin.workbunny.webman-push-server.notice')->notice(
                 "[Channel] $channel -> $message format error. "
             );
         }
