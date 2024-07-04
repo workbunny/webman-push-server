@@ -18,6 +18,7 @@ use Workbunny\WebmanPushServer\Events\Ping;
 use Workbunny\WebmanPushServer\Events\Subscribe;
 use Workbunny\WebmanPushServer\PushServer;
 use const Workbunny\WebmanPushServer\EVENT_CONNECTION_ESTABLISHED;
+use const Workbunny\WebmanPushServer\EVENT_ERROR;
 use const Workbunny\WebmanPushServer\EVENT_PONG;
 use const Workbunny\WebmanPushServer\EVENT_TERMINATE_CONNECTION;
 use const Workbunny\WebmanPushServer\EVENT_UNSUBSCRIPTION_SUCCEEDED;
@@ -88,6 +89,63 @@ class PushServerBaseTest extends BaseTestCase
         );
         // EVENT_CONNECTION_ESTABLISHED事件回复
         $this->assertEquals(EVENT_CONNECTION_ESTABLISHED, @json_decode($connection->getSendBuffer(), true)['event'] ?? null);
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testPushServerOnConnectInvalidAppError()
+    {
+        // 初始化一个mock tcp连接
+        $connection = new MockTcpConnection();
+        // 模拟onConnect
+        $this->getPushServer()->onConnect($connection);
+        // 模拟调用$connection->onWebSocketConnect
+        call_user_func(PushServer::getConnectionProperty($connection, 'onWebSocketConnect'), $connection, '');
+        // 断言检测心跳计数为0
+        $this->assertEquals(
+            0, PushServer::getConnectionProperty($connection, 'clientNotSendPingCount', 'has-not')
+        );
+        // 断言检测连接被暂停接收
+        $this->assertTrue($connection->isPaused());
+        // 断言检测错误信息的返回
+        $data = @json_decode($connection->getSendBuffer(), true) ?: [];
+        $this->assertEquals(EVENT_ERROR, $data['event'] ?? null);
+        $this->assertEquals([
+            'code'      => null,
+            'message'   => 'Invalid app'
+        ], $data['data'] ?? []);
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testPushServerOnConnectInvalidAppKeyError()
+    {
+        // 初始化一个mock tcp连接
+        $connection = new MockTcpConnection();
+        // 模拟onConnect
+        $this->getPushServer()->onConnect($connection);
+        // 模拟调用$connection->onWebSocketConnect
+        call_user_func(
+            PushServer::getConnectionProperty($connection, 'onWebSocketConnect'),
+            $connection,
+            "GET /app/none?protocol=7&client=js&version=3.2.4&flash=false HTTP/1.1\r\nConnection: Upgrade\r\nUpgrade: websocket\r\n\r\n"
+        );
+
+        // 断言检测心跳计数为0
+        $this->assertEquals(
+            0, PushServer::getConnectionProperty($connection, 'clientNotSendPingCount', 'has-not')
+        );
+        // 断言检测连接被暂停接收
+        $this->assertTrue($connection->isPaused());
+        // 断言检测错误信息的返回
+        $data = @json_decode($connection->getSendBuffer(), true) ?: [];
+        $this->assertEquals(EVENT_ERROR, $data['event'] ?? null);
+        $this->assertEquals([
+            'code'      => null,
+            'message'   => 'Invalid app_key'
+        ], $data['data'] ?? []);
     }
 
     /**
@@ -204,7 +262,7 @@ class PushServerBaseTest extends BaseTestCase
     /**
      * @runInSeparateProcess
      */
-    public function testPushServerHeartbeat()
+    public function testPushServerHeartbeatChecker()
     {
         // 初始化一个mock tcp连接
         $connection1 = new MockTcpConnection();
