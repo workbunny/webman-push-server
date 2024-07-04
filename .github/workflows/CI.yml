@@ -19,6 +19,7 @@ jobs:
         redis:
           - "7"
           - "6"
+          - "5"
     steps:
       - uses: actions/checkout@v3
       - uses: supercharge/redis-github-action@1.8.0
