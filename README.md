@@ -19,7 +19,11 @@
     </a>
 </div>
 
-## 当前为3.x版本，[点击跳转2.x文档](https://github.com/workbunny/webman-push-server/blob/2.x/README.md)
+## 说明
+
+- **3.x：全新架构，目前为beta版**
+- **2.x：旧版架构，长期技术支持版本（LTS），[点击跳转2.x文档](https://github.com/workbunny/webman-push-server/blob/2.x/README.md)**
+- **1.x：旧版架构，不再维护，请使用2.x / fork自行维护，[点击跳转1.x文档](https://github.com/workbunny/webman-push-server/blob/1.x/README.md)**
 
 ## 简介
 
