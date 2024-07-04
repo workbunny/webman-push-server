@@ -34,7 +34,7 @@ class ClientEvent extends AbstractEvent
     public function response(TcpConnection $connection, array $request): void
     {
         // 事件必须以client-为前缀
-        if (!str_starts_with($this->getEvent(), 'client-')) {
+        if (!str_starts_with($event = $request['event'] ?? '', 'client-')) {
             PushServer::error($connection, null, 'Client event rejected - client events must be prefixed by \'client-\'');
             return;
         }
@@ -61,7 +61,7 @@ class ClientEvent extends AbstractEvent
         PushServer::publishUseRetry(PushServer::$publishTypeClient, [
             'appKey'    => PushServer::getConnectionProperty($connection,'appKey'),
             'channel'   => $channel,
-            'event'     => $this->getEvent(),
+            'event'     => $event,
             'data'      => $data,
             'socketId'  => PushServer::getConnectionProperty($connection,'socketId')
         ]);

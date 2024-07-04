@@ -216,8 +216,8 @@ class Subscribe extends AbstractEvent
             /**
              * 发送订阅成功消息
              *
-             * @private-channel:{"event":"pusher_internal:subscription_succeeded","data":"{}","channel":"my-channel"}
-             * @public-channel:{"event":"pusher_internal:subscription_succeeded","data":"{}","channel":"my-channel"}
+             * @private-channel:{"event":"pusher_internal:subscription_succeeded","data":{},"channel":"my-channel"}
+             * @public-channel:{"event":"pusher_internal:subscription_succeeded","data":{},"channel":"my-channel"}
              * @presence-channel:{"event":"pusher_internal:subscription_succeeded","data":{"presence":{"count":2,"ids":["1488465780","14884657802"],"hash":{"1488465780":{"name":"123","sex":"1"},"14884657802":{"name":"123","sex":"1"}}}},"channel":"presence-channel"}
              */
             PushServer::send(
@@ -226,7 +226,7 @@ class Subscribe extends AbstractEvent
                 EVENT_SUBSCRIPTION_SUCCEEDED,
                 $isPresence ?
                     PushServer::getPresenceChannelDataForSubscribe($appKey, $channel) :
-                    '{}'
+                    new \stdClass()
             );
         } catch (RedisException $exception) {
             PushServer::error($connection, '500', 'Server error - Subscribe');

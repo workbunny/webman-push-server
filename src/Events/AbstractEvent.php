@@ -26,9 +26,6 @@ abstract class AbstractEvent
     const CLIENT_EVENT = PUSH_SERVER_EVENT_CLIENT_EVENT;
     const SERVER_EVENT = PUSH_SERVER_EVENT_SERVER_EVENT;
 
-    /** @var string  */
-    protected string $_event;
-
     /**
      * @var string[]
      */
@@ -47,28 +44,12 @@ abstract class AbstractEvent
 
     /**
      * @param string $event
-     */
-    public function __construct(string $event)
-    {
-        $this->_event = $event;
-    }
-
-    /**
-     * @return string
-     */
-    public function getEvent(): string
-    {
-        return $this->_event;
-    }
-
-    /**
-     * @param string $event
      * @return AbstractEvent|null
      */
     public static function factory(string $event): ?AbstractEvent
     {
         if (self::exists($preEvent = self::pre($event))) {
-            return self::$_eventObj[$preEvent] ?? (self::$_eventObj[$preEvent] = new self::$_events[$preEvent]($event));
+            return self::$_eventObj[$preEvent] ?? (self::$_eventObj[$preEvent] = new self::$_events[$preEvent]());
         }
         return null;
     }
@@ -102,20 +83,17 @@ abstract class AbstractEvent
      * 预处理
      *
      * @param string $event
-     * @return string|null
+     * @return string
      */
-    public static function pre(string $event): ?string
+    public static function pre(string $event): string
     {
         if (isset(self::$_events[$event])) {
             return $event;
         }
-        if (str_starts_with($event, 'client-')) {
-            return self::CLIENT_EVENT;
-        }
         if (str_starts_with($event, 'pusher:') or str_starts_with($event, 'pusher_internal:')) {
             return self::SERVER_EVENT;
         }
-        return null;
+        return self::CLIENT_EVENT;
     }
 
     /**

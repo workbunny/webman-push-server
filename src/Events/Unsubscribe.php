@@ -117,9 +117,9 @@ class Unsubscribe extends AbstractEvent
                 /**
                  * 发送退订成功事件消息
                  *
-                 * @private-channel:{"event":"pusher_internal:unsubscription_succeeded","data":"{}","channel":"my-channel"}
-                 * @public-channel:{"event":"pusher_internal:unsubscription_succeeded","data":"{}","channel":"my-channel"}
-                 * @presence-channel:{"event":"pusher_internal:unsubscription_succeeded","data":"{}","channel":"my-channel"}
+                 * @private-channel:{"event":"pusher_internal:unsubscription_succeeded","data":{},"channel":"my-channel"}
+                 * @public-channel:{"event":"pusher_internal:unsubscription_succeeded","data":{},"channel":"my-channel"}
+                 * @presence-channel:{"event":"pusher_internal:unsubscription_succeeded","data":{},"channel":"my-channel"}
                  **/
                 PushServer::send($connection, $channel, EVENT_UNSUBSCRIPTION_SUCCEEDED, new stdClass());
             }

@@ -354,11 +354,9 @@ class PushServerBaseTest extends BaseTestCase
         // 模拟onClose
         $this->getPushServer()->onClose($connection);
         // 断言判定
-        $this->assertEquals(
-            null, PushServer::getConnection($appKey, $socketId)
-        );
+        $this->assertNull(PushServer::getConnection($appKey, $socketId));
         // 断言检测回执buffer
-        $this->assertEquals(null, $connection->getSendBuffer());
+        $this->assertNull($connection->getSendBuffer());
         $this->assertEquals([], PushServer::getConnectionProperty($connection, 'channels', []));
     }
 
@@ -424,6 +422,81 @@ class PushServerBaseTest extends BaseTestCase
         );
         // 连接2因触发回收，所以接受一个销毁连接的事件
         $this->assertEquals(EVENT_TERMINATE_CONNECTION, @json_decode($connection2->getSendBuffer(), true)['event'] ?? null);
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testPushServerSubscribeResponse()
+    {
+        // 初始化mock tcp连接
+        $wsConnection = new MockTcpConnection();
+        $tcpConnection = new MockTcpConnection();
+        $channelConnection = new MockTcpConnection();
+        // 模拟创建链接
+        $this->getPushServer()->onConnect($wsConnection);
+        $this->getPushServer()->onConnect($tcpConnection);
+        $this->getPushServer()->onConnect($channelConnection);
+        // 模拟调用$connection->onWebSocketConnect
+        call_user_func(PushServer::getConnectionProperty($wsConnection, 'onWebSocketConnect'), $wsConnection, $this->getWebsocketHeader());
+        call_user_func(PushServer::getConnectionProperty($channelConnection, 'onWebSocketConnect'), $channelConnection, $this->getWebsocketHeader());
+        // 模拟订阅channel
+        // 模拟订阅通道
+        $this->getPushServer()->onMessage($channelConnection, '{"event":"pusher:subscribe","data":{"channel":"public-test"}}');
+        // 初始化buffer
+        $channelConnection->setSendBuffer(null);
+        $tcpConnection->setSendBuffer(null);
+        $wsConnection->setSendBuffer(null);
+        // 断言检测回执buffer
+        $this->assertNull($channelConnection->getSendBuffer());
+        $this->assertNull($tcpConnection->getSendBuffer());
+        $this->assertNull($wsConnection->getSendBuffer());
+
+        // 模拟服务广播响应 非忽略的channel广播
+        PushServer::_subscribeResponse(PushServer::$publishTypeClient, [
+            'appKey'  => PushServer::getConnectionProperty($channelConnection, 'appKey'),
+            'event'   => EVENT_PONG,
+            'channel' => 'public-test'
+        ]);
+        // 断言检测回执buffer 仅合法channel连接接收到广播回执
+        $this->assertNull($tcpConnection->getSendBuffer());
+        $this->assertNull($wsConnection->getSendBuffer());
+        $this->assertEquals(EVENT_PONG, @json_decode($channelConnection->getSendBuffer(), true)['event'] ?? null);
+        // 初始化buffer
+        $channelConnection->setSendBuffer(null);
+        $tcpConnection->setSendBuffer(null);
+        $wsConnection->setSendBuffer(null);
+
+        // 模拟服务广播响应 指定忽略socketId的channel广播
+        PushServer::_subscribeResponse(PushServer::$publishTypeClient, [
+            'appKey'   => PushServer::getConnectionProperty($channelConnection, 'appKey'),
+            'event'    => EVENT_PONG,
+            'channel'  => 'public-test',
+            'socketId' => PushServer::getConnectionProperty($channelConnection, 'socketId'),
+        ]);
+        // 断言检测回执buffer 所有连接不应接收到回执
+        $this->assertNull($tcpConnection->getSendBuffer());
+        $this->assertNull($wsConnection->getSendBuffer());
+        $this->assertNull($channelConnection->getSendBuffer());
+        // 初始化buffer
+        $channelConnection->setSendBuffer(null);
+        $tcpConnection->setSendBuffer(null);
+        $wsConnection->setSendBuffer(null);
+
+        // 模拟服务广播响应 向未知连接广播
+        PushServer::_subscribeResponse(PushServer::$publishTypeClient, [
+            'appKey'   => PushServer::$unknownTag,
+            'event'    => EVENT_PONG,
+            'channel'  => 'public-test',
+        ]);
+        // 断言检测回执buffer 所有连接不应接收到回执
+        $this->assertNull($tcpConnection->getSendBuffer());
+        $this->assertNull($wsConnection->getSendBuffer());
+        $this->assertNull($channelConnection->getSendBuffer());
+        // 初始化buffer
+        $channelConnection->setSendBuffer(null);
+        $tcpConnection->setSendBuffer(null);
+        $wsConnection->setSendBuffer(null);
     }
 
 }
