@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Tests\MockClass;
 
+use Workbunny\WebmanPushServer\PushServer;
 use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Response;
 
@@ -80,6 +81,7 @@ class MockTcpConnection extends TcpConnection
         if ($data) {
             $this->send($data, $raw);
         }
+        (new PushServer())->onClose($this);
     }
 
     /**

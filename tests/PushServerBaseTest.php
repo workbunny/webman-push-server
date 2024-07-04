@@ -212,6 +212,7 @@ class PushServerBaseTest extends BaseTestCase
         // 模拟创建链接
         $this->getPushServer()->onConnect($connection1);
         $this->getPushServer()->onConnect($connection2);
+        $this->assertCount(2, PushServer::getConnections()[PushServer::$unknownTag] ?? []);
         // 判断链接心跳计数
         $this->assertEquals(
             0, PushServer::getConnectionProperty($connection1, 'clientNotSendPingCount', 'has-not')
@@ -221,6 +222,7 @@ class PushServerBaseTest extends BaseTestCase
         );
         // 模拟一次心跳检测
         call_user_func([PushServer::class, '_heartbeatChecker']);
+        $this->assertCount(2, PushServer::getConnections()[PushServer::$unknownTag] ?? []);
         // 判断链接心跳计数
         $this->assertEquals(
             1, PushServer::getConnectionProperty($connection1, 'clientNotSendPingCount', 'has-not')
@@ -230,6 +232,7 @@ class PushServerBaseTest extends BaseTestCase
         );
         // 为连接1模拟一次ping
         $this->getPushServer()->onMessage($connection1, '{"event":"pusher:ping"}');
+        $this->assertCount(2, PushServer::getConnections()[PushServer::$unknownTag] ?? []);
         // 判断链接心跳计数
         $this->assertEquals(
             0, PushServer::getConnectionProperty($connection1, 'clientNotSendPingCount', 'has-not')
@@ -239,6 +242,7 @@ class PushServerBaseTest extends BaseTestCase
         );
         // 模拟一次心跳检测
         call_user_func([PushServer::class, '_heartbeatChecker']);
+        $this->assertCount(2, PushServer::getConnections()[PushServer::$unknownTag] ?? []);
         // 判断链接心跳计数
         $this->assertEquals(
             1, PushServer::getConnectionProperty($connection1, 'clientNotSendPingCount', 'has-not')
@@ -248,6 +252,7 @@ class PushServerBaseTest extends BaseTestCase
         );
         // 模拟一次心跳检测
         call_user_func([PushServer::class, '_heartbeatChecker']);
+        $this->assertCount(1, PushServer::getConnections()[PushServer::$unknownTag] ?? []);
         // 判断链接心跳计数
         $this->assertEquals(
             2, PushServer::getConnectionProperty($connection1, 'clientNotSendPingCount', 'has-not')
@@ -258,7 +263,6 @@ class PushServerBaseTest extends BaseTestCase
         );
         // 连接2因触发回收，所以接受一个销毁连接的事件
         $this->assertEquals(EVENT_TERMINATE_CONNECTION, @json_decode($connection2->getSendBuffer(), true)['event'] ?? null);
-
     }
 
 }
