@@ -188,36 +188,104 @@ class PushServerBaseTest extends BaseTestCase
     /**
      * @runInSeparateProcess
      */
-    public function testPushServerOnCloseHasNotChannel()
-    {
+    public function testPushServerOnMessageIllegalData(){
         // 初始化一个mock tcp连接
         $connection = new MockTcpConnection();
         // 模拟onConnect
         $this->getPushServer()->onConnect($connection);
         // 模拟调用$connection->onWebSocketConnect
         call_user_func(PushServer::getConnectionProperty($connection, 'onWebSocketConnect'), $connection, $this->getWebsocketHeader());
-        // 断言判定
+        // 断言检测心跳计数为0
         $this->assertEquals(
-            'workbunny', $appKey = PushServer::getConnectionProperty($connection, 'appKey', 'has-not')
+            0, PushServer::getConnectionProperty($connection, 'clientNotSendPingCount', 'has-not')
         );
-        $this->assertNotEquals(
-            'has-not', $socketId = PushServer::getConnectionProperty($connection, 'socketId', 'has-not')
-        );
+        // 模拟未心跳，累计计数
+        PushServer::setConnectionProperty($connection, 'clientNotSendPingCount', 1);
+        // 断言检测心跳累计为1
         $this->assertEquals(
-            $connection, PushServer::getConnection($appKey, $socketId)
+            1, PushServer::getConnectionProperty($connection, 'clientNotSendPingCount', 'has-not')
         );
-        $this->assertEquals([], PushServer::getConnectionProperty($connection, 'channels', []));
-        // 模拟回执buffer初始化
+        // 断言检测事件初始为null
+        $this->assertNull($this->getPushServer()->getLastEvent());
+        // 设置回执buffer null
         $connection->setSendBuffer(null);
-        // 模拟onClose
-        $this->getPushServer()->onClose($connection);
-        // 断言判定
+        // 断言检测回执buffer为null
+        $this->assertNull($connection->getSendBuffer());
+
+        // 模拟发送 非规范字符串
+        $this->getPushServer()->onMessage($connection, 'abc');
+        // 断言检测心跳
         $this->assertEquals(
-            null, PushServer::getConnection($appKey, $socketId)
+            1, PushServer::getConnectionProperty($connection, 'clientNotSendPingCount', 'has-not')
         );
-        // 断言检测回执buffer
-        $this->assertEquals(null, $connection->getSendBuffer());
-        $this->assertEquals([], PushServer::getConnectionProperty($connection, 'channels', []));
+        // 断言检测事件
+        $this->assertNull($this->getPushServer()->getLastEvent());
+        // 断言检测错误信息的返回
+        $data = @json_decode($connection->getSendBuffer(), true) ?: [];
+        $this->assertEquals(EVENT_ERROR, $data['event'] ?? null);
+        $this->assertEquals([
+            'code'      => null,
+            'message'   => 'Client event rejected - Unknown event'
+        ], $data['data'] ?? []);
+        // 初始化回执buffer
+        $connection->setSendBuffer(null);
+
+        // 模拟发送 int
+        $this->getPushServer()->onMessage($connection, 1);
+        // 断言检测心跳累计
+        $this->assertEquals(
+            1, PushServer::getConnectionProperty($connection, 'clientNotSendPingCount', 'has-not')
+        );
+        // 断言检测事件
+        $this->assertNull($this->getPushServer()->getLastEvent());
+        // 断言检测回执buffer为null
+        $this->assertNull($connection->getSendBuffer());
+
+        // 模拟发送 float
+        $this->getPushServer()->onMessage($connection, 1.1111);
+        // 断言检测心跳累计
+        $this->assertEquals(
+            1, PushServer::getConnectionProperty($connection, 'clientNotSendPingCount', 'has-not')
+        );
+        // 断言检测事件
+        $this->assertNull($this->getPushServer()->getLastEvent());
+        // 断言检测回执buffer为null
+        $this->assertNull($connection->getSendBuffer());
+
+        // 模拟发送 bool
+        $this->getPushServer()->onMessage($connection, true);
+        // 断言检测心跳累计
+        $this->assertEquals(
+            1, PushServer::getConnectionProperty($connection, 'clientNotSendPingCount', 'has-not')
+        );
+        // 断言检测事件
+        $this->assertNull($this->getPushServer()->getLastEvent());
+        // 断言检测回执buffer为null
+        $this->assertNull($connection->getSendBuffer());
+
+        // 模拟发送 array
+        $this->getPushServer()->onMessage($connection, [
+            'data' => 1
+        ]);
+        // 断言检测心跳累计
+        $this->assertEquals(
+            1, PushServer::getConnectionProperty($connection, 'clientNotSendPingCount', 'has-not')
+        );
+        // 断言检测事件
+        $this->assertNull($this->getPushServer()->getLastEvent());
+        // 断言检测回执buffer为null
+        $this->assertNull($connection->getSendBuffer());
+
+        // 模拟发送 object
+        $this->getPushServer()->onMessage($connection, new \stdClass());
+        // 断言检测心跳累计
+        $this->assertEquals(
+            1, PushServer::getConnectionProperty($connection, 'clientNotSendPingCount', 'has-not')
+        );
+        // 断言检测事件
+        $this->assertNull($this->getPushServer()->getLastEvent());
+        // 断言检测回执buffer为null
+        $this->assertNull($connection->getSendBuffer());
     }
 
     /**
@@ -257,6 +325,41 @@ class PushServerBaseTest extends BaseTestCase
         $this->assertEquals(EVENT_UNSUBSCRIPTION_SUCCEEDED, @json_decode($connection->getSendBuffer(), true)['event'] ?? null);
         $this->assertEquals([], PushServer::getConnectionProperty($connection, 'channels', []));
         $this->assertNull(PushServer::getChannels($appKey, 'public-test', $socketId));
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testPushServerOnCloseHasNotChannel()
+    {
+        // 初始化一个mock tcp连接
+        $connection = new MockTcpConnection();
+        // 模拟onConnect
+        $this->getPushServer()->onConnect($connection);
+        // 模拟调用$connection->onWebSocketConnect
+        call_user_func(PushServer::getConnectionProperty($connection, 'onWebSocketConnect'), $connection, $this->getWebsocketHeader());
+        // 断言判定
+        $this->assertEquals(
+            'workbunny', $appKey = PushServer::getConnectionProperty($connection, 'appKey', 'has-not')
+        );
+        $this->assertNotEquals(
+            'has-not', $socketId = PushServer::getConnectionProperty($connection, 'socketId', 'has-not')
+        );
+        $this->assertEquals(
+            $connection, PushServer::getConnection($appKey, $socketId)
+        );
+        $this->assertEquals([], PushServer::getConnectionProperty($connection, 'channels', []));
+        // 模拟回执buffer初始化
+        $connection->setSendBuffer(null);
+        // 模拟onClose
+        $this->getPushServer()->onClose($connection);
+        // 断言判定
+        $this->assertEquals(
+            null, PushServer::getConnection($appKey, $socketId)
+        );
+        // 断言检测回执buffer
+        $this->assertEquals(null, $connection->getSendBuffer());
+        $this->assertEquals([], PushServer::getConnectionProperty($connection, 'channels', []));
     }
 
     /**
