@@ -19,16 +19,17 @@ use Workbunny\WebmanPushServer\Events\Ping;
 use Workbunny\WebmanPushServer\Events\Subscribe;
 use Workbunny\WebmanPushServer\Events\Unsubscribe;
 use Workbunny\WebmanPushServer\PushServer;
-use const Workbunny\WebmanPushServer\EVENT_CONNECTION_ESTABLISHED;
 use const Workbunny\WebmanPushServer\EVENT_ERROR;
 use const Workbunny\WebmanPushServer\EVENT_PING;
 use const Workbunny\WebmanPushServer\EVENT_PONG;
 use const Workbunny\WebmanPushServer\EVENT_SUBSCRIBE;
 use const Workbunny\WebmanPushServer\EVENT_SUBSCRIPTION_SUCCEEDED;
-use const Workbunny\WebmanPushServer\EVENT_TERMINATE_CONNECTION;
 use const Workbunny\WebmanPushServer\EVENT_UNSUBSCRIBE;
 use const Workbunny\WebmanPushServer\EVENT_UNSUBSCRIPTION_SUCCEEDED;
 
+/**
+ * @runTestsInSeparateProcesses
+ */
 class PushServerEventTest extends BaseTestCase
 {
 
@@ -41,9 +42,7 @@ class PushServerEventTest extends BaseTestCase
         return json_encode($array, JSON_UNESCAPED_UNICODE);
     }
 
-    /**
-     * @runInSeparateProcess
-     */
+
     public function testPushServerEventPing(){
         // 初始化一个mock tcp连接
         $connection = new MockTcpConnection();
@@ -84,9 +83,7 @@ class PushServerEventTest extends BaseTestCase
         $this->assertEquals([], $data['data'] ?? null);
     }
 
-    /**
-     * @runInSeparateProcess
-     */
+
     public function testPushServerEventSubscribe()
     {
         $key = __FUNCTION__;
@@ -215,9 +212,7 @@ class PushServerEventTest extends BaseTestCase
         PushServer::setConnections([]);
     }
 
-    /**
-     * @runInSeparateProcess
-     */
+
     public function testPushServerEventUnsubscribe()
     {
         $key = __FUNCTION__;
@@ -296,9 +291,7 @@ class PushServerEventTest extends BaseTestCase
         );
     }
 
-    /**
-     * @runInSeparateProcess
-     */
+
     public function testPushServerEventClientEventError()
     {
         $key = __FUNCTION__;
@@ -427,9 +420,7 @@ class PushServerEventTest extends BaseTestCase
         PushServer::setConnectionProperty($connection, 'clientNotSendPingCount', 1);
     }
 
-    /**
-     * @runInSeparateProcess
-     */
+
     public function testPushServerEventClientEventFailure()
     {
         $key = __FUNCTION__;
@@ -501,9 +492,7 @@ class PushServerEventTest extends BaseTestCase
         ], $data['data'] ?? null);
     }
 
-    /**
-     * @runInSeparateProcess
-     */
+
     public function testPushServerEventClientEventSuccess()
     {
         $key = __FUNCTION__;

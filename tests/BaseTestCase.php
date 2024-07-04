@@ -57,24 +57,24 @@ abstract class BaseTestCase extends TestCase
     /** @inheritDoc */
     protected function setUp(): void
     {
-        parent::setUp();
-        // 引入框架文件
+        // 模拟webman-framework加载框架
         require_once __DIR__ . '/../vendor/workerman/webman-framework/src/support/helpers.php';
-        // 加载配置
+        // 模拟webman-framework加载配置
         Config::load($configPath = __DIR__ . '/../src/config', ['route']);
-        // 加载bootsrap
+        // 模拟webman-framework加载bootsrap
         foreach (\config('plugin.workbunny.webman-push-server.bootstrap') as $bootstrap) {
             if (
-                class_exists($bootstrap, false) and
+                class_exists($bootstrap) and
                 is_a($bootstrap, Bootstrap::class, true)
             ) {
-                $bootstrap::start(null);
+                $bootstrap::start(null, $configPath);
             }
         }
-        // 加载路由
+        // 模拟webman-framework加载路由
         Route::load($configPath);
-        // 加载服务
+        // 模拟启动服务
         $this->pushServer = new PushServer();
         $this->apiServer = new ApiServer();
+        parent::setUp();
     }
 }

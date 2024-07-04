@@ -23,11 +23,12 @@ use const Workbunny\WebmanPushServer\EVENT_PONG;
 use const Workbunny\WebmanPushServer\EVENT_TERMINATE_CONNECTION;
 use const Workbunny\WebmanPushServer\EVENT_UNSUBSCRIPTION_SUCCEEDED;
 
+/**
+ * @runTestsInSeparateProcesses
+ */
 class PushServerBaseTest extends BaseTestCase
 {
-    /**
-     * @runInSeparateProcess
-     */
+
     public function testPushServerOnConnect()
     {
         // 初始化一个mock tcp连接
@@ -91,9 +92,7 @@ class PushServerBaseTest extends BaseTestCase
         $this->assertEquals(EVENT_CONNECTION_ESTABLISHED, @json_decode($connection->getSendBuffer(), true)['event'] ?? null);
     }
 
-    /**
-     * @runInSeparateProcess
-     */
+
     public function testPushServerOnConnectInvalidAppError()
     {
         // 初始化一个mock tcp连接
@@ -117,9 +116,7 @@ class PushServerBaseTest extends BaseTestCase
         ], $data['data'] ?? []);
     }
 
-    /**
-     * @runInSeparateProcess
-     */
+
     public function testPushServerOnConnectInvalidAppKeyError()
     {
         // 初始化一个mock tcp连接
@@ -148,9 +145,7 @@ class PushServerBaseTest extends BaseTestCase
         ], $data['data'] ?? []);
     }
 
-    /**
-     * @runInSeparateProcess
-     */
+
     public function testPushServerOnMessage()
     {
         // 初始化一个mock tcp连接
@@ -185,9 +180,7 @@ class PushServerBaseTest extends BaseTestCase
         $this->assertEquals(EVENT_PONG, @json_decode($connection->getSendBuffer(), true)['event'] ?? null);
     }
 
-    /**
-     * @runInSeparateProcess
-     */
+
     public function testPushServerOnMessageIllegalData(){
         // 初始化一个mock tcp连接
         $connection = new MockTcpConnection();
@@ -288,9 +281,7 @@ class PushServerBaseTest extends BaseTestCase
         $this->assertNull($connection->getSendBuffer());
     }
 
-    /**
-     * @runInSeparateProcess
-     */
+
     public function testPushServerOnCloseHasChannel()
     {
         // 初始化一个mock tcp连接
@@ -327,9 +318,7 @@ class PushServerBaseTest extends BaseTestCase
         $this->assertNull(PushServer::getChannels($appKey, 'public-test', $socketId));
     }
 
-    /**
-     * @runInSeparateProcess
-     */
+
     public function testPushServerOnCloseHasNotChannel()
     {
         // 初始化一个mock tcp连接
@@ -360,9 +349,7 @@ class PushServerBaseTest extends BaseTestCase
         $this->assertEquals([], PushServer::getConnectionProperty($connection, 'channels', []));
     }
 
-    /**
-     * @runInSeparateProcess
-     */
+
     public function testPushServerHeartbeatChecker()
     {
         // 初始化一个mock tcp连接
@@ -424,9 +411,7 @@ class PushServerBaseTest extends BaseTestCase
         $this->assertEquals(EVENT_TERMINATE_CONNECTION, @json_decode($connection2->getSendBuffer(), true)['event'] ?? null);
     }
 
-    /**
-     * @runInSeparateProcess
-     */
+
     public function testPushServerSubscribeResponse()
     {
         // 初始化mock tcp连接

@@ -292,10 +292,10 @@ ApiRoute::addGroup('/apps/{appId}', function () {
         if (!($appKey = $request->get('auth_key'))) {
             return response(400,['error' => 'Required auth_key']);
         }
-        if ($appVerifyCallback = ApiServer::getConfig('app_verify')) {
+        if ($appVerifyCallback = ApiServer::getConfig('app_verify', getBase: true)) {
             if (
                 !$app = call_user_func($appVerifyCallback, $appKey) or
-                ($app['app_id'] !== $appId)
+                ($app['app_id'] !== intval($appId))
             ) {
                 return response(401,['error' => 'Invalid auth_key']);
             }

@@ -90,19 +90,21 @@ class ApiRoute implements Bootstrap
     protected static array $_middlewares = [];
 
     /** @inheritDoc */
-    public static function start($worker): void
+    public static function start($worker, $configPath = null): void
     {
         ApiRoute::initCollector();
-        ApiRoute::initRoutes();
+        ApiRoute::initRoutes($configPath);
         ApiRoute::initDispatcher();
     }
 
     /**
+     * @param null $configPath
      * @return void
      */
-    public static function initRoutes(): void
+    public static function initRoutes($configPath = null): void
     {
-        if (is_file($file = config_path() . '/plugin/workbunny/webman-push-server/route.php')) {
+        if (is_file($file = ($configPath ?: config_path()) . '/plugin/workbunny/webman-push-server/route.php')) {
+
             require_once $file;
         }
     }
@@ -132,7 +134,7 @@ class ApiRoute implements Bootstrap
      */
     public static function initDispatcher(): void
     {
-        if(!self::$_dispatcher){
+        if (!self::$_dispatcher) {
             self::$_dispatcher = new Dispatcher\GroupCountBased(self::getCollector()->getData());
         }
     }
