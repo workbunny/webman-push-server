@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Workbunny\WebmanPushServer;
 
 use Closure;
+use Workbunny\WebmanPushServer\Traits\ConnectionsMethods;
 use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
 use Workerman\Protocols\Http\Response;
@@ -22,6 +23,13 @@ use function config;
 
 class ApiServer
 {
+    use ConnectionsMethods;
+
+    public function __construct()
+    {
+        static::setStatisticsInterval(static::getConfig('traffic_statistics_interval', 0));
+    }
+
     /**
      * 获取配置
      *
@@ -51,6 +59,8 @@ class ApiServer
         $response->withHeader('Content-Type', 'application/json');
         $response->withHeader('Server', 'workbunny/webman-push-server');
         $response->withHeader('Version', PushServer::$version);
+        $response->withHeader('SocketId', static::getConnectionProperty($connection, 'socketId'));
+        static::setSendBytesStatistics($connection, (string)$response);
         if ($request) {
             $keepAlive = $request->header('connection');
             if (
@@ -81,7 +91,11 @@ class ApiServer
      * @param TcpConnection $connection
      * @return void
      */
-    public function onConnect(TcpConnection $connection): void{}
+    public function onConnect(TcpConnection $connection): void
+    {
+        static::setConnectionProperty($connection, 'socketId', $socketId = static::createSocketId());
+        static::setConnection('', $socketId, $connection);
+    }
 
     /**
      * @param TcpConnection $connection
@@ -94,6 +108,7 @@ class ApiServer
             $this->send(\Workbunny\WebmanPushServer\response(400, 'Bad Request.'), $connection);
             return;
         }
+        self::setRecvBytesStatistics($connection, (string)$data);
         $res = ApiRoute::getDispatcher()->dispatch($data->method(), $data->path());
         $handler = $res[1] ?? null;
         $params = $res[2] ?? [];
@@ -123,5 +138,10 @@ class ApiServer
      * @param TcpConnection $connection
      * @return void
      */
-    public function onClose(TcpConnection $connection): void {}
+    public function onClose(TcpConnection $connection): void
+    {
+        if ($socketId = static::getConnectionProperty($connection, 'socketId')) {
+            static::unsetConnection('', $socketId);
+        }
+    }
 }

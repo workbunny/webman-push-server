@@ -67,3 +67,17 @@ if (!function_exists('fuuid')) {
         return $uuid;
     }
 }
+
+/**
+ * 字符串转换为bit
+ */
+if (!function_exists('str2byte')) {
+    /**
+     * @param string|int|float $str
+     * @return int
+     */
+    function str2byte(string|int|float $str): int
+    {
+        return strlen((string)$str);
+    }
+}

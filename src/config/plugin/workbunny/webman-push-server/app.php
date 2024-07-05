@@ -31,9 +31,12 @@ return [
     'push-server' => [
         // 心跳检查，0为不检查
         'heartbeat' => 60,
+        // 流量统计间隔
+        'traffic_statistics_interval' => 0,
     ],
     // api服务配置
     'api-server' => [
-
+        // 流量统计间隔
+        'traffic_statistics_interval' => 0,
     ],
 ];

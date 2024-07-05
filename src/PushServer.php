@@ -17,6 +17,7 @@ use support\Log;
 use Workbunny\WebmanPushServer\Events\AbstractEvent;
 use Workbunny\WebmanPushServer\Events\Unsubscribe;
 use Workbunny\WebmanPushServer\Traits\ChannelMethods;
+use Workbunny\WebmanPushServer\Traits\ConnectionsMethods;
 use Workbunny\WebmanPushServer\Traits\HelperMethods;
 use Workbunny\WebmanPushServer\Traits\StorageMethods;
 use Workerman\Connection\TcpConnection;
@@ -28,6 +29,7 @@ class PushServer
     use HelperMethods;
     use ChannelMethods;
     use StorageMethods;
+    use ConnectionsMethods;
 
     /**
      * @var string $version version
@@ -38,18 +40,6 @@ class PushServer
      * @var string 未知连接储存的appKey标签
      */
     public static string $unknownTag = '<unknown>';
-
-    /**
-     * 当前进程所有连接
-     *
-     * @var TcpConnection[][] = [
-     *  'appKey_1' => [
-     *      'socketId_1' => TcpConnection_1, @see self::getConnectionProperty()
-     *      'socketId_2' => TcpConnection_2, @see self::getConnectionProperty()
-     *  ],
-     * ]
-     */
-    protected static array $_connections = [];
 
     /**
      * 当前进程所有通道及所在通道的连接id
@@ -76,6 +66,7 @@ class PushServer
 
     public function __construct()
     {
+        static::setStatisticsInterval(static::getConfig('traffic_statistics_interval', 0));
         $this->setKeepaliveTimeout(
             intval(self::getConfig('heartbeat', 60))
         );
@@ -183,6 +174,7 @@ class PushServer
     public function onMessage(TcpConnection $connection, $data): void
     {
         if (is_string($data)) {
+            static::setRecvBytesStatistics($connection, $data);
             if ($data = @json_decode($data, true)) {
                 // 获取事件
                 $this->setLastEvent(AbstractEvent::factory($data['event'] ?? ''));
@@ -324,7 +316,9 @@ class PushServer
             'data'      => $data
         ]);
         // 向连接发送消息
-        $connection->send($response ? json_encode($response, JSON_UNESCAPED_UNICODE) : '{}');
+        $connection->send($buffer = $response ? json_encode($response, JSON_UNESCAPED_UNICODE) : '{}');
+        // 设置发送每秒字节数
+        static::setSendBytesStatistics($connection, $buffer);
         // 向通道发送一个type=server的消息
         static::publishUseRetry(static::$publishTypeServer, $response);
     }
@@ -348,16 +342,6 @@ class PushServer
     }
 
     /**
-     * 创建一个全局的客户端id
-     *
-     * @return string
-     */
-    public static function createSocketId(): string
-    {
-        return uuid();
-    }
-
-    /**
      * 获得channel类型
      *
      * @param string $channel
@@ -368,87 +352,6 @@ class PushServer
         return (str_starts_with($channel, 'private-'))
             ? CHANNEL_TYPE_PRIVATE
             : ((str_starts_with($channel, 'presence-')) ? CHANNEL_TYPE_PRESENCE : CHANNEL_TYPE_PUBLIC);
-    }
-
-    /**
-     * 设置连接信息
-     *
-     * @param TcpConnection $connection
-     * @param string $property = clientNotSendPingCount (int) | appKey (string) | queryString (string) | socketId (string) | channels = [ channel => ''|uid]
-     * @param mixed|null $value
-     * @return void
-     */
-    public static function setConnectionProperty(TcpConnection $connection, string $property, mixed $value): void
-    {
-        $connection->$property = $value;
-    }
-
-    /**
-     * 获取连接信息
-     *
-     * @param TcpConnection $connection
-     * @param string $property = clientNotSendPingCount (int) | appKey (string) | queryString (string) | socketId (string) | channels = [ channel => ''|uid]
-     * @param mixed|null $default
-     * @return mixed|null
-     */
-    public static function getConnectionProperty(TcpConnection $connection, string $property, mixed $default = null): mixed
-    {
-        return $connection->$property ?? $default;
-    }
-
-    /**
-     * @return TcpConnection[][]
-     */
-    public static function getConnections(): array
-    {
-        return static::$_connections;
-    }
-
-    /**
-     * @param array $connections
-     * @return void
-     */
-    public static function setConnections(array $connections): void
-    {
-        static::$_connections = $connections;
-    }
-
-    /**
-     * 设置连接
-     *
-     * @param string $appKey
-     * @param string $socketId
-     * @param TcpConnection $connection
-     * @return void
-     */
-    public static function setConnection(string $appKey, string $socketId, TcpConnection $connection): void
-    {
-        static::$_connections[$appKey][$socketId] = $connection;
-    }
-
-    /**
-     * 获取连接
-     *
-     * @param string $appKey
-     * @param string $socketId
-     * @return TcpConnection|null
-     */
-    public static function getConnection(string $appKey, string $socketId): ?TcpConnection
-    {
-        return static::$_connections[$appKey][$socketId] ?? null;
-    }
-
-    /**
-     * 移除连接
-     *
-     * @param string $appKey
-     * @param string $socketId
-     * @return void
-     */
-    public static function unsetConnection(string $appKey, string $socketId): void
-    {
-        // 移除connections
-        unset(static::$_connections[$appKey][$socketId]);
     }
 
     /**
