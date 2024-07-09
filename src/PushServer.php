@@ -16,6 +16,7 @@ namespace Workbunny\WebmanPushServer;
 use support\Log;
 use Workbunny\WebmanPushServer\Events\AbstractEvent;
 use Workbunny\WebmanPushServer\Events\Unsubscribe;
+use Workbunny\WebmanPushServer\PublishTypes\AbstractPublishType;
 use Workbunny\WebmanPushServer\Traits\ChannelMethods;
 use Workbunny\WebmanPushServer\Traits\ConnectionsMethods;
 use Workbunny\WebmanPushServer\Traits\HelperMethods;
@@ -320,7 +321,7 @@ class PushServer
         // 设置发送每秒字节数
         static::setSendBytesStatistics($connection, $buffer);
         // 向通道发送一个type=server的消息
-        static::publishUseRetry(static::$publishTypeServer, $response);
+        static::publishUseRetry(AbstractPublishType::PUBLISH_TYPE_SERVER, $response);
     }
 
     /**
@@ -403,47 +404,9 @@ class PushServer
     public static function _subscribeResponse(string $type, array $data): void
     {
         try {
-            // 客户端事件
-            if ($type === static::$publishTypeClient) {
-                static::verify($data, [
-                    ['appKey', 'is_string', true],
-                    ['channel', 'is_string', true],
-                    ['event', 'is_string', true],
-                    ['socketId', 'is_string', false]
-                ]);
-                // 查询通道下的所有socketId
-                $socketIds = static::getChannels($appKey = $data['appKey'], $data['channel']);
-                // 发送至socketId对应的连接
-                foreach ($socketIds as $socketId) {
-                    // 如果存在socketId字段，则是需要做忽略发送
-                    if ($socketId !== ($data['socketId'] ?? null)) {
-                        // 获取对应connection对象
-                        if ($connection = static::getConnection($appKey, $socketId)) {
-                            // 发送
-                            static::send(
-                                $connection,
-                                $data['channel'],
-                                $data['event'],
-                                $data['data'] ?? '{}'
-                            );
-                        }
-                    }
-                }
-            }
-            // 服务事件
-            if ($type === static::$publishTypeServer) {
-                static::verify($data, [
-                    ['appKey', 'is_string', true],
-                    ['event', 'is_string', true],
-                    ['socketId', 'is_string', false],
-                ]);
-                // 断开连接事件
-                if (
-                    ($socketId = $data['socketId'] ?? null) and
-                    $data['event'] === EVENT_TERMINATE_CONNECTION
-                ) {
-                    static::terminateConnections($data['appKey'], $socketId, $data['data'] ?? []);
-                }
+            // publishType 响应
+            if ($publishType = AbstractPublishType::factory($type)) {
+                $publishType::response($data);
             }
         } catch (\InvalidArgumentException $exception) {
             Log::channel('plugin.workbunny.webman-push-server.warning')

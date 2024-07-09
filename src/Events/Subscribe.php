@@ -15,6 +15,7 @@ namespace Workbunny\WebmanPushServer\Events;
 
 use RedisException;
 use support\Log;
+use Workbunny\WebmanPushServer\PublishTypes\AbstractPublishType;
 use Workbunny\WebmanPushServer\PushServer;
 use Workerman\Connection\TcpConnection;
 use function Workbunny\WebmanPushServer\uuid;
@@ -164,7 +165,7 @@ class Subscribe extends AbstractEvent
                 /** @see PushServer::$_storage */
                 $storage->hSet($key, 'type', $type);
                 // 内部事件广播 通道被创建事件
-                PushServer::publishUseRetry(PushServer::$publishTypeServer, [
+                PushServer::publishUseRetry(AbstractPublishType::PUBLISH_TYPE_SERVER, [
                     'appKey'    => $appKey,
                     'channel'   => $channel,
                     'event'     => EVENT_CHANNEL_OCCUPIED,
@@ -200,7 +201,7 @@ class Subscribe extends AbstractEvent
                      *
                      * {"event":"pusher_internal:member_added","data":{"user_id":1488465780,"user_info":"{\"name\":\"123\",\"sex:\"1\"}","channel ":"presence-channel"}}
                      */
-                    PushServer::publishUseRetry(PushServer::$publishTypeClient, [
+                    PushServer::publishUseRetry(AbstractPublishType::PUBLISH_TYPE_CLIENT, [
                         'appKey'   => $appKey,
                         'channel'  => $channel,
                         'event'    => EVENT_MEMBER_ADDED,

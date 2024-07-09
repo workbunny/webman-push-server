@@ -16,6 +16,7 @@ namespace Workbunny\WebmanPushServer\Events;
 use RedisException;
 use stdClass;
 use support\Log;
+use Workbunny\WebmanPushServer\PublishTypes\AbstractPublishType;
 use Workbunny\WebmanPushServer\PushServer;
 use Workerman\Connection\TcpConnection;
 use function Workbunny\WebmanPushServer\uuid;
@@ -81,7 +82,7 @@ class Unsubscribe extends AbstractEvent
                          *
                          * {"event":"pusher_internal:member_removed","data":"{"user_id":"14884657801"}","channel":"presence-channel"}
                          */
-                        PushServer::publishUseRetry(PushServer::$publishTypeClient, [
+                        PushServer::publishUseRetry(AbstractPublishType::PUBLISH_TYPE_CLIENT, [
                             'appKey'  => $appKey,
                             'channel' => $channel,
                             'event'   => EVENT_MEMBER_REMOVED,
@@ -98,7 +99,7 @@ class Unsubscribe extends AbstractEvent
                 if ($subCount <= 0) {
                     $storage->del($key);
                     // 内部事件广播 通道被移除事件
-                    PushServer::publishUseRetry(PushServer::$publishTypeServer, [
+                    PushServer::publishUseRetry(AbstractPublishType::PUBLISH_TYPE_SERVER, [
                         'appKey'    => $appKey,
                         'channel'   => $channel,
                         'event'     => EVENT_CHANNEL_VACATED,

@@ -19,7 +19,6 @@ use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
 use Workerman\Protocols\Http\Response;
 use Workerman\Worker;
-use function config;
 
 class ApiServer
 {

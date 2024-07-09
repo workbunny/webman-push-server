@@ -14,6 +14,7 @@ declare(strict_types=1);
 use support\Log;
 use Workbunny\WebmanPushServer\ApiClient;
 use Workbunny\WebmanPushServer\ApiServer;
+use Workbunny\WebmanPushServer\PublishTypes\AbstractPublishType;
 use Workerman\Protocols\Http\Request;
 use support\Response;
 use Workbunny\WebmanPushServer\ApiRoute;
@@ -184,7 +185,7 @@ ApiRoute::addGroup('/apps/{appId}', function () {
         }
         $channels = ($channel !== null) ? [(string)$channel] : $channels;
         foreach ($channels as $channel) {
-            PushServer::publishUseRetry(PushServer::$publishTypeClient, PushServer::filter([
+            PushServer::publishUseRetry(AbstractPublishType::PUBLISH_TYPE_CLIENT, PushServer::filter([
                 'appKey'    => $appKey,
                 'channel'   => $channel,
                 'event'     => $event,
@@ -214,7 +215,7 @@ ApiRoute::addGroup('/apps/{appId}', function () {
             $event = $package['name'];
             $data = $package['data'];
             $socketId = $package['socket_id'] ?? null;
-            PushServer::publishUseRetry(PushServer::$publishTypeClient, PushServer::filter([
+            PushServer::publishUseRetry(AbstractPublishType::PUBLISH_TYPE_CLIENT, PushServer::filter([
                 'appKey'    => $appKey,
                 'channel'   => $channel,
                 'event'     => $event,
@@ -242,7 +243,7 @@ ApiRoute::addGroup('/apps/{appId}', function () {
             $socketIds[] = $storage->hGet($userKey, 'socket_id');
         }
         foreach ($socketIds as $socketId){
-            PushServer::publishUseRetry(PushServer::$publishTypeServer, [
+            PushServer::publishUseRetry(AbstractPublishType::PUBLISH_TYPE_SERVER, [
                 'appKey'    => $appKey,
                 'socket_id' => $socketId,
                 'event'     => EVENT_TERMINATE_CONNECTION,

@@ -15,6 +15,7 @@ namespace Workbunny\WebmanPushServer\Events;
 
 use RedisException;
 use support\Log;
+use Workbunny\WebmanPushServer\PublishTypes\AbstractPublishType;
 use Workbunny\WebmanPushServer\PushServer;
 use Workbunny\WebmanPushServer\Traits\ChannelMethods;
 use Workerman\Connection\TcpConnection;
@@ -58,7 +59,7 @@ class ClientEvent extends AbstractEvent
             return;
         }
         // 广播 客户端消息
-        PushServer::publishUseRetry(PushServer::$publishTypeClient, [
+        PushServer::publishUseRetry(AbstractPublishType::PUBLISH_TYPE_CLIENT, [
             'appKey'    => PushServer::getConnectionProperty($connection,'appKey'),
             'channel'   => $channel,
             'event'     => $event,

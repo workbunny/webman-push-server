@@ -16,6 +16,7 @@ namespace Tests;
 use Tests\MockClass\MockTcpConnection;
 use Workbunny\WebmanPushServer\Events\Ping;
 use Workbunny\WebmanPushServer\Events\Subscribe;
+use Workbunny\WebmanPushServer\PublishTypes\AbstractPublishType;
 use Workbunny\WebmanPushServer\PushServer;
 use const Workbunny\WebmanPushServer\EVENT_CONNECTION_ESTABLISHED;
 use const Workbunny\WebmanPushServer\EVENT_ERROR;
@@ -438,7 +439,7 @@ class PushServerBaseTest extends BaseTestCase
         $this->assertNull($wsConnection->getSendBuffer());
 
         // 模拟服务广播响应 非忽略的channel广播
-        PushServer::_subscribeResponse(PushServer::$publishTypeClient, [
+        PushServer::_subscribeResponse(AbstractPublishType::PUBLISH_TYPE_CLIENT, [
             'appKey'  => PushServer::getConnectionProperty($channelConnection, 'appKey'),
             'event'   => EVENT_PONG,
             'channel' => 'public-test'
@@ -453,7 +454,7 @@ class PushServerBaseTest extends BaseTestCase
         $wsConnection->setSendBuffer(null);
 
         // 模拟服务广播响应 指定忽略socketId的channel广播
-        PushServer::_subscribeResponse(PushServer::$publishTypeClient, [
+        PushServer::_subscribeResponse(AbstractPublishType::PUBLISH_TYPE_CLIENT, [
             'appKey'   => PushServer::getConnectionProperty($channelConnection, 'appKey'),
             'event'    => EVENT_PONG,
             'channel'  => 'public-test',
@@ -469,7 +470,7 @@ class PushServerBaseTest extends BaseTestCase
         $wsConnection->setSendBuffer(null);
 
         // 模拟服务广播响应 向未知连接广播
-        PushServer::_subscribeResponse(PushServer::$publishTypeClient, [
+        PushServer::_subscribeResponse(AbstractPublishType::PUBLISH_TYPE_CLIENT, [
             'appKey'   => PushServer::$unknownTag,
             'event'    => EVENT_PONG,
             'channel'  => 'public-test',

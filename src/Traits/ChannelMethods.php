@@ -21,9 +21,6 @@ trait ChannelMethods
     /** @var string  */
     protected static string $internalChannelKey = 'workbunny.webman-push-server.server-channel';
 
-    public static string $publishTypeClient = 'client';
-
-    public static string $publishTypeServer = 'server';
 
     /**
      * 创建连接
