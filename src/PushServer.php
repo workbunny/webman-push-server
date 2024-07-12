@@ -187,7 +187,7 @@ class PushServer
      */
     public function onMessage(TcpConnection $connection, $data): void
     {
-        $handler = function ($connection, $data) {
+        $handler = function (TcpConnection $connection, $data) {
             if (is_string($data)) {
                 static::setRecvBytesStatistics($connection, $data);
                 if ($data = @json_decode($data, true)) {
@@ -207,13 +207,12 @@ class PushServer
         call_user_func(array_reduce(
             array_reverse($this->_middlewares),
             function (Closure $carry, Closure $pipe) {
-
-                return function (...$arguments) use ($carry, $pipe) {
-                    return $pipe($carry, ...$arguments);
+                return function (TcpConnection $connection, $data) use ($carry, $pipe) {
+                    return $pipe($carry, $connection, $data);
                 };
             },
-            function (...$arguments) use ($handler) {
-                return $handler(...$arguments);
+            function (TcpConnection $connection, $data) use ($handler) {
+                return $handler($connection, $data);
             }
         ), $connection, $data);
     }
