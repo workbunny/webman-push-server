@@ -15,6 +15,7 @@ use support\Log;
 use Workbunny\WebmanPushServer\ApiClient;
 use Workbunny\WebmanPushServer\ApiServer;
 use Workbunny\WebmanPushServer\PublishTypes\AbstractPublishType;
+use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
 use support\Response;
 use Workbunny\WebmanPushServer\ApiRoute;
@@ -288,7 +289,7 @@ ApiRoute::addGroup('/apps/{appId}', function () {
         }
     });
 
-}, function (Closure $next, Request $request, array $urlParams): Response {
+}, function (Closure $next, Request $request, array $urlParams, TcpConnection $connection): Response {
     if ($appId = $urlParams['appId'] ?? null) {
         if (!($appKey = $request->get('auth_key'))) {
             return response(400,['error' => 'Required auth_key']);
@@ -308,5 +309,5 @@ ApiRoute::addGroup('/apps/{appId}', function () {
             }
         }
     }
-    return $next($request, $urlParams);
+    return $next($request, $urlParams, $connection);
 });

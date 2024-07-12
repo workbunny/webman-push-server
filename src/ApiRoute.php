@@ -52,6 +52,8 @@ use function is_file;
  */
 class ApiRoute implements Bootstrap
 {
+    const TAG_GROUP = '#group';
+
     /**
      * @var RouteCollector|null
      */
@@ -233,9 +235,9 @@ class ApiRoute implements Bootstrap
     public static function group(string $prefix, Closure $callback, Closure ...$middlewares): void
     {
         self::$_groupPrefix = $prefix;
-        self::middleware('#group', $middlewares);
+        self::middleware(self::TAG_GROUP, $middlewares);
         self::$_collector->addGroup(...func_get_args());
-        unset(self::$_middlewares['#group']);
+        unset(self::$_middlewares[self::TAG_GROUP]);
         self::$_groupPrefix = null;
     }
 

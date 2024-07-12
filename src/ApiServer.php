@@ -78,7 +78,21 @@ class ApiServer
      * @param Worker $worker
      * @return void
      */
-    public function onWorkerStart(Worker $worker): void{}
+    public function onWorkerStart(Worker $worker): void
+    {
+        // 加载中间件
+        if ($middlewares = \config('plugin.workbunny.webman-push-server.middleware.api-server', [])) {
+            $mid = [];
+            foreach ($middlewares as $middleware) {
+                if (is_callable($middleware)) {
+                    $mid[] = $middleware;
+                }
+            }
+            if ($mid) {
+                ApiRoute::middleware(ApiRoute::TAG_GROUP, $mid);
+            }
+        }
+    }
 
     /**
      * @param Worker $worker
@@ -125,8 +139,8 @@ class ApiServer
             function (...$arguments) use ($handler) {
                 return $handler(...$arguments);
             }
-        ), $data, $params);
-        if(!$response instanceof Response){
+        ), $data, $params, $connection);
+        if (!$response instanceof Response) {
             $this->send(\Workbunny\WebmanPushServer\response(500, 'Server Error.'), $connection, $data);
             return;
         }

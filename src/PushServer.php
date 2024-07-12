@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Workbunny\WebmanPushServer;
 
+use Closure;
 use support\Log;
 use Workbunny\WebmanPushServer\Events\AbstractEvent;
 use Workbunny\WebmanPushServer\Events\Unsubscribe;
@@ -56,6 +57,9 @@ class PushServer
      */
     protected static array $_channels = [];
 
+    /** @var callable[] */
+    protected array $_middlewares = [];
+
     /** @var int|null 心跳定时器 */
     protected ?int $_heartbeatTimer = null;
 
@@ -71,6 +75,15 @@ class PushServer
         $this->setKeepaliveTimeout(
             intval(self::getConfig('heartbeat', 60))
         );
+        // 加载中间件
+        if ($middlewares = \config('plugin.workbunny.webman-push-server.middleware.push-server', [])) {
+            foreach ($middlewares as $middleware) {
+                if (is_callable($middleware)) {
+                    $this->_middlewares[] = $middleware;
+                }
+            }
+        }
+
     }
 
     /**
@@ -174,21 +187,35 @@ class PushServer
      */
     public function onMessage(TcpConnection $connection, $data): void
     {
-        if (is_string($data)) {
-            static::setRecvBytesStatistics($connection, $data);
-            if ($data = @json_decode($data, true)) {
-                // 获取事件
-                $this->setLastEvent(AbstractEvent::factory($data['event'] ?? ''));
-                if ($event = $this->getLastEvent()) {
-                    // 心跳计数归零
-                    static::setConnectionProperty($connection, 'clientNotSendPingCount', 0);
-                    // 事件响应
-                    $event->response($connection, $data);
-                    return;
+        $handler = function (TcpConnection $connection, $data) {
+            if (is_string($data)) {
+                static::setRecvBytesStatistics($connection, $data);
+                if ($data = @json_decode($data, true)) {
+                    // 获取事件
+                    $this->setLastEvent(AbstractEvent::factory($data['event'] ?? ''));
+                    if ($event = $this->getLastEvent()) {
+                        // 心跳计数归零
+                        static::setConnectionProperty($connection, 'clientNotSendPingCount', 0);
+                        // 事件响应
+                        $event->response($connection, $data);
+                        return;
+                    }
                 }
+                static::error($connection,null, 'Client event rejected - Unknown event');
             }
-            static::error($connection,null, 'Client event rejected - Unknown event');
-        }
+        };
+        call_user_func(array_reduce(
+            array_reverse($this->_middlewares),
+            function (Closure $carry, Closure $pipe) {
+
+                return function (...$arguments) use ($carry, $pipe) {
+                    return $pipe($carry, ...$arguments);
+                };
+            },
+            function (...$arguments) use ($handler) {
+                return $handler(...$arguments);
+            }
+        ), $connection, $data);
     }
 
     /**
