@@ -187,7 +187,7 @@ class PushServer
      */
     public function onMessage(TcpConnection $connection, $data): void
     {
-        $handler = function (TcpConnection $connection, $data) {
+        $handler = function ($connection, $data) {
             if (is_string($data)) {
                 static::setRecvBytesStatistics($connection, $data);
                 if ($data = @json_decode($data, true)) {
