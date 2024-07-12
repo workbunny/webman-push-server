@@ -89,7 +89,7 @@ class ApiServer
                 }
             }
             if ($mid) {
-                ApiRoute::middleware(ApiRoute::TAG_GROUP, $mid);
+                ApiRoute::middleware(ApiRoute::TAG_ROOT, $mid);
             }
         }
     }

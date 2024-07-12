@@ -53,6 +53,7 @@ use function is_file;
 class ApiRoute implements Bootstrap
 {
     const TAG_GROUP = '#group';
+    const TAG_ROOT  = '#root';
 
     /**
      * @var RouteCollector|null
@@ -221,7 +222,13 @@ class ApiRoute implements Bootstrap
                 'handler'     => $handler
             ];
         }
-        self::middleware(self::getMiddlewareTag($handler), self::$_groupPrefix !== null ? self::getMiddlewares('#group') : $middlewares, $methods);
+        self::middleware(
+            self::getMiddlewareTag($handler),
+            self::getMiddlewares(self::TAG_ROOT) + (self::$_groupPrefix !== null ?
+                self::getMiddlewares(self::TAG_GROUP) :
+                $middlewares),
+            $methods
+        );
         self::$_collector->addRoute($methods, $route, $handler);
     }
 
