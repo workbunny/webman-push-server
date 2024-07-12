@@ -27,6 +27,18 @@ class ApiServer
     public function __construct()
     {
         static::setStatisticsInterval(static::getConfig('traffic_statistics_interval', 0));
+        // 加载中间件
+        if ($middlewares = \config('plugin.workbunny.webman-push-server.middleware.api-server', [])) {
+            $mid = [];
+            foreach ($middlewares as $middleware) {
+                if (is_callable($middleware)) {
+                    $mid[] = $middleware;
+                }
+            }
+            if ($mid) {
+                ApiRoute::middleware(ApiRoute::TAG_ROOT, $mid);
+            }
+        }
     }
 
     /**
@@ -78,21 +90,7 @@ class ApiServer
      * @param Worker $worker
      * @return void
      */
-    public function onWorkerStart(Worker $worker): void
-    {
-        // 加载中间件
-        if ($middlewares = \config('plugin.workbunny.webman-push-server.middleware.api-server', [])) {
-            $mid = [];
-            foreach ($middlewares as $middleware) {
-                if (is_callable($middleware)) {
-                    $mid[] = $middleware;
-                }
-            }
-            if ($mid) {
-                ApiRoute::middleware(ApiRoute::TAG_ROOT, $mid);
-            }
-        }
-    }
+    public function onWorkerStart(Worker $worker): void{}
 
     /**
      * @param Worker $worker
