@@ -21,20 +21,20 @@
 
 # 说明
 
-- **3.x：全新架构，目前为beta版**
-- **2.x：旧版架构，长期技术支持版本（LTS），[点击跳转2.x文档](https://github.com/workbunny/webman-push-server/blob/2.x/README.md)**
-- **1.x：旧版架构，不再维护，请使用2.x / fork自行维护，[点击跳转1.x文档](https://github.com/workbunny/webman-push-server/blob/1.x/README.md)**
+- **3.0：全新架构，目前为beta版**
+- **2.0：旧版架构，长期技术支持版本（LTS），[点击跳转2.0文档](https://github.com/workbunny/webman-push-server/blob/2.x/README.md)**
+- **1.0：旧版架构，不再维护，请使用2.0 / fork自行维护，[点击跳转1.0文档](https://github.com/workbunny/webman-push-server/blob/1.x/README.md)**
 
 # 简介
 
 - 全新重构的分布式推送服务，更简单的使用，更简单的部署，更简单的代码！
-- 完整且高效的即时通讯服务，支持聊天、在线推送、数字大屏等业务场景；
+- 完整且高效的即时通讯服务，支持聊天、在线推送、数字大屏等双向通讯长连接业务场景；
 - 高保真复刻的[Pusher-Channel](https://support.pusher.com/hc/en-us/categories/4411973917585-Channels)，可以利用现有的[Pusher-Channel](https://support.pusher.com/hc/en-us/categories/4411973917585-Channels)客户端，其他语言(Java Swift .NET Objective-C Unity Flutter Android IOS AngularJS等)客户端地址下载地址：
   https://pusher.com/docs/channels/channels_libraries/libraries/
-- 本项目1.x/2.x版本承接实现了诸多商业项目的即时通讯服务，最高日活连接达到20万+，最久的商业化项目已稳定运行3年，性能与稳定性兼顾；
+- 本项目1.0/2.0版本承接实现了诸多商业项目的即时通讯服务，最高日活连接达到20万+，最久的商业化项目已稳定运行3年，性能与稳定性兼顾；
 - 如遇问题，欢迎 **[issue](https://github.com/workbunny/webman-push-server/issues) & PR**；
 
-## 架构设计：
+## 架构
 
 - 摒弃了api-service服务需要挂载在Push-server的设计，独立化api-server，性能更好
 - 使用redis Publish/Subscribe 代替workerman/channel作为分布式广播
@@ -59,7 +59,9 @@
                                      
 ```
 
-## 配置说明：
+## 约定
+
+### 配置说明
 
 配置信息及对应功能在代码注释中均有解释，详见对应代码注释；
 
@@ -77,22 +79,24 @@
             |-- route.php      # APIs路由信息
 ```
 
-## 频道说明：
+### 频道说明
 
-push-server支持以下三种频道类型：
+#### push-server支持以下三种频道类型：
 
 - 公共频道（public）：**客户端仅可监听公共频道，不可向公共频道推送消息；**
 - 私有频道（private）：客户端可向私有频道推送/监听，一般用于端对端的通讯，服务端仅做转发；**该频道可以用于私聊场景；**
 - 状态频道（presence）：与私有频道保持一致，区别在于状态频道还保存有客户端的信息，任何用户的上下线都会收到该频道的广播通知，如user_id、user_info；
 **状态频道最多支持100个客户端（客户端限制，实际上可以放开）；**
 
-## 事件说明：
+### 事件说明
 
-推送的 event 须遵守以下的约定规范：
+#### 1. 默认 event 遵守以下的约定规范：
 
 - **client-** 前缀的事件：拥有 **client-** 前缀的事件是客户端发起的事件，客户端在推送消息时一定会带有该前缀；
 - **pusher:** 前缀的事件：拥有 **pusher:** 前缀的事件一般用于服务端消息、公共消息，比如在公共频道由服务端推送的消息、客户端发起的订阅公共消息；
 - **pusher_internal:** 前缀的事件：拥有 **pusher_internal:** 前缀的事件是服务端的回执通知，一般是由客户端发起订阅、取消订阅等操作时，由服务端回执的事件信息带有该前缀的事件；
+
+#### 2. event支持自定义注册
 
 # 使用
 
@@ -122,7 +126,7 @@ composer require workbunny/webman-push-server
 
 - push-server服务用于监听websocket消息，是实现即时通讯功能的主要服务
 - push-server服务支持多进程，通讯方式及基础数据储存方式为redis
-- config/plugin/workbunny/webman-push-server/process.php中可调节启动进程数，默认为1
+- config/plugin/workbunny/webman-push-server/process.php中可调节启动进程数，默认为cpu count
 - config/plugin/workbunny/webman-push-server/app.php中可配置心跳等参数
 - config/plugin/workbunny/webman-push-server/redis.php中可配置redis连接信息
 - config/plugin/workbunny/webman-push-server/middleware.php中可配置push-server消息中间件，可用于消息的拦截、过滤、路由等
@@ -130,7 +134,7 @@ composer require workbunny/webman-push-server
 #### api-server服务
 
 - api-server服务用于监听http/https消息，对外提供REST风格的open-apis，API服务提供REST风格的http-APIs，接口内容与 [pusher-channel-api](https://pusher.com/docs/channels/library_auth_reference/rest-api/) 基本保持一致
-- config/plugin/workbunny/webman-push-server/process.php中可调节启动进程数，默认为1
+- config/plugin/workbunny/webman-push-server/process.php中可调节启动进程数，默认为cpu count
 - config/plugin/workbunny/webman-push-server/app.php中可配置流量统计间隔等参数
 - config/plugin/workbunny/webman-push-server/route.php中为基础open-apis的实现
 - config/plugin/workbunny/webman-push-server/middleware.php中可配置api-server消息中间件，可用于消息的拦截、过滤、路由等
@@ -696,8 +700,8 @@ class OtherType extends AbstractPublishType
 - 分别启动A、B服务即可
 
 #### Tips：
-- 分布式部署与分离式部署可以相互结合，打到最小颗粒度的部署
-- redis配置中可以独立配置storage与channel，以打到最高性能
+- 分布式部署与分离式部署可以相互结合，达到最小颗粒度的部署
+- redis配置中可以独立配置storage与channel，以达到最高性能
 
 ### 6. 二次开发
 
