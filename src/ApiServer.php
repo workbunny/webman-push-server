@@ -28,7 +28,7 @@ class ApiServer
     {
         static::setStatisticsInterval(static::getConfig('traffic_statistics_interval', 0));
         // 加载中间件
-        if ($middlewares = \config('plugin.workbunny.webman-push-server.middleware.api-server', [])) {
+        if ($middlewares = \config('plugin.workbunny.webman-push-server.middlewares.api-server', [])) {
             $mid = [];
             foreach ($middlewares as $middleware) {
                 if (is_callable($middleware)) {

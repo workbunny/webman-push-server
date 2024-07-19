@@ -69,14 +69,14 @@
 |-- config
     |-- plugin
         |-- webman-push-server
-            |-- app.php        # 主配置信息
-            |-- bootstrap.php  # 自动加载
-            |-- command.php    # 支持命令
-            |-- log.php        # 日志配置
-            |-- middleware.php # 基础中间件
-            |-- process.php    # 启动进程
-            |-- redis.php      # redis配置
-            |-- route.php      # APIs路由信息
+            |-- app.php         # 主配置信息
+            |-- bootstrap.php   # 自动加载
+            |-- command.php     # 支持命令
+            |-- log.php         # 日志配置
+            |-- middlewares.php # 基础中间件
+            |-- process.php     # 启动进程
+            |-- redis.php       # redis配置
+            |-- route.php       # APIs路由信息
 ```
 
 ### 频道说明
@@ -129,7 +129,7 @@ composer require workbunny/webman-push-server
 - config/plugin/workbunny/webman-push-server/process.php中可调节启动进程数，默认为cpu count
 - config/plugin/workbunny/webman-push-server/app.php中可配置心跳等参数
 - config/plugin/workbunny/webman-push-server/redis.php中可配置redis连接信息
-- config/plugin/workbunny/webman-push-server/middleware.php中可配置push-server消息中间件，可用于消息的拦截、过滤、路由等
+- config/plugin/workbunny/webman-push-server/middlewares.php中可配置push-server消息中间件，可用于消息的拦截、过滤、路由等
 
 #### api-server服务
 
@@ -137,7 +137,7 @@ composer require workbunny/webman-push-server
 - config/plugin/workbunny/webman-push-server/process.php中可调节启动进程数，默认为cpu count
 - config/plugin/workbunny/webman-push-server/app.php中可配置流量统计间隔等参数
 - config/plugin/workbunny/webman-push-server/route.php中为基础open-apis的实现
-- config/plugin/workbunny/webman-push-server/middleware.php中可配置api-server消息中间件，可用于消息的拦截、过滤、路由等
+- config/plugin/workbunny/webman-push-server/middlewares.php中可配置api-server消息中间件，可用于消息的拦截、过滤、路由等
 
 ##### open-apis列表：
 
@@ -572,7 +572,7 @@ class PushServerMiddleware
 我们在使用过程中可能需要为push-server的onMessage做一些安全性考虑或者数据过滤和拦截的功能，那么消息中间件非常适合该场景
 
 - 以拦截非websocket协议消息距离
-- 在config/plugin/workbunny/webman-push-server/middleware.php中添加中间件回调函数
+- 在config/plugin/workbunny/webman-push-server/middlewares.php中添加中间件回调函数
 
 ```php
     // push server root middlewares

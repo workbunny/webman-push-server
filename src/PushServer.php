@@ -76,7 +76,7 @@ class PushServer
             intval(self::getConfig('heartbeat', 60))
         );
         // 加载中间件
-        if ($middlewares = \config('plugin.workbunny.webman-push-server.middleware.push-server', [])) {
+        if ($middlewares = \config('plugin.workbunny.webman-push-server.middlewares.push-server', [])) {
             foreach ($middlewares as $middleware) {
                 if (is_callable($middleware)) {
                     $this->_middlewares[] = $middleware;
