@@ -187,23 +187,7 @@ class PushServer
      */
     public function onMessage(TcpConnection $connection, $data): void
     {
-        $handler = function (TcpConnection $connection, $data) {
-            if (is_string($data)) {
-                static::setRecvBytesStatistics($connection, $data);
-                if ($data = @json_decode($data, true)) {
-                    // 获取事件
-                    $this->setLastEvent(AbstractEvent::factory($data['event'] ?? ''));
-                    if ($event = $this->getLastEvent()) {
-                        // 心跳计数归零
-                        static::setConnectionProperty($connection, 'clientNotSendPingCount', 0);
-                        // 事件响应
-                        $event->response($connection, $data);
-                        return;
-                    }
-                }
-                static::error($connection,null, 'Client event rejected - Unknown event');
-            }
-        };
+        // 洋葱圈中间件调用
         call_user_func(array_reduce(
             array_reverse($this->_middlewares),
             function (Closure $carry, Closure $pipe) {
@@ -211,8 +195,29 @@ class PushServer
                     return $pipe($carry, $connection, $data);
                 };
             },
-            function (TcpConnection $connection, $data) use ($handler) {
-                return $handler($connection, $data);
+            // 最内层执行
+            function (TcpConnection $connection, $data) {
+                // 基础执行handler
+                return call_user_func(function (TcpConnection $connection, $data) {
+                    // 忽略非字符串data
+                    if (is_string($data)) {
+                        // 字节数统计
+                        static::setRecvBytesStatistics($connection, $data);
+                        // json解析
+                        if ($data = @json_decode($data, true)) {
+                            // 获取事件
+                            $this->setLastEvent(AbstractEvent::factory($data['event'] ?? ''));
+                            if ($event = $this->getLastEvent()) {
+                                // 心跳计数归零
+                                static::setConnectionProperty($connection, 'clientNotSendPingCount', 0);
+                                // 事件响应
+                                $event->response($connection, $data);
+                                return;
+                            }
+                        }
+                        static::error($connection,null, 'Client event rejected - Unknown event');
+                    }
+                }, $connection, $data);
             }
         ), $connection, $data);
     }
