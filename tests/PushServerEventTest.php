@@ -332,8 +332,8 @@ class PushServerEventTest extends BaseTestCase
         $data = @json_decode($connection->getSendBuffer(), true) ?: [];
         $this->assertEquals(EVENT_ERROR, $data['event'] ?? null);
         $this->assertEquals([
-            'code'      => null,
-            'message'   => 'Client event rejected - client events must be prefixed by \'client-\''
+            'code'      => '403',
+            'message'   => 'Client rejected - client events must be prefixed by \'client-\''
         ], $data['data'] ?? null);
         // 设置回执buffer null
         $connection->setSendBuffer(null);
@@ -356,8 +356,8 @@ class PushServerEventTest extends BaseTestCase
         $data = @json_decode($connection->getSendBuffer(), true) ?: [];
         $this->assertEquals(EVENT_ERROR, $data['event'] ?? null);
         $this->assertEquals([
-            'code'      => null,
-            'message'   => 'Bad channel'
+            'code'      => '404',
+            'message'   => 'Client error - Bad channel'
         ], $data['data'] ?? null);
         // 设置回执buffer null
         $connection->setSendBuffer(null);
@@ -381,8 +381,8 @@ class PushServerEventTest extends BaseTestCase
         $data = @json_decode($connection->getSendBuffer(), true) ?: [];
         $this->assertEquals(EVENT_ERROR, $data['event'] ?? null);
         $this->assertEquals([
-            'code'      => null,
-            'message'   => 'Bad data'
+            'code'      => '400',
+            'message'   => 'Client error - Empty data'
         ], $data['data'] ?? null);
         // 设置回执buffer null
         $connection->setSendBuffer(null);
@@ -409,8 +409,8 @@ class PushServerEventTest extends BaseTestCase
         $data = @json_decode($connection->getSendBuffer(), true) ?: [];
         $this->assertEquals(EVENT_ERROR, $data['event'] ?? null);
         $this->assertEquals([
-            'code'      => null,
-            'message'   => 'Client event rejected - you didn\'t subscribe this channel'
+            'code'      => '403',
+            'message'   => 'Client rejected - you didn\'t subscribe this channel'
         ], $data['data'] ?? null);
         // 设置回执buffer null
         $connection->setSendBuffer(null);
@@ -487,8 +487,8 @@ class PushServerEventTest extends BaseTestCase
         $data = @json_decode($connection->getSendBuffer(), true) ?: [];
         $this->assertEquals(EVENT_ERROR, $data['event'] ?? null);
         $this->assertEquals([
-            'code'      => null,
-            'message'   => 'Client event rejected - only supported on private and presence channels'
+            'code'      => '403',
+            'message'   => 'Client rejected - only supported on private and presence channels'
         ], $data['data'] ?? null);
     }
 

@@ -56,7 +56,7 @@ class Subscribe extends AbstractEvent
         switch ($channelType = PushServer::getChannelType($channel)){
             case CHANNEL_TYPE_PRESENCE:
                 if (!$channelData) {
-                    PushServer::error($connection, null, 'Empty channel_data');
+                    PushServer::error($connection, '400', 'Client error - Empty channel_data');
                     return;
                 }
                 if ($appsCallback) {
@@ -76,15 +76,15 @@ class Subscribe extends AbstractEvent
                         ]);
                 }
                 if ($clientAuth !== $auth) {
-                    PushServer::error($connection, null, 'Received invalid Auth ' . $clientAuth);
+                    PushServer::error($connection, '403', 'Client rejected - Received invalid Auth ' . $clientAuth);
                     return;
                 }
                 if (!isset($channelData['user_id']) or !is_string($channelData['user_id'])) {
-                    PushServer::error($connection,null, 'Bad channel_data.user_id');
+                    PushServer::error($connection,'400', 'Client error - Bad channel_data.user_id');
                     return;
                 }
                 if (!isset($channelData['user_info']) or !is_string($channelData['user_info'])) {
-                    PushServer::error($connection,null, 'Bad channel_data.user_info');
+                    PushServer::error($connection,'400', 'Client error - Bad channel_data.user_info');
                     return;
                 }
                 self::subscribeChannel($connection, $channel, $channelType, $channelData['user_id'], $channelData['user_info']);
@@ -107,7 +107,7 @@ class Subscribe extends AbstractEvent
                         ]);
                 }
                 if ($clientAuth !== $auth) {
-                    PushServer::error($connection,null, 'Received invalid Auth ' . $clientAuth);
+                    PushServer::error($connection,'403', 'Client rejected - Received invalid Auth ' . $clientAuth);
                     return;
                 }
                 self::subscribeChannel($connection, $channel, $channelType);
@@ -116,7 +116,7 @@ class Subscribe extends AbstractEvent
                 self::subscribeChannel($connection, $channel, $channelType);
                 break;
             default:
-                PushServer::error($connection, null, 'Bad channel_type');
+                PushServer::error($connection, '403', 'Client rejected - Bad channel_type');
                 break;
         }
     }

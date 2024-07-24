@@ -112,8 +112,8 @@ class PushServerBaseTest extends BaseTestCase
         $data = @json_decode($connection->getSendBuffer(), true) ?: [];
         $this->assertEquals(EVENT_ERROR, $data['event'] ?? null);
         $this->assertEquals([
-            'code'      => null,
-            'message'   => 'Invalid app'
+            'code'      => '403',
+            'message'   => 'Client rejected - Invalid app'
         ], $data['data'] ?? []);
     }
 
@@ -141,8 +141,8 @@ class PushServerBaseTest extends BaseTestCase
         $data = @json_decode($connection->getSendBuffer(), true) ?: [];
         $this->assertEquals(EVENT_ERROR, $data['event'] ?? null);
         $this->assertEquals([
-            'code'      => null,
-            'message'   => 'Invalid app_key'
+            'code'      => '403',
+            'message'   => 'Client rejected - Invalid app_key'
         ], $data['data'] ?? []);
     }
 
@@ -218,8 +218,8 @@ class PushServerBaseTest extends BaseTestCase
         $data = @json_decode($connection->getSendBuffer(), true) ?: [];
         $this->assertEquals(EVENT_ERROR, $data['event'] ?? null);
         $this->assertEquals([
-            'code'      => null,
-            'message'   => 'Client event rejected - Unknown event'
+            'code'      => '403',
+            'message'   => 'Client rejected - Unknown event'
         ], $data['data'] ?? []);
         // 初始化回执buffer
         $connection->setSendBuffer(null);

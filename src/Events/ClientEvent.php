@@ -36,26 +36,26 @@ class ClientEvent extends AbstractEvent
     {
         // 事件必须以client-为前缀
         if (!str_starts_with($event = $request['event'] ?? '', 'client-')) {
-            PushServer::error($connection, null, 'Client event rejected - client events must be prefixed by \'client-\'');
+            PushServer::error($connection, '403', 'Client rejected - client events must be prefixed by \'client-\'');
             return;
         }
         if (!$channel = $request['channel'] ?? null){
-            PushServer::error($connection, null, 'Bad channel');
+            PushServer::error($connection, '404', 'Client error - Bad channel');
             return;
         }
         if (!$data = $request['data'] ?? []){
-            PushServer::error($connection, null, 'Bad data');
+            PushServer::error($connection, '400', 'Client error - Empty data');
             return;
         }
         // 当前链接没有订阅这个channel
         if (!isset(PushServer::getConnectionProperty($connection, 'channels')[$channel])) {
-            PushServer::error($connection, null, 'Client event rejected - you didn\'t subscribe this channel');
+            PushServer::error($connection, '403', 'Client rejected - you didn\'t subscribe this channel');
             return;
         }
         // 客户端触发事件必须是private 或者 presence的channel
         $channelType = PushServer::getChannelType($channel);
         if ($channelType !== CHANNEL_TYPE_PRIVATE and $channelType !== CHANNEL_TYPE_PRESENCE) {
-            PushServer::error($connection, null, 'Client event rejected - only supported on private and presence channels');
+            PushServer::error($connection, '403', 'Client rejected - only supported on private and presence channels');
             return;
         }
         // 广播 客户端消息

@@ -147,7 +147,7 @@ class PushServer
             function (TcpConnection $connection, string $header) use ($socketId) {
                 $request = new Request($header);
                 if (!preg_match('/\/app\/([^\/^\?^]+)/', $request->path() ?? '', $match)) {
-                    static::error($connection, null, 'Invalid app', true);
+                    static::error($connection, '403', 'Client rejected - Invalid app', true);
                     return;
                 }
                 // 默认在空字符串域
@@ -155,7 +155,7 @@ class PushServer
                 // 获取app验证回调，如果没有验证回调则忽略验证
                 if ($appVerifyCallback = static::getConfig('app_verify', getBase: true)) {
                     if (!call_user_func($appVerifyCallback, $appKey = $match[1])) {
-                        static::error($connection, null, "Invalid app_key", true);
+                        static::error($connection, '403', 'Client rejected - Invalid app_key', true);
                         return;
                     }
                 }
@@ -215,7 +215,7 @@ class PushServer
                                 return;
                             }
                         }
-                        static::error($connection,null, 'Client event rejected - Unknown event');
+                        static::error($connection,'403', 'Client rejected - Unknown event');
                     }
                 }, $connection, $data);
             }

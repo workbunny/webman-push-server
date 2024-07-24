@@ -43,13 +43,13 @@ class Unsubscribe extends AbstractEvent
             case CHANNEL_TYPE_PRESENCE:
                 $userData = json_decode($request['data']['channel_data'] ?? '{}', true);
                 if (!$userData or !isset($userData['user_id'])) {
-                    PushServer::error($connection, null, 'Bad channel_data');
+                    PushServer::error($connection, '400', 'Client error - Bad channel_data');
                     return;
                 }
                 self::unsubscribeChannel($connection, $channel, $userData['user_id']);
                 break;
             default:
-                PushServer::error($connection, null, 'Bad channel_type');
+                PushServer::error($connection, '403', 'Client rejected - Bad channel_type');
         }
     }
 
