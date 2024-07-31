@@ -15,5 +15,13 @@ return [
         'port'     => 6379,
         'database' => 0,
         'options'  => []
+    ],
+    // redis注册器配置
+    'server-registrar' => [
+        'host'     => '172.17.0.1',
+        'password' => '',
+        'port'     => 6379,
+        'database' => 0,
+        'options'  => []
     ]
 ];

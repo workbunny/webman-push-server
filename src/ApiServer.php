@@ -15,6 +15,7 @@ namespace Workbunny\WebmanPushServer;
 
 use Closure;
 use Workbunny\WebmanPushServer\Traits\ConnectionsMethods;
+use Workbunny\WebmanPushServer\Traits\RegistrarMethods;
 use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
 use Workerman\Protocols\Http\Response;
@@ -23,6 +24,7 @@ use Workerman\Worker;
 class ApiServer
 {
     use ConnectionsMethods;
+    use RegistrarMethods;
 
     public function __construct()
     {
@@ -39,6 +41,12 @@ class ApiServer
                 ApiRoute::middleware(ApiRoute::TAG_ROOT, $mid);
             }
         }
+    }
+
+    /** @inheritDoc */
+    public static function getServerName(): string
+    {
+        return 'api-server';
     }
 
     /**

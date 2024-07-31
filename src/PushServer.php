@@ -21,6 +21,7 @@ use Workbunny\WebmanPushServer\PublishTypes\AbstractPublishType;
 use Workbunny\WebmanPushServer\Traits\ChannelMethods;
 use Workbunny\WebmanPushServer\Traits\ConnectionsMethods;
 use Workbunny\WebmanPushServer\Traits\HelperMethods;
+use Workbunny\WebmanPushServer\Traits\RegistrarMethods;
 use Workbunny\WebmanPushServer\Traits\StorageMethods;
 use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
@@ -32,6 +33,7 @@ class PushServer
     use ChannelMethods;
     use StorageMethods;
     use ConnectionsMethods;
+    use RegistrarMethods;
 
     /**
      * @var string $version version
@@ -102,6 +104,12 @@ class PushServer
                 'plugin.workbunny.webman-push-server.app.push-server.') .
             $key, $default
         );
+    }
+
+    /** @inheritDoc */
+    public static function getServerName(): string
+    {
+        return 'push-server';
     }
 
     /**

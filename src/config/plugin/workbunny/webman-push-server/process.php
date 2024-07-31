@@ -18,7 +18,7 @@ return [
     // 推送服务器
     'push-server' => [
         'handler'     => PushServer::class,
-        'listen'      => 'websocket://0.0.0.0:8001',
+        'listen'      => 'websocket://0.0.0.0:' . config('plugin.workbunny.webman-push-server.app.push-server.port', 8002),
         'count'       => cpu_count(),
         'reloadable'  => false, // 执行reload不重启
         'reusePort'   => true,
@@ -26,7 +26,7 @@ return [
     // api服务器
     'api-server' => [
         'handler'     => ApiServer::class,
-        'listen'      => 'websocket://0.0.0.0:8001',
+        'listen'      => 'http://0.0.0.0:' . config('plugin.workbunny.webman-push-server.app.api-server.port', 8002),
         'count'       => cpu_count(),
         'reloadable'  => false, // 执行reload不重启
         'reusePort'   => true,
