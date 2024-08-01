@@ -98,13 +98,21 @@ class ApiServer
      * @param Worker $worker
      * @return void
      */
-    public function onWorkerStart(Worker $worker): void{}
+    public function onWorkerStart(Worker $worker): void
+    {
+        // 注册
+        $this->registrarStart($worker);
+    }
 
     /**
      * @param Worker $worker
      * @return void
      */
-    public function onWorkerStop(Worker $worker): void{}
+    public function onWorkerStop(Worker $worker): void
+    {
+        // 注销
+        $this->registrarStop($worker);
+    }
 
     /**
      * @param TcpConnection $connection

@@ -59,7 +59,7 @@ trait RegistrarMethods
      * @param Worker $worker
      * @return void
      */
-    public function registrarEnd(Worker $worker): void
+    public function registrarStop(Worker $worker): void
     {
         if ($this->registrarTimerId) {
             Timer::del($this->registrarTimerId);

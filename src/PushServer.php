@@ -26,6 +26,7 @@ use Workbunny\WebmanPushServer\Traits\StorageMethods;
 use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
 use Workerman\Timer;
+use Workerman\Worker;
 
 class PushServer
 {
@@ -113,9 +114,10 @@ class PushServer
     }
 
     /**
+     * @param Worker $worker
      * @return void
      */
-    public function onWorkerStart(): void
+    public function onWorkerStart(Worker $worker): void
     {
         // 通道订阅
         static::subscribe();
@@ -126,17 +128,23 @@ class PushServer
                 [static::class, '_heartbeatChecker']
             ));
         }
+        // 注册
+        $this->registrarStart($worker);
     }
 
     /**
+     * @param Worker $worker
      * @return void
      */
-    public function onWorkerStop(): void{
+    public function onWorkerStop(Worker $worker): void
+    {
         if ($this->getHeartbeatTimer()){
             Timer::del($this->getHeartbeatTimer());
             $this->setHeartbeatTimer(null);
         }
         static::channelClose();
+        // 注销
+        $this->registrarStop($worker);
     }
 
     /**
