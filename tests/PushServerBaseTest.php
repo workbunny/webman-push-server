@@ -13,11 +13,13 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use support\Redis;
 use Tests\MockClass\MockTcpConnection;
 use Workbunny\WebmanPushServer\Events\Ping;
 use Workbunny\WebmanPushServer\Events\Subscribe;
 use Workbunny\WebmanPushServer\PublishTypes\AbstractPublishType;
 use Workbunny\WebmanPushServer\PushServer;
+use Workerman\Worker;
 use const Workbunny\WebmanPushServer\EVENT_CONNECTION_ESTABLISHED;
 use const Workbunny\WebmanPushServer\EVENT_ERROR;
 use const Workbunny\WebmanPushServer\EVENT_PONG;
@@ -483,6 +485,25 @@ class PushServerBaseTest extends BaseTestCase
         $channelConnection->setSendBuffer(null);
         $tcpConnection->setSendBuffer(null);
         $wsConnection->setSendBuffer(null);
+    }
+
+    public function testPushServerRegistrar()
+    {
+        $client = Redis::connection('plugin.workbunny.webman-push-server.server-registrar')->client();
+
+        $this->assertEquals([], $client->keys("registrar:*"));
+
+        $this->getPushServer()->registrarStart($worker = new Worker());
+
+        $this->assertNotEquals([], $keys = $client->keys("registrar:*"));
+        $this->assertEquals([
+            'master' => '{}'
+        ], $client->hGetAll($key = $keys[0]));
+
+        $this->getPushServer()->registrarStop($worker);
+
+        $this->assertEquals(false, $client->exists($key));
+        $this->assertEquals([], $client->keys("registrar:*"));
     }
 
 }

@@ -13,10 +13,12 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use support\Redis;
 use Tests\MockClass\MockTcpConnection;
 use Webman\Http\Request;
 use Webman\Http\Response;
 use Workbunny\WebmanPushServer\ApiRoute;
+use Workerman\Worker;
 
 /**
  * @runTestsInSeparateProcesses
@@ -130,5 +132,24 @@ class ApiServerBaseTest extends BaseTestCase
         $this->assertEquals('Bad Request.', $mockConnection->getSendBuffer()->rawBody());
         $this->assertEquals(400, $mockConnection->getSendBuffer()->getStatusCode());
         $this->assertEquals('application/json', $mockConnection->getSendBuffer()->getHeader('Content-Type'));
+    }
+
+    public function testApiServerRegistrar()
+    {
+        $client = Redis::connection('plugin.workbunny.webman-push-server.server-registrar')->client();
+
+        $this->assertEquals([], $client->keys("registrar:*"));
+
+        $this->getPushServer()->registrarStart($worker = new Worker());
+
+        $this->assertNotEquals([], $keys = $client->keys("registrar:*"));
+        $this->assertEquals([
+            'master' => '{}'
+        ], $client->hGetAll($key = $keys[0]));
+
+        $this->getPushServer()->registrarStop($worker);
+
+        $this->assertEquals(false, $client->exists($key));
+        $this->assertEquals([], $client->keys("registrar:*"));
     }
 }

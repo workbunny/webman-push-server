@@ -14,7 +14,7 @@ class RedisRegistrar implements RegistrarInterface
     /** @inheritDoc */
     public function get(string $name, string $ip, int $port): ?array
     {
-        $client = Redis::connection('plugin.workbunny.webman-push-server.server-register')->client();
+        $client = Redis::connection('plugin.workbunny.webman-push-server.server-registrar')->client();
         try {
             $result = $client->hGetAll($this->_registrarKey($name, $ip, $port));
             foreach ($result as &$value) {
@@ -36,7 +36,7 @@ class RedisRegistrar implements RegistrarInterface
     /** @inheritDoc */
     public function query(?string $name): ?array
     {
-        $client = Redis::connection('plugin.workbunny.webman-push-server.server-register')->client();
+        $client = Redis::connection('plugin.workbunny.webman-push-server.server-registrar')->client();
         $hash = [];
         try {
             while(
@@ -68,8 +68,12 @@ class RedisRegistrar implements RegistrarInterface
     {
         $workerId = $workerId ?: '';
         try {
-            $client = Redis::connection('plugin.workbunny.webman-push-server.server-register')->client();
-            $res = $client->hSet($key = $this->_registrarKey($name, $ip, $port), $workerId, json_encode($metadata, JSON_UNESCAPED_UNICODE));
+            $client = Redis::connection('plugin.workbunny.webman-push-server.server-registrar')->client();
+            $res = $client->hSet(
+                $key = $this->_registrarKey($name, $ip, $port),
+                $workerId,
+                $metadata ? json_encode($metadata, JSON_UNESCAPED_UNICODE) : '{}'
+            );
             // 如果存在定时间隔，则存在定时上报，则开启键值过期
             if ($interval = config('plugin.workbunny.webman-push-server.registrar.interval')) {
                 $client->expire($key, $interval * 1.5);
@@ -92,8 +96,12 @@ class RedisRegistrar implements RegistrarInterface
     {
         $workerId = $workerId ?: '';
         try {
-            $client = Redis::connection('plugin.workbunny.webman-push-server.server-register')->client();
-            $res = $client->hSet($key = $this->_registrarKey($name, $ip, $port), $workerId, json_encode($metadata, JSON_UNESCAPED_UNICODE));
+            $client = Redis::connection('plugin.workbunny.webman-push-server.server-registrar')->client();
+            $res = $client->hSet(
+                $key = $this->_registrarKey($name, $ip, $port),
+                $workerId,
+                $metadata ? json_encode($metadata, JSON_UNESCAPED_UNICODE) : '{}'
+            );
             // 如果存在定时间隔，则存在定时上报，则开启键值过期
             if ($interval = config('plugin.workbunny.webman-push-server.registrar.interval')) {
                 $client->expire($key, $interval * 1.5);
@@ -116,7 +124,7 @@ class RedisRegistrar implements RegistrarInterface
     {
         $workerId = $workerId ?: '';
         try {
-            $client = Redis::connection('plugin.workbunny.webman-push-server.server-register')->client();
+            $client = Redis::connection('plugin.workbunny.webman-push-server.server-registrar')->client();
             return boolval(
                 $client->hDel($this->_registrarKey($name, $ip, $port), $workerId)
             );

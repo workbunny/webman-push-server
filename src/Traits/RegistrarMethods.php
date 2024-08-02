@@ -43,7 +43,7 @@ trait RegistrarMethods
             $port = $this->registrarGetHostPort()
         ) {
             // 注册
-            $registrar->register($serverName, $ip, $port, $id = (string)$worker->id);
+            $registrar->register($serverName, $ip, $port, $id = ($worker->id === 0 ? 'master' : strval($worker->id)));
             // 定时上报
             if ($interval = config('plugin.workbunny.webman-push-server.registrar.interval')) {
                 $this->registrarTimerId = Timer::add($interval, function () use ($registrar, $serverName, $ip, $port, $id) {
@@ -70,7 +70,7 @@ trait RegistrarMethods
             $ip = $this->registrarGetHostIp() and
             $port = $this->registrarGetHostPort()
         ) {
-            $registrar->unregister($serverName, $ip, $port, (string)$worker->id);
+            $registrar->unregister($serverName, $ip, $port, ($worker->id === 0 ? 'master' : strval($worker->id)));
         }
     }
 

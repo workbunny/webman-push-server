@@ -46,13 +46,13 @@
                                    ┌─────────────┐     2 | 3
                              ┌───> | Push-server | ─── ─ · ─
                              |     └─────────────┘     1 | 4 ··· n
-                             |       Hash |              ↑
+                             |       Hash | register     ↑
                              |            |          PUB | SUB
     ┌────────────────────┐ ──┘     ┌──────────────┐ <────┘                     
     | webman-push-server | ──────> | Redis-server | 
     └────────────────────┘ ──┐     └──────────────┘ <────┐     
                              |            |          PUB | SUB
-                             |       Hash |              ↓
+                             |       Hash | register     ↓
                              |      ┌────────────┐     2 | 3
                              └────> | API-server | ─── ─ · ─
                                     └────────────┘     1 | 4 ··· n
@@ -77,6 +77,7 @@
             |-- process.php     # 启动进程
             |-- redis.php       # redis配置
             |-- route.php       # APIs路由信息
+            |-- registrar.php   # 分布式服务注册器配置
 ```
 
 ### 频道说明
@@ -149,8 +150,6 @@ composer require workbunny/webman-push-server
 | GET    | /apps/[app_id]/channels/[channel_name]               | [对应的pusher文档地址](https://pusher.com/docs/channels/library_auth_reference/rest-api/#get-channel-fetch-info-for-one-channel)        |
 | POST   | /apps/[app_id]/users/[user_id]/terminate_connections | [对应的pusher文档地址](https://pusher.com/docs/channels/library_auth_reference/rest-api/#post-terminate-user-connections)               |
 | GET    | /apps/[app_id]/channels/[channel_name]/users         | [对应的pusher文档地址](https://pusher.com/docs/channels/library_auth_reference/rest-api/#get-users)                                     |
-
-
 
 ## 客户端
 
