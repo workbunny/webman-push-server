@@ -358,7 +358,9 @@ class PushServer
     public static function send(TcpConnection $connection, ?string $channel, ?string $event, mixed $data): void
     {
         $response = static::filter([
-            'timestamp' => intval(microtime(true) * 1000),
+            'appKey'    => static::getConnectionProperty($connection, 'appKey'),
+            'socketId'  => PushServer::getConnectionProperty($connection,'socketId'),
+            'timestamp' => ms_timestamp(),
             'channel'   => $channel,
             'event'     => $event,
             'data'      => $data

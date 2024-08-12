@@ -20,6 +20,7 @@ use Workbunny\WebmanPushServer\Events\Subscribe;
 use Workbunny\WebmanPushServer\PublishTypes\AbstractPublishType;
 use Workbunny\WebmanPushServer\PushServer;
 use Workerman\Worker;
+use function Workbunny\WebmanPushServer\ms_timestamp;
 use const Workbunny\WebmanPushServer\EVENT_CONNECTION_ESTABLISHED;
 use const Workbunny\WebmanPushServer\EVENT_ERROR;
 use const Workbunny\WebmanPushServer\EVENT_PONG;
@@ -442,9 +443,10 @@ class PushServerBaseTest extends BaseTestCase
 
         // 模拟服务广播响应 非忽略的channel广播
         PushServer::_subscribeResponse(AbstractPublishType::PUBLISH_TYPE_CLIENT, [
-            'appKey'  => PushServer::getConnectionProperty($channelConnection, 'appKey'),
-            'event'   => EVENT_PONG,
-            'channel' => 'public-test'
+            'appKey'    => PushServer::getConnectionProperty($channelConnection, 'appKey'),
+            'timestamp' => ms_timestamp(),
+            'event'     => EVENT_PONG,
+            'channel'   => 'public-test'
         ]);
         // 断言检测回执buffer 仅合法channel连接接收到广播回执
         $this->assertNull($tcpConnection->getSendBuffer());
@@ -457,10 +459,11 @@ class PushServerBaseTest extends BaseTestCase
 
         // 模拟服务广播响应 指定忽略socketId的channel广播
         PushServer::_subscribeResponse(AbstractPublishType::PUBLISH_TYPE_CLIENT, [
-            'appKey'   => PushServer::getConnectionProperty($channelConnection, 'appKey'),
-            'event'    => EVENT_PONG,
-            'channel'  => 'public-test',
-            'socketId' => PushServer::getConnectionProperty($channelConnection, 'socketId'),
+            'appKey'    => PushServer::getConnectionProperty($channelConnection, 'appKey'),
+            'socketId'  => PushServer::getConnectionProperty($channelConnection, 'socketId'),
+            'timestamp' => ms_timestamp(),
+            'event'     => EVENT_PONG,
+            'channel'   => 'public-test',
         ]);
         // 断言检测回执buffer 所有连接不应接收到回执
         $this->assertNull($tcpConnection->getSendBuffer());
@@ -473,9 +476,10 @@ class PushServerBaseTest extends BaseTestCase
 
         // 模拟服务广播响应 向未知连接广播
         PushServer::_subscribeResponse(AbstractPublishType::PUBLISH_TYPE_CLIENT, [
-            'appKey'   => PushServer::$unknownTag,
-            'event'    => EVENT_PONG,
-            'channel'  => 'public-test',
+            'appKey'    => PushServer::$unknownTag,
+            'timestamp' => ms_timestamp(),
+            'event'     => EVENT_PONG,
+            'channel'   => 'public-test',
         ]);
         // 断言检测回执buffer 所有连接不应接收到回执
         $this->assertNull($tcpConnection->getSendBuffer());

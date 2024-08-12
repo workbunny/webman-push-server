@@ -18,6 +18,7 @@ use support\Log;
 use Workbunny\WebmanPushServer\PublishTypes\AbstractPublishType;
 use Workbunny\WebmanPushServer\PushServer;
 use Workerman\Connection\TcpConnection;
+use function Workbunny\WebmanPushServer\ms_timestamp;
 use function Workbunny\WebmanPushServer\uuid;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRESENCE;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRIVATE;
@@ -167,6 +168,8 @@ class Subscribe extends AbstractEvent
                 // 内部事件广播 通道被创建事件
                 PushServer::publishUseRetry(AbstractPublishType::PUBLISH_TYPE_SERVER, [
                     'appKey'    => $appKey,
+                    'socketId'  => $socketId,
+                    'timestamp' => ms_timestamp(),
                     'channel'   => $channel,
                     'event'     => EVENT_CHANNEL_OCCUPIED,
                     'data'      => [
@@ -202,15 +205,16 @@ class Subscribe extends AbstractEvent
                      * {"event":"pusher_internal:member_added","data":{"user_id":1488465780,"user_info":"{\"name\":\"123\",\"sex:\"1\"}","channel ":"presence-channel"}}
                      */
                     PushServer::publishUseRetry(AbstractPublishType::PUBLISH_TYPE_CLIENT, [
-                        'appKey'   => $appKey,
-                        'channel'  => $channel,
-                        'event'    => EVENT_MEMBER_ADDED,
-                        'data'     => [
+                        'appKey'    => $appKey,
+                        'socketId'  => $socketId,
+                        'timestamp' => ms_timestamp(),
+                        'channel'   => $channel,
+                        'event'     => EVENT_MEMBER_ADDED,
+                        'data'      => [
                             'id'        => uuid(),
                             'user_id'   => $userId,
                             'user_info' => $userInfo
                         ],
-                        'socketId' => $socketId
                     ]);
                 }
             }

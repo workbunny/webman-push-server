@@ -20,6 +20,7 @@ use Workerman\Protocols\Http\Request;
 use support\Response;
 use Workbunny\WebmanPushServer\ApiRoute;
 use Workbunny\WebmanPushServer\PushServer;
+use function Workbunny\WebmanPushServer\ms_timestamp;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRESENCE;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRIVATE;
 use function Workbunny\WebmanPushServer\response;
@@ -188,10 +189,11 @@ ApiRoute::addGroup('/apps/{appId}', function () {
         foreach ($channels as $channel) {
             PushServer::publishUseRetry(AbstractPublishType::PUBLISH_TYPE_CLIENT, PushServer::filter([
                 'appKey'    => $appKey,
+                'socketId'  => $socketId,
+                'timestamp' => ms_timestamp(),
                 'channel'   => $channel,
                 'event'     => $event,
                 'data'      => $data,
-                'socketId'  => $socketId,
             ]));
         }
         return response(200, json_encode([
@@ -218,10 +220,11 @@ ApiRoute::addGroup('/apps/{appId}', function () {
             $socketId = $package['socket_id'] ?? null;
             PushServer::publishUseRetry(AbstractPublishType::PUBLISH_TYPE_CLIENT, PushServer::filter([
                 'appKey'    => $appKey,
+                'socketId'  => $socketId,
+                'timestamp' => ms_timestamp(),
                 'channel'   => $channel,
                 'event'     => $event,
                 'data'      => $data,
-                'socketId'  => $socketId,
             ]));
         }
         return response(200,json_encode([
@@ -247,6 +250,7 @@ ApiRoute::addGroup('/apps/{appId}', function () {
             PushServer::publishUseRetry(AbstractPublishType::PUBLISH_TYPE_SERVER, [
                 'appKey'    => $appKey,
                 'socket_id' => $socketId,
+                'timestamp' => ms_timestamp(),
                 'event'     => EVENT_TERMINATE_CONNECTION,
                 'data'      => [
                     'type'      => 'API',

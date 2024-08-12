@@ -23,8 +23,8 @@ class ServerType extends AbstractPublishType
     public static function response(array $data): void
     {
         static::verify($data, [
-            ['appKey', 'is_string', true],
             ['event', 'is_string', true],
+            ['appKey', 'is_string', false],
             ['socketId', 'is_string', false],
         ]);
         // 断开连接事件

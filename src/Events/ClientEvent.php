@@ -19,6 +19,7 @@ use Workbunny\WebmanPushServer\PublishTypes\AbstractPublishType;
 use Workbunny\WebmanPushServer\PushServer;
 use Workbunny\WebmanPushServer\Traits\ChannelMethods;
 use Workerman\Connection\TcpConnection;
+use function Workbunny\WebmanPushServer\ms_timestamp;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRESENCE;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRIVATE;
 
@@ -61,10 +62,11 @@ class ClientEvent extends AbstractEvent
         // 广播 客户端消息
         PushServer::publishUseRetry(AbstractPublishType::PUBLISH_TYPE_CLIENT, [
             'appKey'    => PushServer::getConnectionProperty($connection,'appKey'),
+            'socketId'  => PushServer::getConnectionProperty($connection,'socketId'),
+            'timestamp' => ms_timestamp(),
             'channel'   => $channel,
             'event'     => $event,
             'data'      => $data,
-            'socketId'  => PushServer::getConnectionProperty($connection,'socketId')
         ]);
     }
 }

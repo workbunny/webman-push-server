@@ -81,3 +81,13 @@ if (!function_exists('str2byte')) {
         return strlen((string)$str);
     }
 }
+
+/**
+ * 毫秒时间戳
+ */
+if (!function_exists('ms_timestamp')) {
+    function ms_timestamp(): int
+    {
+        return intval(microtime(true) * 1000);
+    }
+}

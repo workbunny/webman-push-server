@@ -19,6 +19,7 @@ use support\Log;
 use Workbunny\WebmanPushServer\PublishTypes\AbstractPublishType;
 use Workbunny\WebmanPushServer\PushServer;
 use Workerman\Connection\TcpConnection;
+use function Workbunny\WebmanPushServer\ms_timestamp;
 use function Workbunny\WebmanPushServer\uuid;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRESENCE;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRIVATE;
@@ -83,14 +84,15 @@ class Unsubscribe extends AbstractEvent
                          * {"event":"pusher_internal:member_removed","data":"{"user_id":"14884657801"}","channel":"presence-channel"}
                          */
                         PushServer::publishUseRetry(AbstractPublishType::PUBLISH_TYPE_CLIENT, [
-                            'appKey'  => $appKey,
-                            'channel' => $channel,
-                            'event'   => EVENT_MEMBER_REMOVED,
-                            'data'    => [
+                            'appKey'    => $appKey,
+                            'socketId'  => $socketId,
+                            'timestamp' => ms_timestamp(),
+                            'channel'   => $channel,
+                            'event'     => EVENT_MEMBER_REMOVED,
+                            'data'      => [
                                 'id'      => uuid(),
                                 'user_id' => $uid
                             ],
-                            'socketId' => $socketId
                         ]);
                     }
                 }
@@ -101,6 +103,8 @@ class Unsubscribe extends AbstractEvent
                     // 内部事件广播 通道被移除事件
                     PushServer::publishUseRetry(AbstractPublishType::PUBLISH_TYPE_SERVER, [
                         'appKey'    => $appKey,
+                        'socketId'  => $socketId,
+                        'timestamp' => ms_timestamp(),
                         'channel'   => $channel,
                         'event'     => EVENT_CHANNEL_VACATED,
                         'data'      => [
