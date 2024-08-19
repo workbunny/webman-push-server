@@ -13,6 +13,8 @@ use Workbunny\WebmanPushServer\ApiRoute;
 
 class ApisCommand extends Command
 {
+    protected static string $defaultName        = 'workbunny:push-server-apis';
+    protected static string $defaultDescription = 'Push Server APIs. ';
 
     /**
      * @return void
