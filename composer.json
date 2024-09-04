@@ -27,7 +27,9 @@
 	"require-dev": {
 		"workerman/webman-framework": "^1.5",
 		"symfony/var-dumper": "^6.0",
-		"phpunit/phpunit": "^9.0"
+		"phpunit/phpunit": "^9.0",
+		"phpstan/phpstan": "^1.11",
+		"friendsofphp/php-cs-fixer": "^3.58"
 	},
 	"suggest": {
 		"ext-uuid": "For unique socket id. "
@@ -50,5 +52,9 @@
 		"psr-4": {
 			"Tests\\": "tests"
 		}
+	},
+	"scripts": {
+		"cs-fix": "./vendor/bin/php-cs-fixer fix",
+		"php-stan": "./vendor/bin/phpstan analyse src"
 	}
 }
