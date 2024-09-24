@@ -21,6 +21,10 @@ trait RegistrarMethods
 {
     protected ?int $registrarTimerId = null;
 
+    protected ?string $registrarHostIp = null;
+
+    protected ?int $registrarHostPort = null;
+
     /**
      * @return RegistrarInterface|null
      */
@@ -79,7 +83,7 @@ trait RegistrarMethods
      */
     public function registrarGetHostIp(): string
     {
-        return trim(shell_exec('curl -s ifconfig.me'));
+        return $this->registrarHostIp ?: ($this->registrarHostIp = trim(shell_exec('curl -s ifconfig.me')));
     }
 
     /**
@@ -88,7 +92,7 @@ trait RegistrarMethods
     public function registrarGetHostPort(): ?int
     {
         $serverName = static::getServerName();
-        return config("plugin.workbunny.webman-push-server.app.$serverName.port");
+        return $this->registrarHostPort ?: ($this->registrarHostPort = config("plugin.workbunny.webman-push-server.app.$serverName.port"));
     }
 
     /**
