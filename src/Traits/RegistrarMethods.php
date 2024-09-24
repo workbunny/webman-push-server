@@ -83,7 +83,7 @@ trait RegistrarMethods
      */
     public function registrarGetHostIp(): string
     {
-        return $this->registrarHostIp ?: ($this->registrarHostIp = trim(shell_exec('curl -s ifconfig.me')));
+        return $this->registrarHostIp ?: ($this->registrarHostIp = trim(shell_exec('curl -s ifconfig.me') ?: ''));
     }
 
     /**
