@@ -160,8 +160,8 @@ class PushServer
         // 设置websocket握手事件回调
         static::setConnectionProperty($connection, 'onWebSocketConnect',
             // ws 连接会调用该回调
-            function (TcpConnection $connection, string $header) use ($socketId) {
-                $request = new Request($header);
+            function (TcpConnection $connection, string|Request $header) use ($socketId) {
+                $request = is_string($header) ? new Request($header) : $header;
                 if (!preg_match('/\/app\/([^\/^\?^]+)/', $request->path() ?? '', $match)) {
                     static::error($connection, '403', 'Client rejected - Invalid app', true);
                     return;
