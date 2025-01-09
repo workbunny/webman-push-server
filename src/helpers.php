@@ -15,79 +15,60 @@ namespace Workbunny\WebmanPushServer;
 
 use support\Response;
 
-if (!function_exists('response')) {
-    /**
-     * @param int $httpStatus
-     * @param array|string $data
-     * @param array $header
-     * @return Response
-     */
-    function response(int $httpStatus, array|string $data, array $header = []): Response
-    {
-        return new Response($httpStatus, array_merge([
-            'Content-Type' => 'application/json',
-            'Server'       => 'workbunny'
-        ], $header), is_array($data) ? json_encode($data, JSON_UNESCAPED_UNICODE) : $data);
-    }
+/**
+ * @param int $httpStatus
+ * @param array|string $data
+ * @param array $header
+ * @return Response
+ */
+function response(int $httpStatus, array|string $data, array $header = []): Response
+{
+    return new Response($httpStatus, array_merge([
+        'Content-Type' => 'application/json',
+        'Server'       => 'workbunny'
+    ], $header), is_array($data) ? json_encode($data, JSON_UNESCAPED_UNICODE) : $data);
 }
 
 /**
- * 生成UUID
+ * uuid
+ * @return string
  */
-if (!function_exists('uuid')) {
-    /**
-     * uuid
-     * @return string
-     */
-    function uuid(): string
-    {
-        if (function_exists('uuid_create')) {
-            return uuid_create(1);
-        }
-        return fuuid();
+function uuid(): string
+{
+    if (function_exists('uuid_create')) {
+        return uuid_create(1);
     }
+    return fuuid();
 }
 
 /**
- * 模拟生成UUID
+ * fake uuid
+ * @return string
  */
-if (!function_exists('fuuid')) {
-    /**
-     * fake uuid
-     * @return string
-     */
-    function fuuid(): string
-    {
-        $chars = md5(uniqid((string)mt_rand(), true));
-        $uuid  = substr($chars, 0, 8) . '-';
-        $uuid  .= substr($chars, 8, 4) . '-';
-        $uuid  .= substr($chars, 12, 4) . '-';
-        $uuid  .= substr($chars, 16, 4) . '-';
-        $uuid  .= substr($chars, 20, 12);
-        return $uuid;
-    }
+function fuuid(): string
+{
+    $chars = md5(uniqid((string)mt_rand(), true));
+    $uuid  = substr($chars, 0, 8) . '-';
+    $uuid  .= substr($chars, 8, 4) . '-';
+    $uuid  .= substr($chars, 12, 4) . '-';
+    $uuid  .= substr($chars, 16, 4) . '-';
+    $uuid  .= substr($chars, 20, 12);
+    return $uuid;
 }
 
 /**
- * 字符串转换为bit
+ * @param string|int|float $str
+ * @return int
  */
-if (!function_exists('str2byte')) {
-    /**
-     * @param string|int|float $str
-     * @return int
-     */
-    function str2byte(string|int|float $str): int
-    {
-        return strlen((string)$str);
-    }
+function str2byte(string|int|float $str): int
+{
+    return strlen((string)$str);
 }
 
 /**
- * 毫秒时间戳
+ * @return int
  */
-if (!function_exists('ms_timestamp')) {
-    function ms_timestamp(): int
-    {
-        return intval(microtime(true) * 1000);
-    }
+function ms_timestamp(): int
+{
+    return intval(microtime(true) * 1000);
 }
