@@ -10,9 +10,9 @@ use Workerman\Protocols\Http\Response;
 class MockTcpConnection extends TcpConnection
 {
 
-    protected Response|string|null $_sendBuffer = null;
+    protected Response|string|null $__sendBuffer = null;
 
-    protected Response|string|null $_recvBuffer = null;
+    protected Response|string|null $__recvBuffer = null;
 
     public function __construct($remote_address = '')
     {
@@ -40,7 +40,7 @@ class MockTcpConnection extends TcpConnection
      */
     public function getSendBuffer()
     {
-        return $this->_sendBuffer;
+        return $this->__sendBuffer;
     }
 
     /**
@@ -48,7 +48,7 @@ class MockTcpConnection extends TcpConnection
      */
     public function setSendBuffer(Response|string|null $sendBuffer): void
     {
-        $this->_sendBuffer = $sendBuffer;
+        $this->__sendBuffer = $sendBuffer;
     }
 
     /**
@@ -56,7 +56,7 @@ class MockTcpConnection extends TcpConnection
      */
     public function getRecvBuffer(): Response|string|null
     {
-        return $this->_recvBuffer;
+        return $this->__recvBuffer;
     }
 
     /**
@@ -64,7 +64,7 @@ class MockTcpConnection extends TcpConnection
      */
     public function setRecvBuffer(Response|string|null $recvBuffer): void
     {
-        $this->_recvBuffer = $recvBuffer;
+        $this->__recvBuffer = $recvBuffer;
     }
 
     /**
