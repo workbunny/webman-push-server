@@ -10,12 +10,16 @@ use Workerman\Protocols\Http\Response;
 class MockTcpConnection extends TcpConnection
 {
 
+    protected Response|string|null $_sendBuffer = null;
+
+    protected Response|string|null $_recvBuffer = null;
+
     public function __construct($remote_address = '')
     {
         ++self::$statistics['connection_count'];
-        $this->id = $this->_id = self::$_idRecorder++;
-        if(self::$_idRecorder === \PHP_INT_MAX){
-            self::$_idRecorder = 0;
+        $this->id = $this->realId = self::$idRecorder++;
+        if (self::$idRecorder === PHP_INT_MAX) {
+            self::$idRecorder = 0;
         }
         $this->maxSendBufferSize        = self::$defaultMaxSendBufferSize;
         $this->maxPackageSize           = self::$defaultMaxPackageSize;
@@ -28,11 +32,11 @@ class MockTcpConnection extends TcpConnection
      */
     public function isPaused(): bool
     {
-        return $this->_isPaused;
+        return $this->isPaused;
     }
 
     /**
-     * @return string|Response
+     * @return string|Response|null
      */
     public function getSendBuffer()
     {
@@ -40,43 +44,45 @@ class MockTcpConnection extends TcpConnection
     }
 
     /**
-     * @param string|Response $sendBuffer
+     * @param string|Response|null $sendBuffer
      */
-    public function setSendBuffer($sendBuffer): void
+    public function setSendBuffer(Response|string|null $sendBuffer): void
     {
         $this->_sendBuffer = $sendBuffer;
     }
 
     /**
-     * @return string
+     * @return Response|string|null
      */
-    public function getRecvBuffer(): string
+    public function getRecvBuffer(): Response|string|null
     {
         return $this->_recvBuffer;
     }
 
     /**
-     * @param string $recvBuffer
+     * @param Response|string|null $recvBuffer
      */
-    public function setRecvBuffer(string $recvBuffer): void
+    public function setRecvBuffer(Response|string|null $recvBuffer): void
     {
         $this->_recvBuffer = $recvBuffer;
     }
 
     /**
-     * @param mixed $send_buffer
+     * @param mixed $sendBuffer
      * @param mixed $raw
+     * @return bool|null
      */
-    public function send($send_buffer, $raw = false)
+    public function send(mixed $sendBuffer, bool $raw = false): ?bool
     {
-        $this->setSendBuffer($send_buffer);
+        $this->setSendBuffer($sendBuffer);
+        return true;
     }
 
     /**
      * @param mixed $data
      * @param mixed $raw
      */
-    public function close($data = null, $raw = false)
+    public function close(mixed $data = null, bool $raw = false): void
     {
         if ($data) {
             $this->send($data, $raw);
@@ -84,11 +90,8 @@ class MockTcpConnection extends TcpConnection
         (new PushServer())->onClose($this);
     }
 
-    /**
-     * @return void
-     */
-    public function pauseRecv()
+    public function pauseRecv(): void
     {
-        $this->_isPaused = true;
+        $this->isPaused = true;
     }
 }

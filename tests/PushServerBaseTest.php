@@ -27,9 +27,6 @@ use const Workbunny\WebmanPushServer\EVENT_PONG;
 use const Workbunny\WebmanPushServer\EVENT_TERMINATE_CONNECTION;
 use const Workbunny\WebmanPushServer\EVENT_UNSUBSCRIPTION_SUCCEEDED;
 
-/**
- * @runTestsInSeparateProcesses
- */
 class PushServerBaseTest extends BaseTestCase
 {
 
@@ -38,7 +35,7 @@ class PushServerBaseTest extends BaseTestCase
         // 初始化一个mock tcp连接
         $connection = new MockTcpConnection();
         // 初始化判定
-        $this->assertFalse(property_exists($connection, 'onWebSocketConnect'));
+//        $this->assertFalse(property_exists($connection, 'onWebSocketConnect'));
         $this->assertFalse(property_exists($connection, 'appKey'));
         $this->assertFalse(property_exists($connection, 'clientNotSendPingCount'));
         $this->assertFalse(property_exists($connection, 'queryString'));
@@ -104,7 +101,11 @@ class PushServerBaseTest extends BaseTestCase
         // 模拟onConnect
         $this->getPushServer()->onConnect($connection);
         // 模拟调用$connection->onWebSocketConnect
-        call_user_func(PushServer::getConnectionProperty($connection, 'onWebSocketConnect'), $connection, '');
+        call_user_func(
+            PushServer::getConnectionProperty($connection, 'onWebSocketConnect'),
+            $connection,
+            "GET HTTP/1.1\r\nConnection: Upgrade\r\nUpgrade: websocket\r\n\r\n"
+        );
         // 断言检测心跳计数为0
         $this->assertEquals(
             0, PushServer::getConnectionProperty($connection, 'clientNotSendPingCount', 'has-not')

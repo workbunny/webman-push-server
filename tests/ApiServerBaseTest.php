@@ -20,9 +20,6 @@ use Webman\Http\Response;
 use Workbunny\WebmanPushServer\ApiRoute;
 use Workerman\Worker;
 
-/**
- * @runTestsInSeparateProcesses
- */
 class ApiServerBaseTest extends BaseTestCase
 {
 
@@ -30,7 +27,7 @@ class ApiServerBaseTest extends BaseTestCase
     public function testApiServerOnMessageSuccessful()
     {
         $mockConnection = new MockTcpConnection();
-        $request = new Request("GET /index HTTP/1.1\r\nConnection: keep-alive\r\n");
+        $request = new Request("GET /index HTTP/1.1\r\nConnection: keep-alive\r\n\r\n");
         // 手动触发 onMessage 回调
         $this->getApiServer()->onMessage($mockConnection, $request);
 

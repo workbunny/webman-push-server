@@ -78,7 +78,7 @@ class ApiServer
         $response->withHeader('Content-Type', 'application/json');
         $response->withHeader('Server', 'workbunny/webman-push-server');
         $response->withHeader('Version', PushServer::$version);
-        $response->withHeader('SocketId', static::getConnectionProperty($connection, 'socketId'));
+        $response->withHeader('SocketId', static::getConnectionProperty($connection, 'socketId', ''));
         static::setSendBytesStatistics($connection, (string)$response);
         if ($request) {
             $keepAlive = $request->header('connection');

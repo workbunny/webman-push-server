@@ -18,16 +18,13 @@ use Webman\Http\Request;
 use Webman\Http\Response;
 use Workbunny\WebmanPushServer\ApiClient;
 
-/**
- * @runTestsInSeparateProcesses
- */
 class ApiServerRouteTest extends BaseTestCase
 {
 
     public function testApiServerRouteChannels(){
         // required auth_key
         $mockConnection = new MockTcpConnection();
-        $request = new Request("GET /apps/1/channels HTTP/1.1\r\nConnection: keep-alive\r\n");
+        $request = new Request("GET /apps/1/channels HTTP/1.1\r\nConnection: keep-alive\r\n\r\n");
         // 手动触发 onMessage 回调
         $this->getApiServer()->onMessage($mockConnection, $request);
         $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
@@ -37,7 +34,7 @@ class ApiServerRouteTest extends BaseTestCase
 
         // invalid auth_key
         $mockConnection = new MockTcpConnection();
-        $request = new Request("GET /apps/1/channels?auth_key=test HTTP/1.1\r\nConnection: keep-alive\r\n");
+        $request = new Request("GET /apps/1/channels?auth_key=test HTTP/1.1\r\nConnection: keep-alive\r\n\r\n");
         // 手动触发 onMessage 回调
         $this->getApiServer()->onMessage($mockConnection, $request);
         $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
@@ -47,7 +44,7 @@ class ApiServerRouteTest extends BaseTestCase
 
         // invalid auth_key
         $mockConnection = new MockTcpConnection();
-        $request = new Request("GET /apps/1/channels?auth_key=workbunny&auth_signature=abc HTTP/1.1\r\nConnection: keep-alive\r\n");
+        $request = new Request("GET /apps/1/channels?auth_key=workbunny&auth_signature=abc HTTP/1.1\r\nConnection: keep-alive\r\n\r\n");
         // 手动触发 onMessage 回调
         $this->getApiServer()->onMessage($mockConnection, $request);
         $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
@@ -60,7 +57,7 @@ class ApiServerRouteTest extends BaseTestCase
         $signature = ApiClient::routeAuth('workbunny', 'U2FsdGVkX1+vlfFH8Q9XdZ9t9h2bABGYAZltEYAX6UM=', 'GET', '/apps/1/channels', [
             'auth_key' => 'workbunny'
         ]);
-        $request = new Request("GET /apps/1/channels?auth_key=workbunny&auth_signature=$signature HTTP/1.1\r\nConnection: keep-alive\r\n");
+        $request = new Request("GET /apps/1/channels?auth_key=workbunny&auth_signature=$signature HTTP/1.1\r\nConnection: keep-alive\r\n\r\n");
         // 手动触发 onMessage 回调
         $this->getApiServer()->onMessage($mockConnection, $request);
         $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
@@ -75,7 +72,7 @@ class ApiServerRouteTest extends BaseTestCase
         $signature = ApiClient::routeAuth('workbunny', 'U2FsdGVkX1+vlfFH8Q9XdZ9t9h2bABGYAZltEYAX6UM=', 'GET', '/apps/1/channels/private-test', [
             'auth_key' => 'workbunny'
         ]);
-        $request = new Request("GET /apps/1/channels/private-test?auth_key=workbunny&auth_signature=$signature HTTP/1.1\r\nConnection: keep-alive\r\n");
+        $request = new Request("GET /apps/1/channels/private-test?auth_key=workbunny&auth_signature=$signature HTTP/1.1\r\nConnection: keep-alive\r\n\r\n");
         // 手动触发 onMessage 回调
         $this->getApiServer()->onMessage($mockConnection, $request);
         $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
@@ -88,7 +85,7 @@ class ApiServerRouteTest extends BaseTestCase
             'auth_key'  => 'workbunny',
             'info'      => 'subscription_count'
         ]);
-        $request = new Request("GET /apps/1/channels/private-test?auth_key=workbunny&auth_signature=$signature&info=subscription_count HTTP/1.1\r\nConnection: keep-alive\r\n");
+        $request = new Request("GET /apps/1/channels/private-test?auth_key=workbunny&auth_signature=$signature&info=subscription_count HTTP/1.1\r\nConnection: keep-alive\r\n\r\n");
         // 手动触发 onMessage 回调
         $this->getApiServer()->onMessage($mockConnection, $request);
         $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
@@ -101,7 +98,7 @@ class ApiServerRouteTest extends BaseTestCase
             'auth_key'  => 'workbunny',
             'info'      => 'subscription_count,user_count'
         ]);
-        $request = new Request("GET /apps/1/channels/private-test?auth_key=workbunny&auth_signature=$signature&info=subscription_count,user_count HTTP/1.1\r\nConnection: keep-alive\r\n");
+        $request = new Request("GET /apps/1/channels/private-test?auth_key=workbunny&auth_signature=$signature&info=subscription_count,user_count HTTP/1.1\r\nConnection: keep-alive\r\n\r\n");
         // 手动触发 onMessage 回调
         $this->getApiServer()->onMessage($mockConnection, $request);
         $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
@@ -115,7 +112,7 @@ class ApiServerRouteTest extends BaseTestCase
         $signature = ApiClient::routeAuth('workbunny', 'U2FsdGVkX1+vlfFH8Q9XdZ9t9h2bABGYAZltEYAX6UM=', 'POST', '/apps/1/events', [
             'auth_key' => 'workbunny'
         ]);
-        $request = new Request("POST /apps/1/events?auth_key=workbunny&auth_signature=$signature HTTP/1.1\r\nConnection: keep-alive\r\n");
+        $request = new Request("POST /apps/1/events?auth_key=workbunny&auth_signature=$signature HTTP/1.1\r\nConnection: keep-alive\r\n\r\n");
 
         // 手动触发 onMessage 回调
         $this->getApiServer()->onMessage($mockConnection, $request);
@@ -132,7 +129,7 @@ class ApiServerRouteTest extends BaseTestCase
         $signature = ApiClient::routeAuth('workbunny', 'U2FsdGVkX1+vlfFH8Q9XdZ9t9h2bABGYAZltEYAX6UM=', 'POST', '/apps/1/batch_events', [
             'auth_key' => 'workbunny'
         ]);
-        $request = new Request("POST /apps/1/batch_events?auth_key=workbunny&auth_signature=$signature HTTP/1.1\r\nConnection: keep-alive\r\n");
+        $request = new Request("POST /apps/1/batch_events?auth_key=workbunny&auth_signature=$signature HTTP/1.1\r\nConnection: keep-alive\r\n\r\n");
 
         // 手动触发 onMessage 回调
         $this->getApiServer()->onMessage($mockConnection, $request);
@@ -149,7 +146,7 @@ class ApiServerRouteTest extends BaseTestCase
         $signature = ApiClient::routeAuth('workbunny', 'U2FsdGVkX1+vlfFH8Q9XdZ9t9h2bABGYAZltEYAX6UM=', 'GET', '/apps/1/channels/private-test/users', [
             'auth_key' => 'workbunny'
         ]);
-        $request = new Request("GET /apps/1/channels/private-test/users?auth_key=workbunny&auth_signature=$signature HTTP/1.1\r\nConnection: keep-alive\r\n");
+        $request = new Request("GET /apps/1/channels/private-test/users?auth_key=workbunny&auth_signature=$signature HTTP/1.1\r\nConnection: keep-alive\r\n\r\n");
         // 手动触发 onMessage 回调
         $this->getApiServer()->onMessage($mockConnection, $request);
         $this->assertTrue($mockConnection->getSendBuffer() instanceof Response);
@@ -164,7 +161,7 @@ class ApiServerRouteTest extends BaseTestCase
         $signature = ApiClient::routeAuth('workbunny', 'U2FsdGVkX1+vlfFH8Q9XdZ9t9h2bABGYAZltEYAX6UM=', 'POST', '/apps/1/users/abc/terminate_connections', [
             'auth_key' => 'workbunny'
         ]);
-        $request = new Request("POST /apps/1/users/abc/terminate_connections?auth_key=workbunny&auth_signature=$signature HTTP/1.1\r\nConnection: keep-alive\r\n");
+        $request = new Request("POST /apps/1/users/abc/terminate_connections?auth_key=workbunny&auth_signature=$signature HTTP/1.1\r\nConnection: keep-alive\r\n\r\n");
 
         // 手动触发 onMessage 回调
         $this->getApiServer()->onMessage($mockConnection, $request);
