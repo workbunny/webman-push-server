@@ -22,8 +22,6 @@ use Workerman\Worker;
 
 class ApiServerBaseTest extends BaseTestCase
 {
-
-
     public function testApiServerOnMessageSuccessful()
     {
         $mockConnection = new MockTcpConnection();

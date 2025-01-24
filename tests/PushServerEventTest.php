@@ -27,12 +27,8 @@ use const Workbunny\WebmanPushServer\EVENT_SUBSCRIPTION_SUCCEEDED;
 use const Workbunny\WebmanPushServer\EVENT_UNSUBSCRIBE;
 use const Workbunny\WebmanPushServer\EVENT_UNSUBSCRIPTION_SUCCEEDED;
 
-/**
- * @runTestsInSeparateProcesses
- */
 class PushServerEventTest extends BaseTestCase
 {
-
     /**
      * @param array $array
      * @return string

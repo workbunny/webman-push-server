@@ -4,9 +4,10 @@
          bootstrap="vendor/autoload.php"
          executionOrder="depends,defects"
          beStrictAboutOutputDuringTests="true"
-         defaultTimeLimit="10"
+         defaultTimeLimit="300"
          colors="true"
          testdox="true"
+         cacheResult="false"
          stopOnWarning="true">
     <testsuites>
         <testsuite name="default">

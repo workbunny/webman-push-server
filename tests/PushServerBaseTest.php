@@ -27,12 +27,8 @@ use const Workbunny\WebmanPushServer\EVENT_PONG;
 use const Workbunny\WebmanPushServer\EVENT_TERMINATE_CONNECTION;
 use const Workbunny\WebmanPushServer\EVENT_UNSUBSCRIPTION_SUCCEEDED;
 
-/**
- * @runTestsInSeparateProcesses
- */
 class PushServerBaseTest extends BaseTestCase
 {
-
     public function testPushServerOnConnect()
     {
         // 初始化一个mock tcp连接
@@ -404,7 +400,7 @@ class PushServerBaseTest extends BaseTestCase
         $this->assertEquals(
             2, PushServer::getConnectionProperty($connection2, 'clientNotSendPingCount', 'has-not')
         );
-        // 模拟一次心跳检测
+        // 模拟一次心跳检测/
         call_user_func([PushServer::class, '_heartbeatChecker']);
         $this->assertCount(1, PushServer::getConnections()[PushServer::$unknownTag] ?? []);
         // 判断链接心跳计数
