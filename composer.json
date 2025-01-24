@@ -26,8 +26,8 @@
 	},
 	"require-dev": {
 		"workerman/webman-framework": "^1.5",
-		"symfony/var-dumper": "^7.0",
-		"phpunit/phpunit": "^9.6",
+		"symfony/var-dumper": "^6.0 | ^7.0",
+		"phpunit/phpunit": "^9.6 | ^10.0",
 		"phpstan/phpstan": "^1.11",
 		"friendsofphp/php-cs-fixer": "^3.58"
 	},
