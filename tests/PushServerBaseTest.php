@@ -27,6 +27,9 @@ use const Workbunny\WebmanPushServer\EVENT_PONG;
 use const Workbunny\WebmanPushServer\EVENT_TERMINATE_CONNECTION;
 use const Workbunny\WebmanPushServer\EVENT_UNSUBSCRIPTION_SUCCEEDED;
 
+/**
+ * @runTestsInSeparateProcesses
+ */
 class PushServerBaseTest extends BaseTestCase
 {
 
