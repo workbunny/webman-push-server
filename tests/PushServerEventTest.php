@@ -157,15 +157,22 @@ class PushServerEventTest extends BaseTestCase
         $this->getPushServer()->onMessage($connection, $this->ArrayToJson([
             'event' => EVENT_SUBSCRIBE,
             'data'  => [
-                'channel'      => "presence-channel-$key",
-                'channel_data' => [
+                'channel'      => $channel = "presence-channel-$key",
+                'channel_data' => $channelData = [
                     'user_id'   => $userId = 'acb',
                     'user_info' => $userInfoJson = json_encode([
                         'name' => 'chaz6chez',
                         'sex'  => 'male'
                     ], JSON_UNESCAPED_UNICODE)
-                ]
-            ]
+                ],
+                'auth' => Subscribe::auth(
+                    'workbunny',
+                    'U2FsdGVkX1+vlfFH8Q9XdZ9t9h2bABGYAZltEYAX6UM=',
+                    PushServer::getConnectionProperty($connection, 'socketId'),
+                    $channel,
+                    $channelData
+                )
+            ],
         ]));
         // 断言检测心跳计数为0
         $this->assertEquals(
@@ -502,21 +509,34 @@ class PushServerEventTest extends BaseTestCase
         $this->getPushServer()->onMessage($connection, $this->ArrayToJson([
             'event' => EVENT_SUBSCRIBE,
             'data'  => [
-                'channel' => "private-channel-$key",
+                'channel' => $channel = "private-channel-$key",
+                'auth' => Subscribe::auth(
+                    'workbunny',
+                    'U2FsdGVkX1+vlfFH8Q9XdZ9t9h2bABGYAZltEYAX6UM=',
+                    PushServer::getConnectionProperty($connection, 'socketId'),
+                    $channel
+                )
             ]
         ]));
         // 模拟发送 subscribe
         $this->getPushServer()->onMessage($connection, $this->ArrayToJson([
             'event' => EVENT_SUBSCRIBE,
             'data'  => [
-                'channel'      => "presence-channel-$key",
-                'channel_data' => [
+                'channel'      => $channel = "presence-channel-$key",
+                'channel_data' => $channelData = [
                     'user_id'   => '1',
                     'user_info' => json_encode([
                         'name' => 'chaz6chez',
                         'sex'  => 'male'
                     ], JSON_UNESCAPED_UNICODE)
-                ]
+                ],
+                'auth' => Subscribe::auth(
+                    'workbunny',
+                    'U2FsdGVkX1+vlfFH8Q9XdZ9t9h2bABGYAZltEYAX6UM=',
+                    PushServer::getConnectionProperty($connection, 'socketId'),
+                    $channel,
+                    $channelData
+                )
             ]
         ]));
         // 断言检测心跳计数为0
