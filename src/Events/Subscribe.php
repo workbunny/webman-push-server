@@ -51,7 +51,7 @@ class Subscribe extends AbstractEvent
         $channel = $request['data']['channel'] ?? '';
         $channelData = $request['data']['channel_data'] ?? [];
         $clientAuth = $request['data']['auth'] ?? '';
-        $appsCallback = PushServer::getConfig('apps_query', getBase: true);
+        $appsCallback = PushServer::getConfig('app_verify', getBase: true);
 
         // private- 和 presence- 开头的channel需要验证
         switch ($channelType = PushServer::getChannelType($channel)){
@@ -71,7 +71,7 @@ class Subscribe extends AbstractEvent
                 } else {
                     $auth = '';
                     Log::channel('plugin.workbunny.webman-push-server.warning')
-                        ->warning("[PUSH-SERVER] Subscribe auth error, Config apps_query not found. ", [
+                        ->warning("[PUSH-SERVER] Subscribe auth error, Config app_verify not found. ", [
                             'request' => $request,
                             'method'  => __METHOD__
                         ]);
@@ -102,7 +102,7 @@ class Subscribe extends AbstractEvent
                 } else {
                     $auth = '';
                     Log::channel('plugin.workbunny.webman-push-server.warning')
-                        ->warning("[PUSH-SERVER] Subscribe auth error, Config apps_query not found. ", [
+                        ->warning("[PUSH-SERVER] Subscribe auth error, Config app_verify not found. ", [
                             'request' => $request,
                             'method'  => __METHOD__
                         ]);

@@ -64,6 +64,7 @@ Push.prototype.createConnection = function () {
             }
 
             params = JSON.parse(params.data);
+
             var event = params.event;
             var channel_name = params.channel;
 
@@ -74,7 +75,7 @@ Push.prototype.createConnection = function () {
             if (event === 'pusher:error') {
                 throw Error(params.data.message);
             }
-            var data = JSON.parse(params.data), channel;
+
             if (event === 'pusher_internal:subscription_succeeded') {
                 channel = _this.channels[channel_name];
                 channel.subscribed = true;
@@ -83,7 +84,7 @@ Push.prototype.createConnection = function () {
                 return;
             }
             if (event === 'pusher:connection_established') {
-                _this.connection.socket_id = data.socket_id;
+                _this.connection.socket_id = params.data.socket_id;
                 _this.connection.updateNetworkState('connected');
                 _this.subscribeAll();
             }
@@ -93,7 +94,7 @@ Push.prototype.createConnection = function () {
             }
             channel = _this.channels[channel_name];
             if (channel) {
-                channel.emit(event, data);
+                channel.emit(event, params.data);
             }
         },
         onClose: function () {
