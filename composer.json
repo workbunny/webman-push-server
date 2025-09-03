@@ -26,6 +26,7 @@
 	},
 	"require-dev": {
 		"workerman/webman-framework": "^1.5 | ^2.0",
+		"webman/redis": "^1.0 | ^2.0",
 		"symfony/var-dumper": "^6.0 | ^7.0",
 		"phpunit/phpunit": "^9.6 | ^10.0",
 		"phpstan/phpstan": "^1.11",
