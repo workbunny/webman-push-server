@@ -34,6 +34,8 @@ return [
         'heartbeat' => 60,
         // 流量统计间隔
         'traffic_statistics_interval' => 0,
+        // error_code_int
+        'error_code_int' => false
     ],
     // api服务配置
     'api-server' => [

@@ -317,13 +317,16 @@ class PushServer
      * 向连接发送错误消息
      *
      * @param TcpConnection $connection 连接
-     * @param string|null $code 错误码
+     * @param int|string|null $code 错误码
      * @param string|null $message 错误信息
      * @param bool $pauseRecv 暂停接收消息，连接随后会被心跳检测回收
      * @return void
      */
-    public static function error(TcpConnection $connection, ?string $code, ?string $message = null, bool $pauseRecv = false): void
+    public static function error(TcpConnection $connection, int|string|null $code, ?string $message = null, bool $pauseRecv = false): void
     {
+        if (static::getConfig('error_code_int', false) and !is_null($code)) {
+            $code = (int)$code;
+        }
         static::send($connection, null, EVENT_ERROR, [
             'code'    => $code,
             'message' => $message
