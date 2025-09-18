@@ -524,7 +524,10 @@ https://pusher.com/docs/channels/channels_libraries/libraries/
 在一些服务器监控场景下，我们需要获取全量的往来信息，包括客户端的消息和服务端的回执等
 
 - 创建一个中间件服务类，use引入ChannelMethods
+  - 客户端与服务端的任何通讯消息会触达`_subscribeResponse`方法，请在`_subscribeResponse`方法中实现对应业务逻辑，入日志等；
 
+  - `_subscribeResponse`方法是经过业务处理后的方法，如果想要订阅原始数据，请实现`_subscribeRaw`方法
+  
 ```php
 <?php declare(strict_types=1);
 
@@ -539,12 +542,16 @@ class PushServerMiddleware
     /** @inheritDoc */
     public static function _subscribeResponse(string $type, array $data): void
     {
-        // TODO
+        // TODO 业务类型中间件
+    }
+
+    /** @inheritDoc */
+    public static function _subscribeRaw($channel, $raw): void
+    {
+        // TODO 订阅通道原始数据
     }
 }
 ```
-
-- 客户端与服务端的任何通讯消息会触达_subscribeResponse方法，请在_subscribeResponse方法中实现对应业务逻辑，入日志等；
 
 - 在项目config/process.php或config/plugin/workbunny/webman-push-server/process.php中添加配置
 
@@ -561,8 +568,10 @@ class PushServerMiddleware
 #### Tips：
 
 - 中间件切记保持单进程运行，本质上是与push-server进程组监听同一个内部通讯通道
-- _subscribeResponse方法中请勿执行耗时操作，否则将影响性能，建议异步执行，如投送到队列进行消费
-- _subscribeResponse中type为client时为客户端消息，type为server时为服务端回执消息，其他则详见[AbstractPublishType.php](src/PublishTypes/AbstractPublishType.php)
+- `_subscribeResponse`方法中请勿执行耗时操作，否则将影响性能，建议异步执行，如投送到队列进行消费
+- `_subscribeResponse`中`type`为`client`时为客户端消息，`type`为`server`时为服务端回执消息，其他则详见[AbstractPublishType.php](src/PublishTypes/AbstractPublishType.php)
+- `_subscribeRaw`方法中请勿执行耗时操作，否则将影响性能，建议异步执行，如投送到队列进行消费
+- `_subscribeRaw`中`channel`为订阅的通道名，`raw`为原始数据，通常为json字符串
 - 该中间件更适合作为监控服务或者日志服务，如果作为拦截器等服务，可能存在调用链路较长的问题
 - 样例查看，[PushServerMiddleware.php](tests/Examples/PushServerMiddleware.php)
 

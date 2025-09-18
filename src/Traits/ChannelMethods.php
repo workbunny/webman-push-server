@@ -13,6 +13,9 @@ use support\Redis;
 use Workerman\Redis\Client;
 use Workerman\Timer;
 
+/**
+ * @method static _subscribeRaw($channel, $raw) 订阅原始消息
+ */
 trait ChannelMethods
 {
     /** @var Client[] */
@@ -140,18 +143,21 @@ trait ChannelMethods
      * 订阅回调
      *
      * @param $channel
-     * @param $message
+     * @param $raw
      * @return void
      */
-    public static function _onSubscribe($channel, $message): void
+    public static function _onSubscribe($channel, $raw): void
     {
-        $message = @json_decode($message, true);
+        if (is_callable([static::class, '_subscribeRaw'])) {
+            static::_subscribeRaw($channel, $raw);
+        }
+        $message = @json_decode($raw, true);
         if (
             ($type = $message['type'] ?? null) and
             ($data = $message['data'] ?? null)
         ) {
             // 订阅响应
-            static::_subscribeResponse($type, $data);
+            static::_subscribeResponse($type, $data, $raw);
         } else {
             Log::channel('plugin.workbunny.webman-push-server.notice')->notice(
                 "[Channel] $channel -> $message format error. "
@@ -163,7 +169,7 @@ trait ChannelMethods
      * 订阅响应
      *
      * @param string $type 消息类型
-     * @param array $data 消息数据
+     * @param array $data 解析后的消息数据
      * @return void
      */
     abstract public static function _subscribeResponse(string $type, array $data): void;
