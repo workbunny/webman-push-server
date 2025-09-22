@@ -23,15 +23,16 @@
 
 - **3.0：全新架构**
 - **2.0：旧版架构，长期技术支持版本（LTS），[点击跳转2.0文档](https://github.com/workbunny/webman-push-server/blob/2.x/README.md)**
-- **1.0：旧版架构，不再维护，请使用2.0 / fork自行维护，[点击跳转1.0文档](https://github.com/workbunny/webman-push-server/blob/1.x/README.md)**
+- **~~1.0：旧版架构~~，不再维护，请使用2.0 / fork自行维护，[点击跳转1.0文档](https://github.com/workbunny/webman-push-server/blob/1.x/README.md)**
 
 # 简介
 
-- 全新重构的分布式推送服务，更简单的使用，更简单的部署，更简单的代码！
+- 全新重构的分布式推送服务，更高的性能，更简单的使用，更简单的部署，更简单的代码！
 - 完整且高效的即时通讯服务，支持聊天、在线推送、数字大屏等双向通讯长连接业务场景；
 - 高保真复刻的[Pusher-Channel](https://support.pusher.com/hc/en-us/categories/4411973917585-Channels)，可以利用现有的[Pusher-Channel](https://support.pusher.com/hc/en-us/categories/4411973917585-Channels)客户端，其他语言(Java Swift .NET Objective-C Unity Flutter Android IOS AngularJS等)客户端地址下载地址：
   https://pusher.com/docs/channels/channels_libraries/libraries/
-- 本项目1.0/2.0版本承接实现了诸多商业项目的即时通讯服务，最高日活连接达到20万+，最久的商业化项目已稳定运行3年，性能与稳定性兼顾；
+- 本项目承接实现了诸多商业项目的即时通讯服务，最高日活连接达到20万+，最久的商业化项目已稳定运行3年+，性能与稳定性兼顾；
+- 3.0与2.0相比，具备更低的广播延迟（上下界减少8%），具备更高的承载能力（QPS提升12%），具备更多样的部署方案和更多样的拓展开发能力；
 - 如遇问题，欢迎 **[issue](https://github.com/workbunny/webman-push-server/issues) & PR**；
 
 ## 架构
