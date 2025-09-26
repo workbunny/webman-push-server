@@ -21,9 +21,9 @@
 
 # 说明
 
-- **3.0：全新架构**
-- **2.0：旧版架构，长期技术支持版本（LTS），[点击跳转2.0文档](https://github.com/workbunny/webman-push-server/blob/2.x/README.md)**
-- **~~1.0：旧版架构~~，不再维护，请使用2.0 / fork自行维护，[点击跳转1.0文档](https://github.com/workbunny/webman-push-server/blob/1.x/README.md)**
+- **3.0：全新架构 【推荐】**
+- **2.0：旧版架构 LTS版本 | [点击跳转2.0文档](https://github.com/workbunny/webman-push-server/blob/2.x/README.md)**
+- **~~1.0：旧版架构~~，不再维护，请使用2.0 / fork自行维护 | [点击跳转1.0文档](https://github.com/workbunny/webman-push-server/blob/1.x/README.md)**
 
 # 简介
 
