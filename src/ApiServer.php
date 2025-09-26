@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Workbunny\WebmanPushServer;
 
 use Closure;
+use Workbunny\WebmanPushServer\Traits\BaseApiRoutes;
 use Workbunny\WebmanPushServer\Traits\ConnectionsMethods;
 use Workbunny\WebmanPushServer\Traits\RegistrarMethods;
 use Workerman\Connection\TcpConnection;
@@ -25,6 +26,7 @@ class ApiServer
 {
     use ConnectionsMethods;
     use RegistrarMethods;
+    use BaseApiRoutes;
 
     public function __construct()
     {
