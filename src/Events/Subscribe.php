@@ -163,7 +163,6 @@ class Subscribe extends AbstractEvent
             // 通道是否已经被建立
             $channelExists = $storage->exists($key = PushServer::getChannelStorageKey($appKey, $channel));
             if (!$channelExists) {
-                /** @see PushServer::$_storage */
                 $storage->hSet($key, 'type', $type);
                 // 内部事件广播 通道被创建事件
                 PushServer::publishUseRetry(AbstractPublishType::PUBLISH_TYPE_SERVER, [
@@ -186,7 +185,6 @@ class Subscribe extends AbstractEvent
                 PushServer::setConnectionProperty($connection, 'channels', $channels);
                 PushServer::setConnection($appKey, $socketId, $connection);
                 // 递增订阅数
-                /** @see PushServer::$_storage */
                 $storage->hIncrBy($key,'subscription_count', 1);
             }
             // 如果是presence通道

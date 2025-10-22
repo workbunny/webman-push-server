@@ -8,6 +8,9 @@ namespace Workbunny\WebmanPushServer\Traits;
 
 use RedisException;
 use support\Redis;
+use Workbunny\WebmanPushServer\Exceptions\StorageException;
+use Workbunny\WebmanPushServer\Storages\RedisStorage;
+use Workbunny\WebmanPushServer\Storages\StorageInterface;
 use const Workbunny\WebmanPushServer\CHANNEL_TYPE_PRESENCE;
 
 trait StorageMethods
@@ -30,21 +33,19 @@ trait StorageMethods
      *       socket_id  => socketId      // 客户端id
      *   ]
      *
-     * @var \Redis|null
+     * @var StorageInterface|null
      */
-    protected static ?\Redis $_storageClient = null;
-
-    /** @var string  */
-    protected static string $storageRedisChannelKey = 'plugin.workbunny.webman-push-server.server-storage';
+    protected static ?StorageInterface $_storageClient = null;
 
     /**
-     * @return \Redis
+     * @return StorageInterface
      */
-    public static function getStorageClient(): \Redis
+    public static function getStorageClient(): StorageInterface
     {
-        if(!self::$_storageClient instanceof \Redis){
-            self::$_storageClient =
-                Redis::connection(self::$storageRedisChannelKey)->client();
+        if(!self::$_storageClient instanceof StorageInterface){
+            $handler = config('workbunny.webman-push-server.storage.handler');
+            $handler = $handler instanceof StorageInterface ? $handler : new RedisStorage();
+            self::$_storageClient = $handler;
         }
         return self::$_storageClient;
     }
@@ -105,7 +106,7 @@ trait StorageMethods
      * @param string $appKey
      * @param string $channel
      * @return array[]
-     * @throws RedisException
+     * @throws StorageException
      */
     public static function getPresenceChannelDataForSubscribe(string $appKey, string $channel): array
     {
