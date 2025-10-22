@@ -6,11 +6,10 @@
 
 namespace Workbunny\WebmanPushServer\Traits;
 
-use InvalidArgumentException;
 use RedisException;
 use support\Log;
-use support\Redis;
-use Workerman\Redis\Client;
+use Workbunny\WebmanPushServer\Channels\ChannelInterface;
+use Workbunny\WebmanPushServer\Channels\RedisChannel;
 use Workerman\Timer;
 
 /**
@@ -18,8 +17,8 @@ use Workerman\Timer;
  */
 trait ChannelMethods
 {
-    /** @var Client[] */
-    protected static array $_redisClients = [];
+    /** @var ChannelInterface[] */
+    protected static array $channels = [];
 
     /** @var string  */
     protected static string $internalChannelKey = 'workbunny.webman-push-server.server-channel';
@@ -28,58 +27,58 @@ trait ChannelMethods
     /**
      * 创建连接
      *
-     * @param string $redisChannel redis通道
-     * @return Client
+     * @param string $channelKey
+     * @return ChannelInterface
+     * @throws RedisException
+     * @throws \Throwable
      */
-    public static function channelConnect(string $redisChannel = 'server-channel'): Client
+    public static function channelConnect(string $channelKey = 'default'): ChannelInterface
     {
-        if (!(static::$_redisClients[$redisChannel] ?? null)) {
-            if (!$config = config('redis')["plugin.workbunny.webman-push-server.$redisChannel"] ?? []) {
-                throw new InvalidArgumentException("Redis channel [$redisChannel] not found. ");
-            }
-            $client = new Client(sprintf('redis://%s:%s', $config['host'], $config['port']), $config['options'] ?? []);
-            $client->connect();
-            if ($passport = $config['password'] ?? null) {
-                $client->auth($passport);
-            }
-            if ($database = $config['database'] ?? 0) {
-                $client->select($database);
-            }
-            static::$_redisClients[$redisChannel] = $client;
+        if (!(static::$channels[$channelKey] ?? null)) {
+            $handler = config("workbunny.webman-push-server.channel.$channelKey.handler");
+            $handler = $handler instanceof ChannelInterface ? $handler : new RedisChannel(
+                // 兼容旧版及其他可能的可选项
+                $channelKey === 'default' ?
+                    'server-channel' :
+                    $channelKey
+            );
+            static::$channels[$channelKey] = $handler;
         }
-        return static::$_redisClients[$redisChannel];
+        return static::$channels[$channelKey];
     }
 
     /**
      * 关闭连接
      *
-     * @param string|null $redisChannel redis通道
+     * @param string|null $channelKey
      * @return void
      */
-    public static function channelClose(?string $redisChannel = 'server-channel'): void
+    public static function channelClose(?string $channelKey = 'default'): void
     {
-        if ($redisChannel === null) {
-            foreach (static::$_redisClients as $client) {
-                $client->close();
+        if ($channelKey === null) {
+            foreach (static::$channels as $client) {
+                $client->unsubscribe();
             }
-            static::$_redisClients = [];
+            static::$channels = [];
             return;
         }
-        if (static::$_redisClients[$redisChannel] ?? null) {
-            static::$_redisClients[$redisChannel]->close();
-            unset(static::$_redisClients[$redisChannel]);
+        if (static::$channels[$channelKey] ?? null) {
+            static::$channels[$channelKey]->unsubscribe();
+            unset(static::$channels[$channelKey]);
         }
     }
 
     /**
      * 订阅
      *
-     * @param string $redisChannel redis通道
+     * @param string $channelKey
      * @return void
+     * @throws RedisException
+     * @throws \Throwable
      */
-    public static function subscribe(string $redisChannel = 'server-channel'): void
+    public static function subscribe(string $channelKey = 'default'): void
     {
-        static::channelConnect($redisChannel)
+        static::channelConnect($channelKey)
             ->subscribe(static::$internalChannelKey, [static::class, '_onSubscribe']);
     }
 
@@ -88,16 +87,14 @@ trait ChannelMethods
      *
      * @param string $type 消息类型
      * @param array $data 消息数据
-     * @param string $redisChannel redis通道
-     * @return bool|int|\Redis
+     * @param string $channelKey
+     * @return bool|int
      * @throws RedisException
+     * @throws \Throwable
      */
-    public static function publish(string $type, array $data, string $redisChannel = 'server-channel'): bool|int|\Redis
+    public static function publish(string $type, array $data, string $channelKey = 'default'): bool|int
     {
-        if (!(config('redis')[$redisChannel = "plugin.workbunny.webman-push-server.$redisChannel"] ?? [])) {
-            throw new InvalidArgumentException("Redis channel [$redisChannel] not found. ");
-        }
-        return Redis::connection($redisChannel)->client()->publish(
+        return static::channelConnect($channelKey)->publish(
             static::$internalChannelKey,
             json_encode([
                 'type' => $type,
@@ -112,13 +109,14 @@ trait ChannelMethods
      * @param string $type 消息类型
      * @param array $data 消息数据
      * @param float $retryInterval 重试间隔
-     * @param string $redisChannel redis通道
+     * @param string $channelKey
      * @return int|bool|null
+     * @throws \Throwable
      */
-    public static function publishUseRetry(string $type, array $data, float $retryInterval = 0.5, string $redisChannel = 'server-channel'): null|int|bool
+    public static function publishUseRetry(string $type, array $data, float $retryInterval = 0.5, string $channelKey = 'default'): null|int|bool
     {
         try {
-            $res = static::publish($type, $data, $redisChannel);
+            $res = static::publish($type, $data, $channelKey);
         } catch (RedisException $exception) {
             Log::channel('plugin.workbunny.webman-push-server.error')
                 ->error("[CHANNEL-PUBLISH-RETRY] {$exception->getMessage()}", [
@@ -129,9 +127,9 @@ trait ChannelMethods
         }
         if ($res === false) {
             return $timerId = Timer::add($retryInterval, function () use (
-                &$timerId, $redisChannel, $type, $data
+                &$timerId, $channelKey, $type, $data
             ) {
-                if (static::publish($type, $data, $redisChannel) !== false) {
+                if (static::publish($type, $data, $channelKey) !== false) {
                     Timer::del($timerId);
                 }
             });
