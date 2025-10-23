@@ -29,13 +29,14 @@
 		"phpunit/phpunit": "^9.6 | ^10.0",
 		"phpstan/phpstan": "^1.11",
 		"friendsofphp/php-cs-fixer": "^3.58",
-		"illuminate/redis": "^9.0 | ^10.0 | ^11.0 | ^12.0",
-		"workerman/redis": "^2.0"
+		"workerman/redis": "^2.0",
+		"workbunny/webman-shared-cache": "^0.6"
 	},
 	"suggest": {
 		"ext-uuid": "For unique socket id. ",
-		"illuminate/redis": "For redis storage. ",
-		"workerman/redis": "For redis channel. "
+		"webman/redis": "For redis storage. ",
+		"workerman/redis": "For redis channel. ",
+		"workbunny/webman-shared-cache": "For shared storage / channel. "
 	},
 	"autoload": {
 		"psr-4": {

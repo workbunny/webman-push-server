@@ -12,6 +12,8 @@ use Workerman\Redis\Client;
 
 class RedisChannel implements ChannelInterface
 {
+    public static bool $test = false;
+
     /**
      * @var Client|null
      */
@@ -38,7 +40,7 @@ class RedisChannel implements ChannelInterface
         if (!$config = config('redis')["plugin.workbunny.webman-push-server.$redisChannel"] ?? []) {
             throw new InvalidArgumentException("Redis channel [$redisChannel] not found. ");
         }
-        try {
+        if (!static::$test) {
             $client = new Client(sprintf('redis://%s:%s', $config['host'], $config['port']), $config['options'] ?? []);
             $client->connect();
             if ($passport = $config['password'] ?? null) {
@@ -48,10 +50,6 @@ class RedisChannel implements ChannelInterface
                 $client->select($database);
             }
             $this->_subClient = $client;
-        } catch (\RuntimeException $e) {
-            if ($e->getMessage() !== 'Timer can only be used in workerman running environment') {
-                throw $e;
-            }
         }
         $this->_pubClient = Redis::connection("plugin.workbunny.webman-push-server.$redisChannel")->client();
     }

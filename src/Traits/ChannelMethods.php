@@ -35,8 +35,8 @@ trait ChannelMethods
     public static function channelConnect(string $channelKey = 'default'): ChannelInterface
     {
         if (!(static::$channels[$channelKey] ?? null)) {
-            $handler = config("workbunny.webman-push-server.channel.$channelKey.handler");
-            $channel = config("workbunny.webman-push-server.channel.$channelKey.channel");
+            $handler = config("plugin.workbunny.webman-push-server.channel.$channelKey.handler");
+            $channel = config("plugin.workbunny.webman-push-server.channel.$channelKey.channel");
             $handler = is_a($handler, ChannelInterface::class, true) ? new $handler($channel) : new RedisChannel(
                 // 兼容旧版及其他可能的可选项
                 $channelKey === 'default' ?

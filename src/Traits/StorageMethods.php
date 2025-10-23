@@ -43,7 +43,7 @@ trait StorageMethods
     public static function getStorageClient(): StorageInterface
     {
         if(!self::$_storageClient instanceof StorageInterface){
-            $handler = config('workbunny.webman-push-server.storage.handler');
+            $handler = config('plugin.workbunny.webman-push-server.storage.handler');
             $handler = is_a($handler, StorageInterface::class, true) ? new $handler : new RedisStorage();
             self::$_storageClient = $handler;
         }
