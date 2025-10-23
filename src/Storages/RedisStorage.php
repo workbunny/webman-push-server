@@ -87,7 +87,7 @@ class RedisStorage implements StorageInterface
     }
 
     /** @inheritdoc  */
-    public function hSet(string $key, string $hashKey, mixed $value): bool
+    public function hSet(string $key, string $hashKey, mixed $value): bool|int
     {
         try {
             return $this->_client->hSet($key, $hashKey, $value);

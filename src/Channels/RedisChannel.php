@@ -13,14 +13,14 @@ use Workerman\Redis\Client;
 class RedisChannel implements ChannelInterface
 {
     /**
-     * @var Client
+     * @var Client|null
      */
-    protected Client $_subClient;
+    protected ?Client $_subClient;
 
     /**
-     * @var \Redis
+     * @var \Redis|null
      */
-    protected \Redis $_pubClient;
+    protected ?\Redis $_pubClient = null;
 
     /**
      * @var string
@@ -38,16 +38,22 @@ class RedisChannel implements ChannelInterface
         if (!$config = config('redis')["plugin.workbunny.webman-push-server.$redisChannel"] ?? []) {
             throw new InvalidArgumentException("Redis channel [$redisChannel] not found. ");
         }
-        $client = new Client(sprintf('redis://%s:%s', $config['host'], $config['port']), $config['options'] ?? []);
-        $client->connect();
-        if ($passport = $config['password'] ?? null) {
-            $client->auth($passport);
+        try {
+            $client = new Client(sprintf('redis://%s:%s', $config['host'], $config['port']), $config['options'] ?? []);
+            $client->connect();
+            if ($passport = $config['password'] ?? null) {
+                $client->auth($passport);
+            }
+            if ($database = $config['database'] ?? 0) {
+                $client->select($database);
+            }
+            $this->_subClient = $client;
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() !== 'Timer can only be used in workerman running environment') {
+                throw $e;
+            }
         }
-        if ($database = $config['database'] ?? 0) {
-            $client->select($database);
-        }
-        $this->_subClient = $client;
-        $this->_pubClient = Redis::connection($redisChannel)->client();
+        $this->_pubClient = Redis::connection("plugin.workbunny.webman-push-server.$redisChannel")->client();
     }
 
     /** @inheritdoc  */

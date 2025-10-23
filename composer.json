@@ -19,8 +19,6 @@
 		"ext-json": "*",
 		"ext-redis": "*",
 		"webman/console": "^1.0 | ^2.0",
-		"illuminate/redis": "^9.0 | ^10.0 | ^11.0 | ^12.0",
-		"workerman/redis": "^2.0",
 		"guzzlehttp/guzzle": "^7.0 | ^8.0",
 		"monolog/monolog": "^2.0 | ^3.0"
 	},
@@ -30,10 +28,14 @@
 		"symfony/var-dumper": "^6.0 | ^7.0",
 		"phpunit/phpunit": "^9.6 | ^10.0",
 		"phpstan/phpstan": "^1.11",
-		"friendsofphp/php-cs-fixer": "^3.58"
+		"friendsofphp/php-cs-fixer": "^3.58",
+		"illuminate/redis": "^9.0 | ^10.0 | ^11.0 | ^12.0",
+		"workerman/redis": "^2.0"
 	},
 	"suggest": {
-		"ext-uuid": "For unique socket id. "
+		"ext-uuid": "For unique socket id. ",
+		"illuminate/redis": "For redis storage. ",
+		"workerman/redis": "For redis channel. "
 	},
 	"autoload": {
 		"psr-4": {

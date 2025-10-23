@@ -50,10 +50,10 @@ interface StorageInterface
      * @param string $key
      * @param string $hashKey
      * @param mixed $value
-     * @return bool
+     * @return bool|int
      * @throws StorageException
      */
-    public function hSet(string $key, string $hashKey, mixed $value): bool;
+    public function hSet(string $key, string $hashKey, mixed $value): bool|int;
 
     /**
      * @link \Redis::hGet()
