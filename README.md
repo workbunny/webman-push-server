@@ -37,28 +37,27 @@
 
 ## 架构
 
-- 摒弃了api-service服务需要挂载在Push-server的设计，独立化api-server，性能更好
-- 使用redis Publish/Subscribe 代替workerman/channel作为分布式广播
-- 使用redis Publish/Subscribe 代替HookServer队列作为事件监听中间件
-- 简化Push-server的代码内容
-- 简化了Api逻辑
-
 ```
                                    ┌─────────────┐     2 | 3
-                             ┌───> | Push-server | ─── ─ · ─
-                             |     └─────────────┘     1 | 4 ··· n
-                             |       Hash | register     ↑
+     S: Storage              ┌───> | Push-server | ─── ─ · ─
+     C: Channel              |     └─────────────┘     1 | 4 ··· n
+     R: Registrar            |       Hash | register     ↑
                              |            |          PUB | SUB
-    ┌────────────────────┐ ──┘     ┌──────────────┐ <────┘                     
-    | webman-push-server | ──────> | Redis-server | 
-    └────────────────────┘ ──┐     └──────────────┘ <────┐     
+    ┌────────────────────┐ ──┘      ┌───────────┐ <──────┘                     
+    | webman-push-server | ───────> | S / C / R | 
+    └────────────────────┘ ──┐      └───────────┘ <──────┐     
                              |            |          PUB | SUB
                              |       Hash | register     ↓
                              |      ┌────────────┐     2 | 3
                              └────> | API-server | ─── ─ · ─
-                                    └────────────┘     1 | 4 ··· n
-                                     
+                                    └────────────┘     1 | 4 ··· n                              
 ```
+- Push-server: 推送服务，基于`websocket`通讯协议的推送服务器
+- API-server: API服务，基于`http`通讯协议提供简单的`API`管理接口，如：订阅、取消订阅、广播、获取在线人数等
+- Storage: 储存器，用于保存数据信息；默认使用`Redis`作为储存器；提供`StorageInterface`拓展
+- Channel: 通道，用于保存订阅信息；默认使用`Redis`作为通道；提供`ChannelInterface`拓展
+- Registrar: 服务注册器，用于服务注册与发现；默认使用`Redis`作为服务注册器；提供`RegistrarInterface`拓展
+> version>=3.2.0 支持`S/C/R`部分的拓展能力
 
 ## 约定
 
@@ -79,6 +78,8 @@
             |-- redis.php       # redis配置
             |-- route.php       # APIs路由信息
             |-- registrar.php   # 分布式服务注册器配置
+            |-- storage.php     # 储存器配置
+            |-- channel.php     # 订阅通道配置
 ```
 
 ### 频道说明
