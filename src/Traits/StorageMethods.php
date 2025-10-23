@@ -44,7 +44,7 @@ trait StorageMethods
     {
         if(!self::$_storageClient instanceof StorageInterface){
             $handler = config('workbunny.webman-push-server.storage.handler');
-            $handler = $handler instanceof StorageInterface ? $handler : new RedisStorage();
+            $handler = is_a($handler, StorageInterface::class, true) ? new $handler : new RedisStorage();
             self::$_storageClient = $handler;
         }
         return self::$_storageClient;

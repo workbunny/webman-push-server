@@ -17,7 +17,6 @@ use Tests\MockClass\MockTcpConnection;
 use Webman\Http\Request;
 use Webman\Http\Response;
 use Workbunny\WebmanPushServer\ApiClient;
-use Workbunny\WebmanPushServer\ApiRoute;
 
 class ApiServerRouteTest extends BaseTestCase
 {

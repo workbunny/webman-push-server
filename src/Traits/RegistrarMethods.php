@@ -31,7 +31,7 @@ trait RegistrarMethods
     public function registrarGet(): ?RegistrarInterface
     {
         $registrar = config('plugin.workbunny.webman-push-server.registrar.handler');
-        return $registrar instanceof RegistrarInterface ? $registrar : null;
+        return is_a($registrar, RegistrarInterface::class, true) ? new $registrar : null;
     }
 
     /**

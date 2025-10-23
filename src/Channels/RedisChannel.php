@@ -28,11 +28,11 @@ class RedisChannel implements ChannelInterface
     protected string $_redisChannel;
 
     /**
-     * @param string $redisChannel
+     * @param string|null $redisChannel
      * @throws \RedisException
      * @throws \Throwable
      */
-    public function __construct(string $redisChannel)
+    public function __construct(?string $redisChannel)
     {
         $this->_redisChannel = $redisChannel;
         if (!$config = config('redis')["plugin.workbunny.webman-push-server.$redisChannel"] ?? []) {

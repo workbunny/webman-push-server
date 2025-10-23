@@ -8,6 +8,7 @@ use Workbunny\WebmanPushServer\Channels\RedisChannel;
 
 return [
     'default' => [
-        'handler' => new RedisChannel('server-channel')
+        'handler' => RedisChannel::class,
+        'channel' => 'server-channel',
     ],
 ];

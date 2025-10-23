@@ -7,5 +7,5 @@
 use Workbunny\WebmanPushServer\Storages\RedisStorage;
 
 return [
-    'handler'        => new RedisStorage(),
+    'handler' => RedisStorage::class,
 ];

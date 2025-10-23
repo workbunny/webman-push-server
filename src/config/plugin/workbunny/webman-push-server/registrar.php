@@ -7,6 +7,6 @@
 use Workbunny\WebmanPushServer\Registrars\RedisRegistrar;
 
 return [
-    'handler'        => new RedisRegistrar(),
+    'handler'        => RedisRegistrar::class,
     'timer_interval' => 60
 ];
