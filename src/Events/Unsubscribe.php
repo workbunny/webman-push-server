@@ -73,7 +73,23 @@ class Unsubscribe extends AbstractEvent
                 $storage = PushServer::getStorageClient();
                 // presence通道
                 if ($type === CHANNEL_TYPE_PRESENCE) {
-                    if ($users = $storage->keys(PushServer::getUserStorageKey($appKey, $channel, $uid))) {
+                    if ($uid !== null) {
+                        // 主动退订：通过 user_id 定位
+                        $users = $storage->keys(PushServer::getUserStorageKey($appKey, $channel, $uid));
+                    } else {
+                        // onClose 触发：通过 socket_id 定位，避免误删同频道其他用户
+                        $users = [];
+                        foreach ($storage->keys(PushServer::getUserStorageKey($appKey, $channel)) as $userKey) {
+                            if ($storage->hGet($userKey, 'socket_id') === $socketId) {
+                                $users[] = $userKey;
+                            }
+                        }
+                    }
+                    if ($users) {
+                        // onClose 场景下从 Redis 取 user_id，确保 member_removed 事件正确
+                        if ($uid === null) {
+                            $uid = $storage->hGet($users[0], 'user_id') ?: null;
+                        }
                         $userCount = $storage->hIncrBy(PushServer::getChannelStorageKey($appKey, $channel), 'user_count', -count($users));
                         if ($userCount <= 0) {
                             $storage->del(...$users);
