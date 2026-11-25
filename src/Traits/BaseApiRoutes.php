@@ -199,7 +199,7 @@ trait BaseApiRoutes
                 foreach ($socketIds as $socketId){
                     PushServer::publishUseRetry(AbstractPublishType::PUBLISH_TYPE_SERVER, [
                         'appKey'    => $appKey,
-                        'socket_id' => $socketId,
+                        'socketId'  => $socketId,
                         'timestamp' => ms_timestamp(),
                         'event'     => EVENT_TERMINATE_CONNECTION,
                         'data'      => [
