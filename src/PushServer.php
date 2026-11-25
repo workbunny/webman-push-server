@@ -372,8 +372,6 @@ class PushServer
         $connection->send($buffer = $response ? json_encode($response, JSON_UNESCAPED_UNICODE) : '{}');
         // 设置发送每秒字节数
         static::setSendBytesStatistics($connection, $buffer);
-        // 向通道发送一个type=server的消息
-        static::publishUseRetry(AbstractPublishType::PUBLISH_TYPE_SERVER, $response);
     }
 
     /**
